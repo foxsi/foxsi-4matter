@@ -1,12 +1,12 @@
-#Setting up the Raspberry Pi boot image
-##Supplies
+# Setting up the Raspberry Pi boot image
+## Supplies
 1. Rapsberry Pi SBC (versions 3 or 4 will work, as will a Compute Module with carrier board)
 2. microSD card with capacity ≥ 8GB
 3. Laptop
 4. Ethernet cable
 5. Power cable (USB C for Raspberry Pi 4, USB micro B for Raspberry Pi 3)
 
-##Booting
+## Booting
 1. On your laptop, download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
 2. Insert the microSD card
 3. Open the Raspberry Pi Imager software
@@ -22,10 +22,12 @@
 5. Connect the Raspberry Pi to power. You should see two lights: red for power on, and a blinking green light after boot completes.
 6. Connect the laptop to the Raspberry Pi with an Ethernet cable.
 
-##Talking to the Raspberry Pi
+## Talking to the Raspberry Pi
 **From here I assume macOS**. You can translate the shell commands if needed.
 1. Open a Terminal window.
 2. SSH into the Raspberry Pi with the following command, replacing the `<username>` with the username you chose when making the boot image:
-		% ssh <username>@raspberrypi.local
+```
+	% ssh <username>@raspberrypi.local
+```
 3. Enter the password you chose when building the boot image.
 4. *End the SSH session by typing* `exit`.
