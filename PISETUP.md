@@ -22,8 +22,8 @@
 5. Connect the Raspberry Pi to power. You should see two lights: red for power on, and a blinking green light after boot completes.
 6. Connect the laptop to the Raspberry Pi with an Ethernet cable.
 
-## Talking to the Raspberry Pi
-**From here I assume macOS**. You can translate the shell commands if needed.
+# Talking to the Raspberry Pi (SSH)
+**From here I assume macOS Terminal**. You can translate the shell commands if needed. I use the bash prompt `%` to indicate the macOS Terminal command line, and the `$` bash prompt to indicate the Linux command line via the SSH session.
 1. Open a Terminal window.
 2. SSH into the Raspberry Pi with the following command, replacing the `<username>` with the username you chose when making the boot image:
 ```
@@ -31,3 +31,39 @@
 ```
 3. Enter the password you chose when building the boot image.
 4. *End the SSH session by typing* `exit`.
+
+# Setting up the Raspberry Pi
+1. You should be in an SSH session in the Raspberry Pi.
+2. Run
+```
+	$ sudo raspi-config
+```
+3. Enter the `Localisation Options` menu, and select your location and language.
+4. 
+.
+.
+.
+
+## Setting up `eduroam` WiFi
+This is necessary to download packages at, e.g. the University of Minnesota, where network sharing from the host laptop to the Raspberry Pi is disallowed.
+1. Create a file on the Pi in `/etc/wpa_supplicant` called `wpa_supplicant.conf`. You can create the file and start editing with
+```
+$ nano /etc/wpa_supplicant/wpa_supplicant.conf
+```
+2. Edit the file (`vim` or `nano`, or other options) and add the following information, replacing `<your-x500>` with your UMN internet ID, and `<your-UMN-password>` with (unsurprisingly) your UMN password:
+```
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=US
+
+network={
+        ssid="eduroam"
+        key_mgmt=WPA-EAP
+        auth_alg=OPEN
+        eap=PEAP
+        identity="<your-x500>@umn.edu"
+        password="<your-UMN-password>"
+        phase2="auth=MSCHAPV2"
+}
+```
+3. Note that the file lists your login and password information verbatim. This is very insecure.
