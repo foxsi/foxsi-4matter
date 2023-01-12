@@ -23,7 +23,7 @@
 6. Connect the laptop to the Raspberry Pi with an Ethernet cable.
 
 # Talking to the Raspberry Pi (SSH)
-**From here I assume macOS Terminal**. You can translate the shell commands if needed. I use the bash prompt `%` to indicate the macOS Terminal command line, and the `$` bash prompt to indicate the Linux command line via the SSH session.
+**From here I assume macOS Terminal, and knowledge of filesystem navigation (`ls`, `cd`) and file editing (`[vim](https://devhints.io/vim)` or `[nano](https://www.nano-editor.org/dist/latest/cheatsheet.html)`**. You can translate the shell commands if needed. I use the bash prompt `%` to indicate the macOS Terminal command line, and the `$` bash prompt to indicate the Linux command line via the SSH session.
 1. Open a Terminal window.
 2. SSH into the Raspberry Pi with the following command, replacing the `<username>` with the username you chose when making the boot image:
 ```
@@ -46,11 +46,11 @@
 
 ## Setting up `eduroam` WiFi
 This is necessary to download packages at, e.g. the University of Minnesota, where network sharing from the host laptop to the Raspberry Pi is disallowed.
-1. Create a file on the Pi in `/etc/wpa_supplicant` called `wpa_supplicant.conf`. You can create the file and start editing with
+1. Create a file on the Pi in the folder `/etc/wpa_supplicant` called `wpa_supplicant.conf`. You can create the file and start editing with
 ```
 $ nano /etc/wpa_supplicant/wpa_supplicant.conf
 ```
-2. Edit the file (`vim` or `nano`, or other options) and add the following information, replacing `<your-x500>` with your UMN internet ID, and `<your-UMN-password>` with (unsurprisingly) your UMN password:
+2. Edit the file and add the following information, replacing `<your-x500>` with your UMN internet ID, and `<your-UMN-password>` with (unsurprisingly) your UMN password:
 ```
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
@@ -67,3 +67,4 @@ network={
 }
 ```
 3. Note that the file lists your login and password information verbatim. This is very insecure.
+4. You can check the network connection with...
