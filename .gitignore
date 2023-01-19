@@ -1,0 +1,13 @@
+# macOS
+*.DS_Store
+*.fseventsd
+*.Spotlight-V100
+
+
+# cpp
+build/
+*.o
+*.obj
+*.exe
+*.out
+
