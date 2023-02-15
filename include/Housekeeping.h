@@ -1,7 +1,9 @@
+#pragma once
 #ifndef HOUSEKEEPING_H
 #define HOUSEKEEPING_H
 
 #include "AbstractSubsystem.h"
+#include "Parameters.h"
 
 class Housekeeping: AbstractSubsystem::AbstractSubsystem {
     protected:

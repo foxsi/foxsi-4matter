@@ -13,7 +13,9 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(
     SOURCES 
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/AbstractSubsystem.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/AbstractSubsystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp)
 
 # Build the target "formatter" using source files
 add_executable(formatter ${SOURCES})
@@ -21,6 +23,11 @@ target_include_directories(
     formatter 
     PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Force use pthreads (for Boost/asio)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(formatter PRIVATE Threads::Threads)
 
 # message(STATUS "CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 

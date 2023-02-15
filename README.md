@@ -8,6 +8,7 @@ See PISETUP.md for instructions on booting the Raspberry Pi.
 # Dependencies
 - [Boost](https://www.boost.org/)
     - boost::asio
+    - boost::bind
     - boost::statechart
     - boost::interprocess
 

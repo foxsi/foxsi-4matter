@@ -1,3 +1,4 @@
+#pragma once
 #ifndef ABSTRACTSUBSYSTEM_H
 #define ABSTRACTSUBSYSTEM_H
 
