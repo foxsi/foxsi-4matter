@@ -3,6 +3,8 @@
 *.fseventsd
 *.Spotlight-V100
 
+# vscode
+.vscode/
 
 # cpp
 build/
