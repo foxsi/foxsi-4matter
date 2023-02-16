@@ -5,6 +5,9 @@
 #include "SharedMemory.h"
 #include "Parameters.h"
 #include <string>
+#include <iostream>
+#include <fstream>
+
 // #include <boost/interprocess/shared_memory_object.hpp>
 
 
@@ -18,9 +21,12 @@ class AbstractSubsystem {
         AbstractSubsystem(std::string subsystem_name);
         virtual ~AbstractSubsystem() = 0;
 
-        virtual uint8_t* read(uint8_t* addr) = 0;
-        virtual uint8_t* read_to_memory(uint8_t* addr, SharedMemory* memory) = 0;
-        virtual uint8_t* write(uint8_t* addr, uint8_t* data) = 0;
+        virtual uint8_t* receive(uint8_t* addr) = 0;
+        virtual uint8_t* receive_to_memory(uint8_t* addr, SharedMemory* memory) = 0;
+        virtual void send(uint8_t* addr, uint8_t* data) = 0;
+
+        virtual uint8_t* read(std::ifstream& file) = 0;
+        virtual void write(std::ofstream& file, uint8_t* data) = 0;
     
     private:
 

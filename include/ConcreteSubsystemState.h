@@ -11,9 +11,10 @@ class Housekeeping: AbstractState::AbstractState, AbstractSubsystem::AbstractSub
         ~Housekeeping();
 
         // ...they're not virtual anymore
-        uint8_t* read(uint8_t* addr);
-        uint8_t* read_to_memory(uint8_t* addr, SharedMemory* memory);
-        uint8_t* write(uint8_t* addr, uint8_t* data);
+        uint8_t* receive(uint8_t* addr) = 0;
+        void send(uint8_t* addr, uint8_t* data) = 0;
+        uint8_t* read(std::ifstream& file) = 0;
+        void write(std::ofstream& file, uint8_t* data) = 0;;
 
         void enter();
         void exit();
@@ -42,9 +43,10 @@ class CMOS: AbstractState::AbstractState, AbstractSubsystem::AbstractSubsystem {
         CMOS();
         ~CMOS();
 
-        uint8_t* read(uint8_t* addr);
-        uint8_t* read_to_memory(uint8_t* addr, SharedMemory* memory);
-        uint8_t* write(uint8_t* addr, uint8_t* data);
+        uint8_t* receive(uint8_t* addr) = 0;
+        void send(uint8_t* addr, uint8_t* data) = 0;
+        uint8_t* read(std::ifstream& file) = 0;
+        void write(std::ofstream& file, uint8_t* data) = 0;;
 
         void enter();
         void exit();
@@ -57,9 +59,10 @@ class Timepix: AbstractState::AbstractState, AbstractSubsystem::AbstractSubsyste
         Timepix();
         ~Timepix();
 
-        uint8_t* read(uint8_t* addr);
-        uint8_t* read_to_memory(uint8_t* addr, SharedMemory* memory);
-        uint8_t* write(uint8_t* addr, uint8_t* data);
+        uint8_t* receive(uint8_t* addr) = 0;
+        void send(uint8_t* addr, uint8_t* data) = 0;
+        uint8_t* read(std::ifstream& file) = 0;
+        void write(std::ofstream& file, uint8_t* data) = 0;;
 
         void enter();
         void exit();
