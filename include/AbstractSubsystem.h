@@ -18,7 +18,7 @@ class AbstractSubsystem {
         std::string name;
 
     public:
-        AbstractSubsystem(std::string subsystem_name);
+        AbstractSubsystem();
         virtual ~AbstractSubsystem() = 0;
 
         virtual uint8_t* receive(uint8_t* addr) = 0;
