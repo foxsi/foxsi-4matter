@@ -12,6 +12,9 @@ static bool DEBUG = true;
 static const unsigned short         PERIOD          = 1;
 
 // IP addresses
+static std::string                  LOCAL_IP        = "192.168.1.8";
+static const unsigned short         LOCAL_PORT      = 9999;
+
 static std::string                  GSE_IP          = "192.168.1.100";
 static const unsigned short         GSE_PORT        = 9999;
 
@@ -46,7 +49,5 @@ enum STATE_ORDER {
     DATA_STORE,
     STATE_COUNT
 };
-
-
 
 #endif

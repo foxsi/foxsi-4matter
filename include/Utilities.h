@@ -3,6 +3,7 @@
 
 #include "Parameters.h"
 
+// deprecate these later if they are not used
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order);
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order, int);
 STATE_ORDER operator++(STATE_ORDER& order);
