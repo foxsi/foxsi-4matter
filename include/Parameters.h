@@ -47,6 +47,7 @@ enum STATE_ORDER {
     DATA_RECV,
     DATA_CHECK,
     DATA_STORE,
+    IDLE,
     STATE_COUNT
 };
 
