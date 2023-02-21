@@ -11,9 +11,9 @@ UDPInterface::UDPInterface(std::string local_ip, unsigned short local_port, std:
     local_socket.bind(local_endpoint);
 }
 
-UDPInterface::~UDPInterface() {
-    // do something to kill ongoing I/O and close socket?   
-}
+// UDPInterface::~UDPInterface() {
+//     // do something to kill ongoing I/O and close socket?   
+// }
 
 int UDPInterface::recv(uint8_t* addr, char* buffer) {
     // build a SpW message using addr

@@ -12,6 +12,8 @@ static bool DEBUG = true;
 static const unsigned short         PERIOD          = 1;
 
 // IP addresses
+static std::string                  LOOPBACK_IP     = "127.0.0.1";
+
 static std::string                  LOCAL_IP        = "192.168.1.8";
 static const unsigned short         LOCAL_PORT      = 9999;
 

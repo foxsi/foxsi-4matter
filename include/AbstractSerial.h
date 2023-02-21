@@ -13,11 +13,10 @@
 // i.e. the concrete class that extends must implement the function
 class AbstractSerial {
     protected:
-        std::string name;
+        // std::string name;
 
     public:
-        AbstractSerial();
-        virtual ~AbstractSerial() = 0;
+        // virtual ~AbstractSerial() = 0;
 
         virtual int recv(uint8_t* addr, uint8_t* buffer) = 0;
         virtual int async_recv(uint8_t* addr, uint8_t* buffer) = 0;

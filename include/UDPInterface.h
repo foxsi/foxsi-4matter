@@ -20,7 +20,7 @@ class UDPInterface: AbstractSerial {
 
         UDPInterface(std::string local_ip, unsigned short local_port, std::string remote_ip, unsigned short remote_port, boost::asio::io_context& io_context);
 
-        ~UDPInterface();
+        // ~UDPInterface();
 
         int recv(uint8_t* addr, char* buffer);
         int async_recv(uint8_t* addr, char* buffer);
