@@ -43,8 +43,7 @@ class Housekeeping: public AbstractState::AbstractState, public UDPInterface::UD
     public:
         SUBSYSTEM_ORDER name;
 
-        Housekeeping(SUBSYSTEM_ORDER name, STATE_ORDER state, boost::asio::io_context& io_context);
-        ~Housekeeping();
+        Housekeeping(SUBSYSTEM_ORDER name, STATE_ORDER state, std::string local_ip, unsigned short local_port, std::string remote_ip, unsigned short remote_port,boost::asio::io_context& io_context);
 
         void enter();
         void exit();
@@ -54,9 +53,20 @@ class Housekeeping: public AbstractState::AbstractState, public UDPInterface::UD
 class CdTe: AbstractState::AbstractState, public TCPInterface::TCPInterface {
     public:
         SUBSYSTEM_ORDER name;
+        boost::asio::ip::tcp::endpoint ground_endpoint;
 
-        CdTe();
+        CdTe(
+            SUBSYSTEM_ORDER sys_name, 
+            STATE_ORDER initial_state, 
+            std::string local_ip, 
+            unsigned short local_port, 
+            std::string remote_ip, 
+            unsigned short remote_port, 
+            boost::asio::ip::tcp::endpoint& ground, 
+            boost::asio::io_context& io_context);
         ~CdTe();
+
+        void forward_to_ground();
 
         void enter();
         void exit();

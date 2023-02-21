@@ -3,7 +3,6 @@
 #define ABSTRACTSERIAL_H
 
 #include "SharedMemory.h"
-#include "Parameters.h"
 #include <string>
 #include <iostream>
 #include <fstream>

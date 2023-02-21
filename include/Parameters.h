@@ -27,6 +27,10 @@ static const unsigned short         SPMU_PORT       = 0;
 static const std::string            PLENUM_IP       = "127.0.0.1";
 static const unsigned short         PLENUM_PORT     = 0;
 
+// I/O
+static const unsigned long          RECV_BUFF_LEN   = 4096;
+static const unsigned long          SEND_BUFF_LEN   = 4096;
+
 // loop order for subsystems:
 enum SUBSYSTEM_ORDER {
     HOUSEKEEPING,

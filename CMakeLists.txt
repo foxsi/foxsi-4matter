@@ -4,7 +4,8 @@ cmake_minimum_required(VERSION 3.18)
 project(
     Formatter VERSION 0.1
     DESCRIPTION "FOXSI-4 telemetry formatter software"
-    LANGUAGES CXX)
+    LANGUAGES CXX
+)
 
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
@@ -12,16 +13,34 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 # Add other sources and headers here:
 set(
     SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
+)
 
 # Build the target "formatter" using source files
 add_executable(formatter ${SOURCES})
 target_include_directories(
     formatter 
     PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "tcp_example" using source files
+add_executable(tcp_example ${SOURCES})
+target_include_directories(
+    tcp_example
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_library(lib ${SOURCES})
+target_include_directories(
+    lib
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Force use pthreads (for Boost/asio)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -47,7 +66,9 @@ if(Boost_FOUND)
             INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
     endif()
 
-    target_link_libraries(formatter PUBLIC Boost::filesystem)
+    target_link_libraries(lib PUBLIC Boost::filesystem)
+    target_link_libraries(formatter PUBLIC Boost::filesystem lib)
+    target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
