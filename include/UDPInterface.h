@@ -27,6 +27,8 @@ class UDPInterface: AbstractSerial {
 
         int send(uint8_t* addr, char* buffer);
         int async_send(uint8_t* addr, char* buffer);
+
+        void async_send(char* buffer, std::size_t length);
 };
 
 #endif

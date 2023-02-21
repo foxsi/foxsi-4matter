@@ -44,14 +44,14 @@ target_include_directories(
 )
 
 # Check which OS we're using to use correct thread library
-if(UNIX AND APPLE)
+if(UNIX AND NOT APPLE)
     # Force use pthreads (for Boost/asio)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
     target_link_libraries(lib PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND APPLE)
     # this usually builds fine
 else()
     error("Unsupported OS.")

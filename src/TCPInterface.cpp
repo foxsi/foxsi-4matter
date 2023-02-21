@@ -1,7 +1,8 @@
 #include "TCPInterface.h"
 #include <memory>
 
-TCPSession::TCPSession(boost::asio::ip::tcp::socket socket): local_socket(std::move(socket)) {
+TCPSession::TCPSession(boost::asio::ip::tcp::socket socket): 
+    local_socket(std::move(socket)) {
 
 }
 
@@ -12,6 +13,7 @@ void TCPSession::read() {
         [this,self](boost::system::error_code ec, std::size_t length) {
             if(!ec) {
                 TCPSession::write(length);
+
             }
         }
     );
@@ -30,11 +32,13 @@ void TCPSession::write(std::size_t length) {
     );
 }
 
+
+
 TCPServer::TCPServer(boost::asio::ip::tcp::endpoint endpoint, boost::asio::io_context& io_context): acceptor(io_context, endpoint) {
-    accept();
+    accept(io_context);
 }
 
-void TCPServer::accept() {
+void TCPServer::accept(boost::asio::io_context& io_context) {
     acceptor.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
         if(!ec) {
             std::make_shared<TCPSession>(std::move(socket))->read();
@@ -68,7 +72,7 @@ TCPInterface::TCPInterface(
     local_socket.open(boost::asio::ip::tcp::v4());
     // confirm TCP connect flow:
     local_socket.connect(remote_endpoint);
-    
+    TCPInterface::recv();
 }
 
 int TCPInterface::recv(uint8_t* addr, char* buffer) {
@@ -76,7 +80,8 @@ int TCPInterface::recv(uint8_t* addr, char* buffer) {
 }
 
 int TCPInterface::async_recv(uint8_t* addr, char* buffer) {
-
+    
+    return 0;
 }
 
 int TCPInterface::send(uint8_t* addr, char* buffer) {
@@ -84,5 +89,26 @@ int TCPInterface::send(uint8_t* addr, char* buffer) {
 }
 
 int TCPInterface::async_send(uint8_t* addr, char* buffer) {
+    
+    return 0;
+}
 
+void TCPInterface::recv() {
+    std::string msg_str = "hello, it's the formatter\n";
+    const char* msg = msg_str.c_str();
+    std::size_t len = msg_str.length();
+    char recv_buff[RECV_BUFF_LEN];
+
+    // memset(recvbuf, 0, sizeof(recvbuf));
+
+    local_socket.receive(boost::asio::buffer(recv_buff, RECV_BUFF_LEN));
+
+    std::cout << recv_buff << "\n";
+    TCPInterface::send(msg, len);
+}
+
+void TCPInterface::send(const char* buffer, std::size_t len) {
+    std::cout << "sending" << "\n";
+    local_socket.send(boost::asio::buffer(buffer, len));
+    TCPInterface::recv();
 }

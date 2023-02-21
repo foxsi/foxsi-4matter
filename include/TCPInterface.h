@@ -3,6 +3,7 @@
 
 #include "Parameters.h"
 #include "AbstractSerial.h"
+#include "UDPInterface.h"
 #include <boost/asio.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/bind/bind.hpp>
@@ -16,9 +17,9 @@ class TCPSession: public std::enable_shared_from_this<TCPSession> {
     public:
         boost::asio::ip::tcp::socket local_socket;
         char data[RECV_BUFF_LEN];
+        // UDPInterface udpif;
 
         TCPSession(boost::asio::ip::tcp::socket socket);
-
         void read();
         void write(std::size_t length);
 };
@@ -27,10 +28,9 @@ class TCPServer {
     public:
         boost::asio::ip::tcp::acceptor acceptor;
 
-        // make sure endpoint really is LOCAL. (not remote)
         TCPServer(boost::asio::ip::tcp::endpoint endpoint, boost::asio::io_context& io_context);
 
-        void accept();
+        void accept(boost::asio::io_context& io_context);
 };
 
 // like TCP Server
@@ -62,15 +62,18 @@ class TCPInterface {
             boost::asio::io_context& io_context
         );
 
-        ~TCPInterface();
+        // ~TCPInterface();
 
-        void accept();
+        // void accept();
 
         int recv(uint8_t* addr, char* buffer);
         int async_recv(uint8_t* addr, char* buffer);
 
         int send(uint8_t* addr, char* buffer);
         int async_send(uint8_t* addr, char* buffer);
+
+        void recv();
+        void send(const char* buffer, std::size_t len);
 };
 
 

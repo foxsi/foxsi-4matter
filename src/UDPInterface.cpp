@@ -20,17 +20,22 @@ int UDPInterface::recv(uint8_t* addr, char* buffer) {
     // wrap socket.recv_from(), recv_from remote_endpoint
 
     // eventually make buffer shared
+    return 0;
 }
 
 int UDPInterface::async_recv(uint8_t* addr, char* buffer) {
-
+    return 0;
 }
 
 
 int UDPInterface::send(uint8_t* addr, char* buffer) {
-    
+    return 0;
 }
 
 int UDPInterface::async_send(uint8_t* addr, char* buffer) {
-    
+    return 0;
+}
+
+void UDPInterface::async_send(char* buffer, std::size_t length) {
+    // local_socket.send_to(buffer, remote_endpoint);
 }
