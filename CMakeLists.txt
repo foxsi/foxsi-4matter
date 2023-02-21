@@ -20,7 +20,7 @@ set(
 )
 
 # Build the target "formatter" using source files
-add_executable(formatter ${SOURCES})
+add_executable(formatter ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp)
 target_include_directories(
     formatter 
     PRIVATE 
@@ -28,13 +28,14 @@ target_include_directories(
 )
 
 # Build the target "tcp_example" using source files
-add_executable(tcp_example ${SOURCES})
+add_executable(tcp_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
 target_include_directories(
     tcp_example
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
 target_include_directories(
     lib
@@ -42,10 +43,19 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Force use pthreads (for Boost/asio)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(formatter PRIVATE Threads::Threads)
+# Check which OS we're using to use correct thread library
+if(UNIX AND APPLE)
+    # Force use pthreads (for Boost/asio)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(lib PRIVATE Threads::Threads)
+    target_link_libraries(formatter PRIVATE Threads::Threads)
+    target_link_libraries(tcp_example PRIVATE Threads::Threads)
+elseif(UNIX AND NOT APPLE)
+    # this usually builds fine
+else()
+    error("Unsupported OS.")
+endif()
 
 # message(STATUS "CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 
