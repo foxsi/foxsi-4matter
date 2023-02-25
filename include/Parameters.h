@@ -12,6 +12,8 @@ static bool DEBUG = true;
 static const unsigned short         PERIOD          = 1;
 
 // IP addresses
+static std::string                  LOOPBACK_IP     = "127.0.0.1";
+
 static std::string                  LOCAL_IP        = "192.168.1.8";
 static const unsigned short         LOCAL_PORT      = 9999;
 
@@ -26,6 +28,10 @@ static const unsigned short         SPMU_PORT       = 0;
 
 static const std::string            PLENUM_IP       = "127.0.0.1";
 static const unsigned short         PLENUM_PORT     = 0;
+
+// I/O
+static const unsigned long          RECV_BUFF_LEN   = 4096;
+static const unsigned long          SEND_BUFF_LEN   = 4096;
 
 // loop order for subsystems:
 enum SUBSYSTEM_ORDER {
@@ -47,6 +53,7 @@ enum STATE_ORDER {
     DATA_RECV,
     DATA_CHECK,
     DATA_STORE,
+    IDLE,
     STATE_COUNT
 };
 

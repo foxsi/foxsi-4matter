@@ -11,26 +11,31 @@ UDPInterface::UDPInterface(std::string local_ip, unsigned short local_port, std:
     local_socket.bind(local_endpoint);
 }
 
-UDPInterface::~UDPInterface() {
-    // do something to kill ongoing I/O and close socket?   
-}
+// UDPInterface::~UDPInterface() {
+//     // do something to kill ongoing I/O and close socket?   
+// }
 
 int UDPInterface::recv(uint8_t* addr, char* buffer) {
     // build a SpW message using addr
     // wrap socket.recv_from(), recv_from remote_endpoint
 
     // eventually make buffer shared
+    return 0;
 }
 
 int UDPInterface::async_recv(uint8_t* addr, char* buffer) {
-
+    return 0;
 }
 
 
 int UDPInterface::send(uint8_t* addr, char* buffer) {
-    
+    return 0;
 }
 
 int UDPInterface::async_send(uint8_t* addr, char* buffer) {
-    
+    return 0;
+}
+
+void UDPInterface::async_send(char* buffer, std::size_t length) {
+    // local_socket.send_to(buffer, remote_endpoint);
 }

@@ -8,7 +8,6 @@ class AbstractState {
     public:
         STATE_ORDER state;
         
-        AbstractState();
         virtual ~AbstractState() = 0;
 
         virtual void enter() = 0;

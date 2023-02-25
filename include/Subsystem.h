@@ -20,12 +20,12 @@
     Decide if Housekeeping (plenum board) will be UDP or TCP
 */
 
-class Ground: public AbstractState::AbstractState, UDPInterface::UDPInterface {
+class Ground: public AbstractState::AbstractState, public UDPInterface::UDPInterface {
     public:
-        std::string name;
+        SUBSYSTEM_ORDER name;
         // also inherits STATE_ORDER state from AbstractState
 
-        Ground(std::string name, boost::asio::io_context& io_context);
+        Ground(SUBSYSTEM_ORDER name, STATE_ORDER state, boost::asio::io_context& io_context);
         ~Ground();
 
         // inherit the UDPInterface
@@ -39,24 +39,34 @@ class Ground: public AbstractState::AbstractState, UDPInterface::UDPInterface {
 };
 
 
-class Housekeeping: public AbstractState::AbstractState, UDPInterface::UDPInterface {
+class Housekeeping: public AbstractState::AbstractState, public UDPInterface::UDPInterface {
     public:
-        std::string name;
+        SUBSYSTEM_ORDER name;
 
-        Housekeeping(std::string name, boost::asio::io_context& io_context);
-        ~Housekeeping();
+        Housekeeping(SUBSYSTEM_ORDER name, STATE_ORDER state, std::string local_ip, unsigned short local_port, std::string remote_ip, unsigned short remote_port,boost::asio::io_context& io_context);
 
         void enter();
         void exit();
         void update();
 };
 
-class CdTe: AbstractState::AbstractState, TCPInterface::TCPInterface {
+class CdTe: AbstractState::AbstractState, public TCPInterface::TCPInterface {
     public:
-        std::string name;
+        SUBSYSTEM_ORDER name;
+        boost::asio::ip::tcp::endpoint ground_endpoint;
 
-        CdTe();
+        CdTe(
+            SUBSYSTEM_ORDER sys_name, 
+            STATE_ORDER initial_state, 
+            std::string local_ip, 
+            unsigned short local_port, 
+            std::string remote_ip, 
+            unsigned short remote_port, 
+            boost::asio::ip::tcp::endpoint& ground, 
+            boost::asio::io_context& io_context);
         ~CdTe();
+
+        void forward_to_ground();
 
         void enter();
         void exit();
@@ -64,9 +74,9 @@ class CdTe: AbstractState::AbstractState, TCPInterface::TCPInterface {
     
 };
 
-class CMOS: AbstractState::AbstractState, TCPInterface::TCPInterface {
+class CMOS: AbstractState::AbstractState, public TCPInterface::TCPInterface {
     public:
-        std::string name;
+        SUBSYSTEM_ORDER name;
 
         CMOS();
         ~CMOS();
@@ -77,9 +87,9 @@ class CMOS: AbstractState::AbstractState, TCPInterface::TCPInterface {
     
 };
 
-class Timepix: AbstractState::AbstractState, UARTInterface::UARTInterface {
+class Timepix: AbstractState::AbstractState, public UARTInterface::UARTInterface {
     public:
-        std::string name;
+        SUBSYSTEM_ORDER name;
         
         Timepix();
         ~Timepix();
