@@ -7,6 +7,7 @@
 #include "UARTInterface.h"
 #include "Parameters.h"
 #include <boost/asio.hpp>
+#include <map>
 
 
 
@@ -20,22 +21,22 @@
     Decide if Housekeeping (plenum board) will be UDP or TCP
 */
 
-class Ground: public AbstractState::AbstractState, public UDPInterface::UDPInterface {
+class Ground: public UDPInterface::UDPInterface {
     public:
         SUBSYSTEM_ORDER name;
         // also inherits STATE_ORDER state from AbstractState
+        
+        std::map<STATE_ORDER, double>& durations;
+        std::map<std::string, std::string>& flags;
+        bool is_active; // gets from Whirler
 
+    public:
         Ground(SUBSYSTEM_ORDER name, STATE_ORDER state, boost::asio::io_context& io_context);
         ~Ground();
 
         // inherit the UDPInterface
         // send, recv, etc
         // @todo multicast send
-
-        // realize these here:
-        void enter();
-        void exit();
-        void update();
 };
 
 
