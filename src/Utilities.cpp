@@ -21,3 +21,7 @@ STATE_ORDER operator++(STATE_ORDER& order, int) {
     ++order;
     return result;  
 }
+
+int inc_mod(int i, int n) {
+    return i = (i + 1 == n ? 0: i + 1);
+}

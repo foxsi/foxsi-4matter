@@ -16,6 +16,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
 
@@ -31,6 +32,13 @@ target_include_directories(
 add_executable(tcp_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
 target_include_directories(
     tcp_example
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(forwarding_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
+target_include_directories(
+    forwarding_example
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -51,6 +59,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(lib PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
+    target_link_libraries(forwarding_example PRIVATE Threads::Threads)
 elseif(UNIX AND APPLE)
     # this usually builds fine
 else()
@@ -79,6 +88,7 @@ if(Boost_FOUND)
     target_link_libraries(lib PUBLIC Boost::filesystem)
     target_link_libraries(formatter PUBLIC Boost::filesystem lib)
     target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
