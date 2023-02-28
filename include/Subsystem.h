@@ -7,6 +7,7 @@
 #include "UARTInterface.h"
 #include "Parameters.h"
 // #include <boost/asio.hpp>
+#include <vector>
 #include <map>
 #include <queue>
 
@@ -102,6 +103,8 @@ class PepperMill {
         boost::asio::ip::udp::endpoint remote_udp_endpoint;
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
 
+        std::vector<char> share_data;
+
         STATE_ORDER active_state;
         SUBSYSTEM_ORDER active_subsys;
 
@@ -142,7 +145,6 @@ class CdTe: public TCPInterface::TCPInterface {
         ~CdTe();
 
         void forward_to_ground();
-    
 };
 
 #endif

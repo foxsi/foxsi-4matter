@@ -7,6 +7,12 @@ PepperMill::PepperMill(
     local_udp_sock(context), 
     local_tcp_sock(context)
 {
+    active_subsys = HOUSEKEEPING;
+    active_state = IDLE;
+    
+    std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
+    share_data = tmp_vec;
+
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(LOCAL_IP);
     boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(GSE_IP);
     boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(SPMU_IP);
@@ -36,6 +42,12 @@ PepperMill::PepperMill(
     local_udp_sock(context),
     local_tcp_sock(context)
 {
+    active_subsys = HOUSEKEEPING;
+    active_state = IDLE;
+    
+    std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
+    share_data = tmp_vec;
+
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
     boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(remote_udp_ip);
     boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(remote_tcp_ip);
@@ -54,6 +66,10 @@ PepperMill::PepperMill(
     local_tcp_sock.connect(remote_tcp_endpoint);
 }
 
+
+// void PepperMill::recv_tcp_fwd_udp() {
+//     local_tcp_sock.async_receive()
+// }
 
 // Ground::Ground(
 //     std::map<STATE_ORDER, double>& durations, 
