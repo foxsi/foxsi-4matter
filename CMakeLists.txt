@@ -17,6 +17,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
 
