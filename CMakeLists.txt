@@ -37,9 +37,18 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "forwarding_example" using source files
 add_executable(forwarding_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
 target_include_directories(
     forwarding_example
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "cli_example" using source files
+add_executable(cli_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
+target_include_directories(
+    cli_example
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -61,6 +70,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
+    target_link_libraries(cli_example PRIVATE Threads::Threads)
 elseif(UNIX AND APPLE)
     # this usually builds fine
 else()
@@ -90,6 +100,7 @@ if(Boost_FOUND)
     target_link_libraries(formatter PUBLIC Boost::filesystem lib)
     target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
     target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
