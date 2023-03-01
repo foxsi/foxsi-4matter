@@ -8,6 +8,4 @@ LineInterface::LineInterface(int argc, char* argv[]) {
     ;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(desc).run(), vm);
     boost::program_options::notify(vm);
-
-    
 }
