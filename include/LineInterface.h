@@ -6,7 +6,7 @@
 
 class LineInterface {
     public:
-        boost::program_options::options_description desc;
+        boost::program_options::options_description options;
         boost::program_options::variables_map vm;
     public:
         LineInterface(int argc, char* argv[]);
