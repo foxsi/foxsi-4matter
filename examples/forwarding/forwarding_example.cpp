@@ -38,33 +38,7 @@ int main() {
         context
     );
 
-    // Ground ground(
-    //     durations,
-    //     flags,
-    //     local_ip,
-    //     local_ground_port,
-    //     ground_ip,
-    //     local_ground_port,
-    //     context
-    // );
-
-    // Housekeeping hk(
-    //     HOUSEKEEPING,
-    //     CMD_SEND,
-    //     ground,
-    //     durations,
-    //     flags,
-    //     local_ip,
-    //     local_subsys_port,
-    //     ground_ip,
-    //     local_subsys_port,
-    //     context
-    // );
-
-    // std::vector<std::vector<char>> test_buffer(100, std::vector<char>(RECV_BUFF_LEN));
-    // auto* downlinq = &test_buffer;
-    // hk.recv(test_buffer);
-
+    frmtr.recv_tcp_fwd_udp();
     context.run();
 
     return 0;

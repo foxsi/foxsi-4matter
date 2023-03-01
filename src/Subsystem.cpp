@@ -1,5 +1,7 @@
 #include "Subsystem.h"
 
+#include <boost/bind.hpp>
+
 // construct from Parameters.h
 PepperMill::PepperMill(
     boost::asio::io_context& context
@@ -12,6 +14,7 @@ PepperMill::PepperMill(
     
     std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
     share_data = tmp_vec;
+    ground_pipe.push('0');
 
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(LOCAL_IP);
     boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(GSE_IP);
@@ -67,9 +70,20 @@ PepperMill::PepperMill(
 }
 
 
-// void PepperMill::recv_tcp_fwd_udp() {
-//     local_tcp_sock.async_receive()
-// }
+void PepperMill::recv_tcp_fwd_udp() {
+    boost::asio::async_read(
+        local_tcp_sock, 
+        boost::asio::buffer(share_data),
+        boost::bind(&PepperMill::send_udp, this)
+    );
+}
+
+void PepperMill::send_udp() {
+    std::cout << "hi (not really doing anything)\n";
+    // forward the buffer share_data...
+    // clear the buffer share_data...
+    PepperMill::recv_tcp_fwd_udp();
+}
 
 // Ground::Ground(
 //     std::map<STATE_ORDER, double>& durations, 

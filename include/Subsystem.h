@@ -104,6 +104,7 @@ class PepperMill {
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
 
         std::vector<char> share_data;
+        std::queue<char> ground_pipe;
 
         STATE_ORDER active_state;
         SUBSYSTEM_ORDER active_subsys;
