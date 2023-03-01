@@ -1,6 +1,7 @@
 #include "Subsystem.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind.hpp>   // boost::bind (for async handler to class members)
+#include <algorithm>        // std::fill
 
 // construct from Parameters.h
 PepperMill::PepperMill(
@@ -71,140 +72,25 @@ PepperMill::PepperMill(
 
 
 void PepperMill::recv_tcp_fwd_udp() {
-    boost::asio::async_read(
-        local_tcp_sock, 
+    std::cout << "in recv_tcp_fwd_udp()\n";
+
+    // read incoming TCP data...
+    local_tcp_sock.async_read_some(
         boost::asio::buffer(share_data),
         boost::bind(&PepperMill::send_udp, this)
     );
 }
 
 void PepperMill::send_udp() {
-    std::cout << "hi (not really doing anything)\n";
-    // forward the buffer share_data...
+    std::cout << "in send_udp\n";
+
+    // forward the buffer share_data over UDP...
     local_udp_sock.async_send_to(
         boost::asio::buffer(share_data),
         remote_udp_endpoint,
         boost::bind(&PepperMill::recv_tcp_fwd_udp, this)
     );
+
     // clear the buffer share_data...
-    PepperMill::recv_tcp_fwd_udp();
+    std::fill(share_data.begin(), share_data.end(), '\0');
 }
-
-// Ground::Ground(
-//     std::map<STATE_ORDER, double>& durations, 
-//     std::map<std::string, std::string>& flags, 
-//     std::string local_ip, 
-//     unsigned short local_port,
-//     std::string remote_ip, 
-//     unsigned short remote_port, 
-//     boost::asio::io_context& io_context
-// ):  UDPInterface(local_ip, local_port, remote_ip, remote_port, io_context),
-//     durations(durations),
-//     flags(flags)
-// {
-
-// }
-
-// Ground::Ground(
-//     Ground& ground, 
-//     boost::asio::io_context& io_context
-// ):  UDPInterface(ground.local_ip, ground.local_port, ground.remote_ip, ground.remote_port)
-// {
-
-// }
-
-
-// to resolve this, need multiple dispatch: define this function separately for each Subsystem, even if they share an interface.
-// int Ground::send(char buff[RECV_BUFF_LEN], Housekeeping& caller) {
-//     local_socket.async_send_to(
-//         boost::asio::buffer(buff, RECV_BUFF_LEN), 
-//         remote_endpoint,
-//         [this, caller, buff](boost::system::error_code ec, std::size_t bytes_received) {
-//             if(!ec && bytes_received > 0) {
-//                 caller.recv(buff);
-//             } else {
-//                 std::cerr << ec.what();
-//                 throw "couldn't repeat to ground\n";
-//             }
-//         }
-//     );
-// }
-
-
-
-// Housekeeping::Housekeeping(
-//     SUBSYSTEM_ORDER out_name, 
-//     STATE_ORDER out_state,
-//     Ground& in_ground,
-//     std::map<STATE_ORDER, double>& durations, 
-//     std::map<std::string, std::string>& flags,  
-//     std::string local_ip, 
-//     unsigned short local_port, 
-//     std::string remote_ip, 
-//     unsigned short remote_port,
-//     boost::asio::io_context& io_context
-// ):  UDPInterface(local_ip, local_port, remote_ip, remote_port, io_context), 
-//     ground(in_ground, io_context), 
-//     durations(durations), 
-//     flags(flags) 
-// {
-//     is_active = false;
-//     name = out_name;
-//     state = out_state;
-// }
-
-// int Housekeeping::recv(std::vector<std::vector<char>>& q) {
-//     char buff[RECV_BUFF_LEN];
-//     local_socket.async_receive_from(
-//         boost::asio::buffer(buff, RECV_BUFF_LEN),
-//         remote_endpoint,
-//         [this, buff, q](boost::system::error_code ec, std::size_t bytes_received) {
-//             if(!ec && bytes_received > 0) {
-//                 this->ground.send(buff, this);
-//             } else {
-//                 std::cout << ec.what();
-//                 Housekeeping::recv(q);
-//             }
-//         }
-//     );
-//     return 0;
-// }
-
-
-
-// CdTe::CdTe(
-//     SUBSYSTEM_ORDER sys_name, 
-//     STATE_ORDER initial_state, 
-//     std::string local_ip, 
-//     unsigned short local_port, 
-//     std::string remote_ip, 
-//     unsigned short remote_port, 
-//     boost::asio::ip::tcp::endpoint& ground, 
-//     boost::asio::io_context& io_context
-// )
-//     : TCPInterface::TCPInterface
-//     (
-//         local_ip, 
-//         local_port, 
-//         remote_ip, 
-//         remote_port, 
-//         io_context
-//     ) 
-// {
-    
-//     state = state;
-//     name = name;
-
-//     ground_endpoint = ground;
-// }
-
-// CdTe::~CdTe() {
-//     TCPInterface::~TCPInterface();
-
-//     // do whatever to end TCP connection
-// }
-
-// void CdTe::forward_to_ground() {
-//     // receive from remote_endpoint
-//     // send to ground_endpoint
-// }
