@@ -81,6 +81,11 @@ void PepperMill::recv_tcp_fwd_udp() {
 void PepperMill::send_udp() {
     std::cout << "hi (not really doing anything)\n";
     // forward the buffer share_data...
+    local_udp_sock.async_send_to(
+        boost::asio::buffer(share_data),
+        remote_udp_endpoint,
+        boost::bind(&PepperMill::recv_tcp_fwd_udp, this)
+    );
     // clear the buffer share_data...
     PepperMill::recv_tcp_fwd_udp();
 }
