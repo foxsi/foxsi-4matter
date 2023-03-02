@@ -11,4 +11,5 @@ See PISETUP.md for instructions on booting the Raspberry Pi.
     - boost::bind
     - boost::statechart
     - boost::interprocess
+- [pigpio](https://abyz.me.uk/rpi/pigpio/download.html)
 
