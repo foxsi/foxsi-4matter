@@ -71,6 +71,28 @@ PepperMill::PepperMill(
 }
 
 
+PepperMill::PepperMill(
+    boost::asio::ip::udp::endpoint local_udp_end,
+    boost::asio::ip::tcp::endpoint local_tcp_end,
+    boost::asio::ip::udp::endpoint remote_udp_end,
+    boost::asio::ip::tcp::endpoint remote_tcp_end,
+    boost::asio::io_context& context
+): 
+    local_udp_sock(context),
+    local_tcp_sock(context)
+{
+    remote_udp_endpoint = remote_udp_end;
+    remote_tcp_endpoint = remote_tcp_end;
+
+    local_udp_sock.open(boost::asio::ip::udp::v4());
+    local_udp_sock.bind(local_udp_end);
+
+    local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    local_tcp_sock.bind(local_tcp_end);
+    local_tcp_sock.connect(remote_tcp_endpoint);
+}
+
+
 void PepperMill::recv_tcp_fwd_udp() {
     std::cout << "in recv_tcp_fwd_udp()\n";
 

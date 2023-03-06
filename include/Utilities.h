@@ -12,4 +12,6 @@ STATE_ORDER operator++(STATE_ORDER& order, int);
 // increment i mod n (loop through enum?)
 int inc_mod(int i, int n);
 
+void debug_print(std::string msg);
+
 #endif

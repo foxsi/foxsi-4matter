@@ -83,7 +83,7 @@ endif()
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost 1.80 REQUIRED COMPONENTS filesystem program_options)
+find_package(Boost 1.70 REQUIRED COMPONENTS filesystem program_options)
 if(Boost_FOUND)
     message(STATUS "Boost version: ${Boost_VERSION}")
     

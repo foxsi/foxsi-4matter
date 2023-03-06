@@ -1,9 +1,21 @@
 #include "LineInterface.h"
 #include "Parameters.h"
 
+#include "Utilities.h"
 #include <iostream>
 
-LineInterface::LineInterface(int argc, char* argv[]): options("options") {
+EndpointData::EndpointData(std::string ip, std::string prot, unsigned short pt) {
+    address = ip;
+    protocol = prot;
+    port = pt;
+}
+EndpointData::EndpointData() {
+    address = "";
+    protocol = "";
+    port = 0;
+}
+
+LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
     options.add_options()
         ("help,h",                                                              "output help message")
         ("version",                                                             "output software version number")
@@ -47,10 +59,83 @@ LineInterface::LineInterface(int argc, char* argv[]): options("options") {
         std::cout << version << "\n";
         exit(0);
     }
+    if(vm.count("verbose")) {
+        do_verbose = true;
+        verbose_print("verbose printing on");
+    }
     if(vm.count("file")) {
         std::string config_filename = vm["file"].as<std::string>();
-        std::cout << "reading options from " << config_filename << "\n";
+        verbose_print("reading file from " + config_filename);
         boost::program_options::store(boost::program_options::parse_config_file(config_filename.c_str(), options), vm);
     }
     boost::program_options::notify(vm);
+
+    // initialize missings map:
+    missings = {
+        {"gse", false},
+        {"evtm", false},
+        {"spmu", false},
+    };
+
+    EndpointData gse;
+    EndpointData evtm;
+    EndpointData spmu;
+
+    // define gse:
+    if(vm.count("gse.ip") && vm.count("gse.port") && vm.count("gse.protocol")) {
+        verbose_print("gse: connect over " + vm["gse.protocol"].as<std::string>()+ " to " + vm["gse.ip"].as<std::string>() + ":" + vm["gse.port"].as<std::string>());
+
+        EndpointData thisendpoint(
+            vm["gse.ip"].as<std::string>(),
+            vm["gse.protocol"].as<std::string>(),
+            vm["gse.port"].as<unsigned short>()
+        );
+        gse = thisendpoint;
+        endpoints.push_back(thisendpoint);
+    } else {
+        missings["gse"] = true;
+        verbose_print("didn't find gse in config");
+    }
+    // define evtm:
+    if(vm.count("evtm.ip") && vm.count("evtm.port") && vm.count("evtm.protocol")) {
+        verbose_print("evtm: connect over " + vm["evtm.protocol"].as<std::string>()+ " to " + vm["evtm.ip"].as<std::string>() + ":" + vm["evtm.port"].as<std::string>());
+
+        EndpointData thisendpoint(
+            vm["evtm.ip"].as<std::string>(),
+            vm["evtm.protocol"].as<std::string>(),
+            vm["evtm.port"].as<unsigned short>()
+        );
+        evtm = thisendpoint;
+        endpoints.push_back(thisendpoint);
+    } else {
+        missings["evtm"] = true;
+        verbose_print("didn't find evtm in config");
+    }
+    // define spmu:
+    if(vm.count("spmu.ip") && vm.count("spmu.port") && vm.count("spmu.protocol")) {
+        verbose_print("spmu: connect over " + vm["spmu.protocol"].as<std::string>()+ " to " + vm["spmu.ip"].as<std::string>() + ":" + vm["spmu.port"].as<std::string>());
+
+        EndpointData thisendpoint(
+            vm["spmu.ip"].as<std::string>(),
+            vm["spmu.protocol"].as<std::string>(),
+            vm["spmu.port"].as<unsigned short>()
+        );
+        spmu = thisendpoint;
+        endpoints.push_back(thisendpoint);
+    } else {
+        missings["spmu"] = true;
+        verbose_print("didn't find spmu in config");
+    }
+
+    if(vm.count("local.ip")) {
+        verbose_print("local ip: " + vm["local.ip"].as<std::string>());
+    } else {
+        verbose_print("didn't find local ip");
+    }
+}
+
+void LineInterface::verbose_print(std::string msg) {
+    if(do_verbose) {
+        std::cout << msg << "\n";
+    }
 }

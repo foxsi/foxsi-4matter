@@ -2,8 +2,18 @@
 #define LINEINTERFACE_H
 
 #include <boost/program_options.hpp>
+#include <boost/asio.hpp>
 #include <string>
 #include <map>
+
+class EndpointData {
+    public:
+        std::string address;
+        std::string protocol;
+        unsigned short port;
+        EndpointData(std::string ip, std::string prot, unsigned short pt);
+        EndpointData();
+};
 
 class LineInterface {
     private:
@@ -15,9 +25,14 @@ class LineInterface {
 
     public:
         std::string version;
+        std::map<std::string, bool> missings;
+        std::vector<EndpointData> endpoints;
 
     public:
-        LineInterface(int argc, char* argv[]);
+        LineInterface(int argc, char* argv[], boost::asio::io_context& context);
+
+    private:
+        void verbose_print(std::string msg);
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "Utilities.h"
+#include <iostream>
 
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order) {
     order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_COUNT);
@@ -24,4 +25,10 @@ STATE_ORDER operator++(STATE_ORDER& order, int) {
 
 int inc_mod(int i, int n) {
     return i = (i + 1 == n ? 0: i + 1);
+}
+
+void debug_print(std::string msg) {
+    if(DEBUG) {
+        std::cout << msg << "\n";
+    }
 }

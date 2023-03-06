@@ -36,6 +36,13 @@ class PepperMill {
             unsigned short remote_udp_port,
             boost::asio::io_context& context
         );
+        PepperMill(
+            boost::asio::ip::udp::endpoint local_udp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_end,
+            boost::asio::ip::udp::endpoint remote_udp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_end,
+            boost::asio::io_context& context
+        );
 
         void update(SUBSYSTEM_ORDER new_subsys, STATE_ORDER new_state);
 
