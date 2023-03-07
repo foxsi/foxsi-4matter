@@ -36,6 +36,19 @@ int UDPInterface::async_send(uint8_t* addr, char* buffer) {
     return 0;
 }
 
-void UDPInterface::async_send(char* buffer, std::size_t length) {
-    // local_socket.send_to(buffer, remote_endpoint);
+// int recv(std::queue<std::vector<char>>& q) {
+//     return 0;
+// }
+int recv(std::vector<std::vector<char>>& q) {
+    return 0;
 }
+int send(std::queue<std::vector<char>>& q) {
+    return 0;
+}
+// int send(std::vector<std::vector<char>>& q) {
+//     return 0;
+// }
+
+// void UDPInterface::async_send(char* buffer, std::size_t length) {
+//     // local_socket.send_to(buffer, remote_endpoint);
+// }

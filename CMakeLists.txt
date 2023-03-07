@@ -16,6 +16,8 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
 
@@ -31,6 +33,22 @@ target_include_directories(
 add_executable(tcp_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
 target_include_directories(
     tcp_example
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "forwarding_example" using source files
+add_executable(forwarding_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
+target_include_directories(
+    forwarding_example
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "cli_example" using source files
+add_executable(cli_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
+target_include_directories(
+    cli_example
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -51,6 +69,8 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(lib PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
+    target_link_libraries(forwarding_example PRIVATE Threads::Threads)
+    target_link_libraries(cli_example PRIVATE Threads::Threads)
 elseif(UNIX AND APPLE)
     # this usually builds fine
 else()
@@ -63,7 +83,7 @@ endif()
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost 1.50 REQUIRED COMPONENTS filesystem)
+find_package(Boost 1.70 REQUIRED COMPONENTS filesystem program_options)
 if(Boost_FOUND)
     message(STATUS "Boost version: ${Boost_VERSION}")
     
@@ -76,9 +96,11 @@ if(Boost_FOUND)
             INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
     endif()
 
-    target_link_libraries(lib PUBLIC Boost::filesystem)
+    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(formatter PUBLIC Boost::filesystem lib)
     target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
