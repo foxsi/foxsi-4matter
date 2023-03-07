@@ -23,7 +23,7 @@
 6. Connect the laptop to the Raspberry Pi with an Ethernet cable.
 
 # Talking to the Raspberry Pi (SSH)
-**From here I assume macOS Terminal, and knowledge of filesystem navigation (`ls`, `cd`) and file editing ([vim](https://devhints.io/vim) or [nano](https://www.nano-editor.org/dist/latest/cheatsheet.html)**. You can translate the shell commands if needed. I use the bash prompt `%` to indicate the macOS Terminal command line, and the `$` bash prompt to indicate the Linux command line via the SSH session.
+**From here I assume macOS Terminal, and knowledge of filesystem navigation (`ls`, `cd`) and file editing ([vim](https://devhints.io/vim) or [nano](https://www.nano-editor.org/dist/latest/cheatsheet.html))**. You can translate the shell commands if needed. I use the bash prompt `%` to indicate the macOS Terminal command line, and the `$` bash prompt to indicate the Linux command line via the SSH session.
 1. Open a Terminal window.
 2. SSH into the Raspberry Pi with the following command, replacing the `<username>` with the username you chose when making the boot image:
 ```
