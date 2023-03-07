@@ -3,16 +3,20 @@
 #include <boost/bind.hpp>
 #include <iostream>
 
-Metronome::Metronome(boost::asio::io_context& io_context) {
+Metronome::Metronome(double period, boost::asio::io_context& io_context) {
     subsystem = HOUSEKEEPING;
     state = CMD_SEND;
 
-    tick_period_seconds = boost::asio::chrono::seconds(1);
-    timer = new boost::asio::steady_timer(io_context, tick_period_seconds);
+    if(period <= 0) {
+        throw "period must be positive\n";
+    }
+
+    tick_period_milliseconds = boost::asio::chrono::milliseconds(int(period*1000));
+    timer = new boost::asio::steady_timer(io_context, tick_period_milliseconds);
     timer->async_wait(boost::bind(&Metronome::tick, this));
 }
 
-Metronome::~Metronome() {}
+// Metronome::~Metronome() {}
 
 void Metronome::run() {
     timer->async_wait(boost::bind(&Metronome::tick, this));
@@ -28,7 +32,7 @@ void Metronome::tick() {
     Metronome::update();
 
     // update timer
-    timer->expires_at(timer->expires_at() + tick_period_seconds);
+    timer->expires_at(timer->expires_at() + tick_period_milliseconds);
     timer->async_wait(boost::bind(&Metronome::tick, this));
 }
 

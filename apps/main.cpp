@@ -13,7 +13,8 @@ int main(int argc, char** argv){
     std::cout << "max state: " << STATE_COUNT << "\n";
 
     boost::asio::io_context io_context;
-    Metronome metronome(io_context);
+    double period = 1.0;
+    Metronome metronome(period, io_context);
 
     io_context.run();
 

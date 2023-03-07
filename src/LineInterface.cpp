@@ -15,6 +15,17 @@ EndpointData::EndpointData() {
     port = 0;
 }
 
+TimeData::TimeData(double period_s) {
+    if(period_s > 0) {
+        period_seconds = period_s;
+    } else {
+        throw "period must be positive\n";
+    } 
+}
+TimeData::TimeData() {
+    period_seconds = 0.0;
+}
+
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
     options.add_options()
         ("help,h",                                                              "output help message")
@@ -34,7 +45,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         ("gse.protocol",    boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and GSE")
         ("evtm.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and EVTM")
         ("spmu.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and SPMU")
-        ("period,T",        boost::program_options::value<unsigned long>(),     "main loop period in milliseconds")
+        ("period,T",        boost::program_options::value<double>(),     "main loop period in seconds")
     ;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
     boost::program_options::notify(vm);
@@ -56,8 +67,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         exit(0);
     }
     if(vm.count("version")) {
-        std::cout << version << "\n";
-        exit(0);
+        std::cout << "version: " << version << "\n";
     }
     if(vm.count("verbose")) {
         do_verbose = true;
@@ -83,7 +93,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
     // define gse:
     if(vm.count("gse.ip") && vm.count("gse.port") && vm.count("gse.protocol")) {
-        verbose_print("gse: connect over " + vm["gse.protocol"].as<std::string>()+ " to " + vm["gse.ip"].as<std::string>() + ":" + vm["gse.port"].as<std::string>());
+        verbose_print("gse: connect over " + vm["gse.protocol"].as<std::string>()+ " to " + vm["gse.ip"].as<std::string>() + ":" + std::to_string(vm["gse.port"].as<unsigned short>()));
 
         EndpointData thisendpoint(
             vm["gse.ip"].as<std::string>(),
@@ -98,7 +108,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     }
     // define evtm:
     if(vm.count("evtm.ip") && vm.count("evtm.port") && vm.count("evtm.protocol")) {
-        verbose_print("evtm: connect over " + vm["evtm.protocol"].as<std::string>()+ " to " + vm["evtm.ip"].as<std::string>() + ":" + vm["evtm.port"].as<std::string>());
+        verbose_print("evtm: connect over " + vm["evtm.protocol"].as<std::string>()+ " to " + vm["evtm.ip"].as<std::string>() + ":" + std::to_string(vm["evtm.port"].as<unsigned short>()));
 
         EndpointData thisendpoint(
             vm["evtm.ip"].as<std::string>(),
@@ -113,7 +123,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     }
     // define spmu:
     if(vm.count("spmu.ip") && vm.count("spmu.port") && vm.count("spmu.protocol")) {
-        verbose_print("spmu: connect over " + vm["spmu.protocol"].as<std::string>()+ " to " + vm["spmu.ip"].as<std::string>() + ":" + vm["spmu.port"].as<std::string>());
+        verbose_print("spmu: connect over " + vm["spmu.protocol"].as<std::string>()+ " to " + vm["spmu.ip"].as<std::string>() + ":" + std::to_string(vm["spmu.port"].as<unsigned short>()));
 
         EndpointData thisendpoint(
             vm["spmu.ip"].as<std::string>(),
@@ -131,6 +141,15 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         verbose_print("local ip: " + vm["local.ip"].as<std::string>());
     } else {
         verbose_print("didn't find local ip");
+    }
+
+    TimeData times;
+
+    // get timing info
+    if(vm.count("period")) {
+        verbose_print("loop period: " + std::to_string(vm["period"].as<double>()));
+        TimeData temp(vm["period"].as<double>());
+        times = temp;
     }
 }
 

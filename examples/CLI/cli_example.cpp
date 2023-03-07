@@ -1,5 +1,6 @@
 #include "LineInterface.h"
 #include "Subsystem.h"
+#include "Metronome.h"
 #include <boost/asio.hpp>
 #include <iostream>
 
@@ -14,8 +15,8 @@ int main(int argc, char* argv[]) {
 
     bool tcpb = 0;
     bool udpb = 0;
-    // loop over all peripherals
 
+    // loop over all peripherals
     for(int i = 0; i<lif.endpoints.size(); i++) {
         if(lif.endpoints[i].protocol.compare("udp") == 0) {
             local_udp_endpoint.address(boost::asio::ip::make_address(lif.endpoints[i].address));
@@ -33,6 +34,11 @@ int main(int argc, char* argv[]) {
         local_tcp_endpoint,
         remote_udp_endpoint,
         remote_tcp_endpoint,
+        context
+    );
+
+    Metronome metronome(
+        lif.times.period_seconds,
         context
     );
     

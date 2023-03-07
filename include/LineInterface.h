@@ -15,6 +15,13 @@ class EndpointData {
         EndpointData();
 };
 
+class TimeData {
+    public:
+        double period_seconds;
+        TimeData(double period_s);
+        TimeData();
+};
+
 class LineInterface {
     private:
         boost::program_options::options_description options;
@@ -27,6 +34,7 @@ class LineInterface {
         std::string version;
         std::map<std::string, bool> missings;
         std::vector<EndpointData> endpoints;
+        TimeData times;
 
     public:
         LineInterface(int argc, char* argv[], boost::asio::io_context& context);
