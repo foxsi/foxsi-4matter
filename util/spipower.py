@@ -26,10 +26,23 @@ spi=spidev.SpiDev()
 #   GPIO11: P23    SCLK
 # jumper out of ether switch board
 
+# convenience function to print status:
+def print_status(state):
+    print("    CdTe-DE:\t" + ("on" if not (state & 0b0000000001) else "off")) 
+    print("    Timepix:\t" + ("on" if not (state & 0b0000000010) else "off")) 
+    print("    SAAS:\t" + ("on" if not (state & 0b0000000100) else "off")) 
+    print("    CdTe 1:\t" + ("on" if not (state & 0b0000001000) else "off")) 
+    print("    CdTe 2:\t" + ("on" if not (state & 0b0000010000) else "off")) 
+    print("    CdTe 3:\t" + ("on" if not (state & 0b0000100000) else "off")) 
+    print("    CdTe 4:\t" + ("on" if not (state & 0b0001000000) else "off")) 
+    print("    CMOS 1:\t" + ("on" if not (state & 0b0010000000) else "off")) 
+    print("    CMOS 2:\t" + ("on" if not (state & 0b0100000000) else "off")) 
+    print("\n")
 
 spi.open(0,0)
-spi.max_speed_hz = 100000   # 100 kHz
+spi.max_speed_hz = 10000   # 10 kHz
 spi.mode = 0b01
+# spi.bits_per_word = 16
 
 rd = 0b10000000
 wr = 0b00000000
@@ -37,43 +50,49 @@ wr = 0b00000000
 hi = 0x00
 lo = 0x01
 
+# user prompt string:
+prompt = """User, enter:
+    [0]: toggle CdTe-DE
+    [1]: toggle Timepix
+    [2]: toggle SAAS
+    [3]: toggle CdTe canister 1
+    [4]: toggle CdTe canister 2
+    [5]: toggle CdTe canister 3
+    [6]: toggle CdTe canister 4
+    [7]: toggle CMOS 1
+    [8]: toggle CMOS 2
+
+    [a]: everything on
+    [o]: everything off
+
+    [q]: exit 
+""" 
+
 # set all outputs to zero:
-spi.xfer2([wr|0x0A, 0xFF])
+# spi.xfer2([wr|0x0A, 0x01])
+spi.xfer([0x0A, lo])
 print("all outputs should be low.")
 
-state = 0x00
+state = 0b1111111111
 key = "o"
 
 while key != "q":
-    key = input("""Enter:
-        [0]: toggle CdTe-DE
-        [1]: toggle Timepix
-        [2]: toggle SAAS
-        [3]: toggle CdTe canister 1
-        [4]: toggle CdTe canister 2
-        [5]: toggle CdTe canister 3
-        [6]: toggle CdTe canister 4
-        [7]: toggle CMOS 1
-        [8]: toggle CMOS 2
-
-        [a]: everything on
-        [o]: everything off
-
-        [q]: exit 
-    """)
+    key = input(prompt)
     if key.isdigit():
         sys = int(key)
         state = state ^ (1 << sys)
         level = (state >> sys) & 1
-        spi.xfer2([wr|sys, level])
+        spi.xfer2([sys, level])
 
     else:
         if key == "a":
-            state = 0b1111111111
-            spi.xfer2([wr|0x0A, 0x00])
+            state = 0b0000000000 
+            spi.xfer2([0x0A, hi])
         elif key == "o":
-            state = 0b0000000000
-            spi.xfer2([wr|0x0A, 0xFF])
-    print(format(state, '010b'))
+            state = 0b1111111111
+            spi.xfer2([0x0A, lo])
+
+    #print("state: " + format(state, '010b')) 
+    print_status(state)
 
 spi.close()
