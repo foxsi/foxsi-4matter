@@ -101,7 +101,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             vm["gse.port"].as<unsigned short>()
         );
         gse = thisendpoint;
-        endpoints.push_back(thisendpoint);
+        endpoints.insert({"gse", thisendpoint});
     } else {
         missings["gse"] = true;
         verbose_print("didn't find gse in config");
@@ -116,7 +116,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             vm["evtm.port"].as<unsigned short>()
         );
         evtm = thisendpoint;
-        endpoints.push_back(thisendpoint);
+        endpoints.insert({"evtm", thisendpoint});
     } else {
         missings["evtm"] = true;
         verbose_print("didn't find evtm in config");
@@ -131,7 +131,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             vm["spmu.port"].as<unsigned short>()
         );
         spmu = thisendpoint;
-        endpoints.push_back(thisendpoint);
+        endpoints.insert({"spmu", thisendpoint});
     } else {
         missings["spmu"] = true;
         verbose_print("didn't find spmu in config");
@@ -139,6 +139,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
     if(vm.count("local.ip")) {
         verbose_print("local ip: " + vm["local.ip"].as<std::string>());
+        local_address = vm["local.ip"].as<std::string>();
     } else {
         verbose_print("didn't find local ip");
     }

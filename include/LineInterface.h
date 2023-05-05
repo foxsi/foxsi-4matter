@@ -33,7 +33,8 @@ class LineInterface {
     public:
         std::string version;
         std::map<std::string, bool> missings;
-        std::vector<EndpointData> endpoints;
+        std::map<std::string, EndpointData> endpoints;
+        std::string local_address;
         TimeData times;
 
     public:

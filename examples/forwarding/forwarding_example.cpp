@@ -13,9 +13,9 @@ int main() {
     std::string ground_ip = "192.168.1.8";
 
     // number ports for local receiving, remote TCP, and remote UDP.
-    unsigned short local_ground_port = 9999;
-    unsigned short remote_ground_port = 9999;
-    unsigned short remote_subsys_port = 10000;
+    unsigned short local_ground_port = 10000;
+    unsigned short remote_ground_port = 10000;
+    unsigned short remote_subsys_port = 9999;
 
     // create the Boost io_context to handle async events
     boost::asio::io_context context;
