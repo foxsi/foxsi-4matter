@@ -37,6 +37,8 @@ int main(int argc, char* argv[]) {
         context
     );
 
+    mill.recv_tcp_fwd_udp();
+
     Metronome metronome(
         lif.times.period_seconds,
         context
