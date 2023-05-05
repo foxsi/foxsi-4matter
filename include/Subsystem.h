@@ -19,7 +19,8 @@ class PepperMill {
         boost::asio::ip::udp::endpoint remote_udp_endpoint;
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
 
-        std::vector<char> share_data;
+        std::vector<char> downlink_buff;
+        std::vector<char> uplink_buff;
         std::queue<char> ground_pipe;
 
         STATE_ORDER active_state;
@@ -48,6 +49,7 @@ class PepperMill {
 
         void handle_recv();
         void recv_tcp_fwd_udp();
+        void recv_udp_fwd_tcp();
         void send_tcp();
         void send_udp();
 };

@@ -43,7 +43,8 @@ int main() {
         context
     );
 
-    frmtr.recv_tcp_fwd_udp();   // need to give the io_context something to do, else it dies immediately 
+    frmtr.recv_tcp_fwd_udp();   // the io_context will asynchronously liten for TCP packets and forward them out to the UDP endpoint
+    frmtr.recv_udp_fwd_tcp();   // ...and vice-versa
     context.run();
 
     return 0;
