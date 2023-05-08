@@ -11,7 +11,7 @@
 #include <map>
 #include <queue>
 
-class PepperMill {
+class TransportLayerMachine {
     public:
         boost::asio::ip::udp::socket local_udp_sock;
         boost::asio::ip::tcp::socket local_tcp_sock;
@@ -27,8 +27,8 @@ class PepperMill {
         SUBSYSTEM_ORDER active_subsys;
 
     public:
-        PepperMill(boost::asio::io_context& context);
-        PepperMill(
+        TransportLayerMachine(boost::asio::io_context& context);
+        TransportLayerMachine(
             std::string local_ip,
             std::string remote_tcp_ip,
             std::string remote_udp_ip,
@@ -37,7 +37,7 @@ class PepperMill {
             unsigned short remote_udp_port,
             boost::asio::io_context& context
         );
-        PepperMill(
+        TransportLayerMachine(
             boost::asio::ip::udp::endpoint local_udp_end,
             boost::asio::ip::tcp::endpoint local_tcp_end,
             boost::asio::ip::udp::endpoint remote_udp_end,

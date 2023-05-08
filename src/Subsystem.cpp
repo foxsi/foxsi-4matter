@@ -4,7 +4,7 @@
 #include <algorithm>        // std::fill
 
 // construct from Parameters.h macro constants
-PepperMill::PepperMill(
+TransportLayerMachine::TransportLayerMachine(
     boost::asio::io_context& context
 ):  
     local_udp_sock(context), 
@@ -36,7 +36,7 @@ PepperMill::PepperMill(
 }
 
 // construct from IP address:port pairs
-PepperMill::PepperMill(
+TransportLayerMachine::TransportLayerMachine(
     std::string local_ip,
     std::string remote_tcp_ip,
     std::string remote_udp_ip,
@@ -75,7 +75,7 @@ PepperMill::PepperMill(
 
 
 // construct from existing boost asio endpoints
-PepperMill::PepperMill(
+TransportLayerMachine::TransportLayerMachine(
     boost::asio::ip::udp::endpoint local_udp_end,
     boost::asio::ip::tcp::endpoint local_tcp_end,
     boost::asio::ip::udp::endpoint remote_udp_end,
@@ -104,48 +104,48 @@ PepperMill::PepperMill(
 }
 
 
-void PepperMill::recv_tcp_fwd_udp() {
+void TransportLayerMachine::recv_tcp_fwd_udp() {
     std::cout << "in recv_tcp_fwd_udp()\n";
 
     // read incoming TCP data...
     local_tcp_sock.async_read_some(
         boost::asio::buffer(downlink_buff),         // read data into the downlink buffer
-        boost::bind(&PepperMill::send_udp, this)    // callback to send_udp to forward the data after it has been received
+        boost::bind(&TransportLayerMachine::send_udp, this)    // callback to send_udp to forward the data after it has been received
     );
 }
 
-void PepperMill::recv_udp_fwd_tcp() {
+void TransportLayerMachine::recv_udp_fwd_tcp() {
     std::cout << "in recv_udp_fwd_tcp()\n";
 
     // read incoming UDP data...
     local_udp_sock.async_receive_from(
         boost::asio::buffer(uplink_buff),           // read data into the uplink buffer
         remote_udp_endpoint,                        // receive data from the UDP endpoint
-        boost::bind(&PepperMill::send_tcp, this)    // callback to send_tcp to forward the data after it has been received
+        boost::bind(&TransportLayerMachine::send_tcp, this)    // callback to send_tcp to forward the data after it has been received
     );
 }
 
-void PepperMill::send_udp() {
+void TransportLayerMachine::send_udp() {
     std::cout << "in send_udp\n";
 
     // forward the buffer downlink_buff over UDP...
     local_udp_sock.async_send_to(
         boost::asio::buffer(downlink_buff),                 // send out the contents of downlink_buff
         remote_udp_endpoint,                                // send to the UDP endpoint
-        boost::bind(&PepperMill::recv_tcp_fwd_udp, this)    // callback to recv_tcp_fwd_udp after send to continue listening
+        boost::bind(&TransportLayerMachine::recv_tcp_fwd_udp, this)    // callback to recv_tcp_fwd_udp after send to continue listening
     );
 
     // clear the downlink buffer
     std::fill(downlink_buff.begin(), downlink_buff.end(), '\0');
 }
 
-void PepperMill::send_tcp() {
+void TransportLayerMachine::send_tcp() {
     std::cout << "in send_tcp\n";
 
     // forward the buffer uplink_buff over TCP...
     local_tcp_sock.async_send(
         boost::asio::buffer(uplink_buff),                   // send out the contents of uplink_buff
-        boost::bind(&PepperMill::recv_udp_fwd_tcp, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+        boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp, this)    // callback to recv_udp_fwd_tcp after send to continue listening
     );
 
     // clear the buffer uplink_buff...

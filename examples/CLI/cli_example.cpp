@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     remote_tcp_endpoint.port(lif.endpoints["spmu"].port);
 
 
-    // PepperMill mill(
+    // TransportLayerMachine mill(
     //     local_udp_endpoint,
     //     local_tcp_endpoint,
     //     remote_udp_endpoint,
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     //     context
     // );
 
-    PepperMill frmtr(
+    TransportLayerMachine frmtr(
         lif.local_address,              // IP address of this computer
         lif.endpoints["spmu"].address,  // IP of the remote TCP computer (to listen to)
         lif.endpoints["gse"].address,   // IP of the remote UDP computer (to send to)

@@ -33,7 +33,7 @@ int main() {
         {"flag0", "no"}
     };
 
-    PepperMill frmtr(
+    TransportLayerMachine frmtr(
         local_ip,               // IP address of this computer
         ground_ip,              // IP of the remote TCP computer (to listen to)
         ground_ip,              // IP of the remote UDP computer (to send to)
