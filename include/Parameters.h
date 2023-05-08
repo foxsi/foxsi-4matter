@@ -16,6 +16,15 @@ static bool DEBUG = true;
 // DON'T CHANGE THIS WITHOUT EXTENSIVE TESTING
 static const unsigned short         PERIOD          = 1;
 
+// SpaceWire
+static const unsigned short         SPACEWIRE_ADDRESS_LENGTH  = 4;
+
+// UART
+static const unsigned short         UART_ADDRESS_LENGTH = 4;
+
+// SPI (forwarding to HK board)
+static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
+
 // IP addresses
 static std::string                  LOOPBACK_IP     = "127.0.0.1";
 
