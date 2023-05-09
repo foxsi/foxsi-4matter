@@ -12,4 +12,5 @@ See [PISETUP.md](PISETUP.md) for instructions on booting the Raspberry Pi.
     - boost::statechart
     - boost::interprocess
 - [pigpio](https://abyz.me.uk/rpi/pigpio/download.html)
+- [nlohmann JSON](https://github.com/nlohmann/json)
 
