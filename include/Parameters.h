@@ -24,6 +24,7 @@ static const unsigned short         UART_ADDRESS_LENGTH = 4;
 
 // SPI (forwarding to HK board)
 static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
+static const unsigned short         SPI_INSTRUCTION_LENGTH = 4;
 
 // IP addresses
 static std::string                  LOOPBACK_IP     = "127.0.0.1";
@@ -69,6 +70,13 @@ enum STATE_ORDER {
     DATA_STORE,
     IDLE,
     STATE_COUNT
+};
+
+enum COMMAND_TYPE_OPTIONS{
+    NONE,
+    SPW,
+    UART,
+    SPI
 };
 
 #endif

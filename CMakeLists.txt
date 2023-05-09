@@ -17,6 +17,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
@@ -79,6 +80,10 @@ endif()
 
 # message(STATUS "CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 
+# JSON library
+find_package(nlohmann_json 3.11.2 REQUIRED)
+# target_link_libraries(lib PRIVATE nlohmann_json::nlohmann_json)
+
 # Boost library
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
@@ -96,7 +101,10 @@ if(Boost_FOUND)
             INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
     endif()
 
-    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options)
+    # link the whole user code library to Boost and JSON
+    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options nlohmann_json::nlohmann_json)
+
+    # then link it all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem lib)
     target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
     target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
@@ -104,3 +112,4 @@ if(Boost_FOUND)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
+
