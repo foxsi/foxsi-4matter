@@ -1,10 +1,22 @@
 #include "LineInterface.h"
 #include "Subsystem.h"
 #include "Metronome.h"
+#include "Commanding.h"
+#include "Parameters.h"
 #include <boost/asio.hpp>
+#include <unordered_map>
 #include <iostream>
 
 int main(int argc, char* argv[]) {
+
+
+    std::string systems_filename = "foxsi4-commands/all_systems.json";
+    std::string commands_filename = "foxsi4-commands/commands.json";
+    std::unordered_map<std::string, std::string> file_label{{"SYSTEMS", systems_filename}, {"CDTE", commands_filename}};
+
+    CommandDeck deck = CommandDeck(file_label);
+
+
     boost::asio::io_context context;
     LineInterface lif(argc, argv, context);
 
@@ -15,19 +27,6 @@ int main(int argc, char* argv[]) {
 
     bool tcpb = 0;
     bool udpb = 0;
-
-    // loop over all peripherals
-    // for(int i = 0; i<lif.endpoints.size(); i++) {
-    //     if(lif.endpoints[i].protocol.compare("udp") == 0) {
-    //         local_udp_endpoint.address(boost::asio::ip::make_address(lif.endpoints[i].address));
-    //         local_udp_endpoint.port(lif.endpoints[i].port);
-    //     } else if (lif.endpoints[i].protocol.compare("tcp") == 0) {
-    //         local_tcp_endpoint.address(boost::asio::ip::make_address(lif.endpoints[i].address));
-    //         local_tcp_endpoint.port(lif.endpoints[i].port);
-    //     } else {
-    //         std::cout << "undefined protocol found\n";
-    //     }
-    // }
 
     local_udp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
     local_udp_endpoint.port(lif.endpoints["gse"].port);

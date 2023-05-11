@@ -9,18 +9,20 @@
 // object to hold command metadata (TODO: add more attributes)
 class Command {
     public:
+        /* Public properties */
         std::string name;
         char hex;
         bool read;
 
         COMMAND_TYPE_OPTIONS type;
         
+        /* Public methods */
         Command(std::string name, char hex, bool read, COMMAND_TYPE_OPTIONS);
         
         void set_type(COMMAND_TYPE_OPTIONS type);
         
         void set_spw_options(
-            std::vector<char> new_spw_instruction,
+            char new_spw_instruction,
             std::vector<char> new_spw_address,
             std::vector<char> new_spw_write_data,
             unsigned short new_spw_reply_length
@@ -40,7 +42,7 @@ class Command {
     
     private:
         // SpaceWire-related data:
-        std::vector<char> spw_instruction;
+        char spw_instruction;
         std::vector<char> spw_address;
         std::vector<char> spw_write_data;
         unsigned short spw_reply_length;
@@ -67,14 +69,7 @@ class System {
 
 class CommandDeck {
     public:
-        enum FILES {
-            SYSTEMS,
-            TIMEPIX,
-            CDTE,
-            CDTE_OFFSET,
-            CMOS,
-            HK
-        };
+        
 
         std::vector<System> systems;
 
@@ -84,7 +79,7 @@ class CommandDeck {
 
         // pass in a map pairing system text names ("CDTE") with json command file paths
         // CommandDeck(std::unordered_map<std::string, std::string> named_paths);
-        CommandDeck(std::unordered_map<FILES, std::string> named_paths);
+        CommandDeck(std::unordered_map<std::string, std::string> named_paths);
         
         int             validate(void);
 
@@ -93,7 +88,7 @@ class CommandDeck {
         System&         get_sys_for_code(char code);
         System&         get_sys_for_name(std::string name);
 
-        Command*        get_command_for_sys_for_cmd(char sys, char code);
+        Command&        get_command_for_sys_for_cmd(char sys, char code);
     
     private:
         
