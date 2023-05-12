@@ -9,6 +9,6 @@ endpoint = (address, port)
 sock.bind(endpoint)
 
 while True:
-	data, sender_endpoint = sock.recvfrom(1)
+	data, sender_endpoint = sock.recvfrom(1500)
 	print("Echoing data back to " + str(sender_endpoint))
 	sent = sock.sendto(data, sender_endpoint)
