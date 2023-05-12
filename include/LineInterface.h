@@ -1,6 +1,7 @@
 #ifndef LINEINTERFACE_H
 #define LINEINTERFACE_H
 
+#include "Commanding.h"
 #include <boost/program_options.hpp>
 #include <boost/asio.hpp>
 #include <string>
@@ -26,6 +27,7 @@ class LineInterface {
     private:
         boost::program_options::options_description options;
         boost::program_options::variables_map vm;
+        CommandDeck command_deck;
 
         std::string help_msg;
         bool do_verbose;
@@ -39,6 +41,8 @@ class LineInterface {
 
     public:
         LineInterface(int argc, char* argv[], boost::asio::io_context& context);
+        CommandDeck get_command_deck() const {return command_deck;};
+
 
     private:
         void verbose_print(std::string msg);

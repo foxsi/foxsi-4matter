@@ -25,6 +25,10 @@ int main(int argc, char* argv[]) {
     remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.endpoints["spmu"].address));
     remote_tcp_endpoint.port(lif.endpoints["spmu"].port);
 
+    CommandDeck deck = lif.get_command_deck();
+
+    deck.print();
+
 
     // TransportLayerMachine mill(
     //     local_udp_endpoint,
