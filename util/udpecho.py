@@ -1,4 +1,4 @@
-import socket, time, random
+import socket
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -9,10 +9,6 @@ endpoint = (address, port)
 sock.bind(endpoint)
 
 while True:
-    # make some random data to transmit
-    data = random.randbytes(1000)
-    print("sending data to " + address + ":" + str(port))
-    sock.sendto(data, endpoint)
-
-    # approximate 18 Mbps downlink rate
-    time.sleep(55.0/1000)
+	data, sender_endpoint = sock.recvfrom(1)
+	print("Echoing data back to " + str(sender_endpoint))
+	sent = sock.sendto(data, sender_endpoint)
