@@ -3,6 +3,7 @@
 
 #include "Utilities.h"
 #include <iostream>
+#include <algorithm>
 
 EndpointData::EndpointData(std::string ip, std::string prot, unsigned short pt) {
     address = ip;
@@ -45,16 +46,26 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         ("gse.protocol",    boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and GSE")
         ("evtm.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and EVTM")
         ("spmu.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and SPMU")
-        ("period,T",        boost::program_options::value<double>(),     "main loop period in seconds")
+        ("systems.codepath",boost::program_options::value<std::string>(),       "command JSON file path for CDTE1 system")
+        ("cdte1.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE1 system")
+        ("cdte2.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE2 system")
+        ("cdte3.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE3 system")
+        ("cdte4.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE4 system")
+        ("cdtede.codepath", boost::program_options::value<std::string>(),       "command JSON file path for CDTEDE system")
+        ("cmos1.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CMOS1 system")
+        ("cmos2.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CMOS2 system")
+        ("timepix.codepath",boost::program_options::value<std::string>(),       "command JSON file path for TIMEPIX system")
+        ("housekeeping.codepath", boost::program_options::value<std::string>(), "command JSON file path for HOUSEKEEPING system")
+        ("period,T",        boost::program_options::value<double>(),            "main loop period in seconds")
     ;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
     boost::program_options::notify(vm);
 
     version = std::to_string(MAJOR_VERSION) + "." + std::to_string(MINOR_VERSION) + "." + std::to_string(PATCH_VERSION);
-    // long help message (move this elsewhere?)
-    help_msg = R"(usage: etherlogger [options]
+    // long help message (move this elsewhere? TODO:write it)
+    help_msg = R"(usage: ??? [options]
     
-    Log incoming UDP messages to file.
+    Launch Formatter with set global options.
     
     General options:
         --help,         -h                  Display help message.
@@ -152,6 +163,41 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         TimeData temp(vm["period"].as<double>());
         times = temp;
     }
+
+    // get system info (to use for commands)
+    bool found_systems = false;
+    std::unordered_map<std::string, bool> found_files;
+    std::unordered_map<std::string, std::string> named_paths;
+
+    if(vm.count("systems.codepath")) {
+        verbose_print("systems path: " + vm["systems.codepath"].as<std::string>());
+        found_systems = true;
+        named_paths.insert(std::make_pair("SYSTEMS", vm["systems.codepath"].as<std::string>()));
+    }
+    // get command info
+    found_files.insert(std::make_pair("cdte1.codepath", vm.count("cdte1.codepath")));
+    found_files.insert(std::make_pair("cdte2.codepath", vm.count("cdte2.codepath")));
+    found_files.insert(std::make_pair("cdte3.codepath", vm.count("cdte3.codepath")));
+    found_files.insert(std::make_pair("cdte4.codepath", vm.count("cdte4.codepath")));
+    found_files.insert(std::make_pair("cdtede.codepath", vm.count("cdtede.codepath")));
+    found_files.insert(std::make_pair("cmos1.codepath", vm.count("cmos1.codepath")));
+    found_files.insert(std::make_pair("cmos2.codepath", vm.count("cmos2.codepath")));
+    found_files.insert(std::make_pair("timepix.codepath", vm.count("timepix.codepath")));
+    found_files.insert(std::make_pair("housekeeping.codepath", vm.count("housekeeping.codepath")));
+
+    for(auto& [field_name, exists]: found_files) {
+        if(exists) {
+            // pull the all-caps system name out of CLI string
+            std::string reduced_name = field_name;
+            std::transform(reduced_name.begin(), reduced_name.end(), reduced_name.begin(), ::toupper);
+            size_t pos = reduced_name.find(".");
+            reduced_name.erase(pos,reduced_name.size());
+
+            // for each found system, try to make command deck with its file
+            named_paths.insert(std::pair(reduced_name, vm[field_name].as<std::string>()));
+        }
+    }
+    command_deck = CommandDeck(named_paths);
 }
 
 void LineInterface::verbose_print(std::string msg) {
