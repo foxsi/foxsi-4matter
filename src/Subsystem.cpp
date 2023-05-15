@@ -12,10 +12,13 @@ TransportLayerMachine::TransportLayerMachine(
 {
     active_subsys = HOUSEKEEPING;
     active_state = IDLE;
+
+    commands = CommandDeck();
     
     std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
+    command_pipe = tmp_vec;
     ground_pipe.push('0');
 
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(LOCAL_IP);
@@ -50,10 +53,13 @@ TransportLayerMachine::TransportLayerMachine(
 {
     active_subsys = HOUSEKEEPING;
     active_state = IDLE;
+
+    commands = CommandDeck();
     
     std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
+    command_pipe = tmp_vec;
 
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
     boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(remote_udp_ip);
@@ -91,9 +97,12 @@ TransportLayerMachine::TransportLayerMachine(
     active_subsys = HOUSEKEEPING;
     active_state = IDLE;
     
+    commands = CommandDeck();
+    
     std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
+    command_pipe = tmp_vec;
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
     local_udp_sock.bind(local_udp_end);
@@ -101,6 +110,10 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
     local_tcp_sock.bind(local_tcp_end);
     local_tcp_sock.connect(remote_tcp_endpoint);
+}
+
+void TransportLayerMachine::add_commands(CommandDeck& new_commands) {
+    commands = new_commands;
 }
 
 
@@ -150,4 +163,42 @@ void TransportLayerMachine::send_tcp() {
 
     // clear the buffer uplink_buff...
     std::fill(uplink_buff.begin(), uplink_buff.end(), '\0');
+}
+
+void TransportLayerMachine::recv_udp_fwd_tcp_cmd() {
+    std::cout << "in recv_udp_fwd_tcp_cmd()\n";
+
+    // read incoming UDP data...
+    local_udp_sock.async_receive_from(
+        boost::asio::buffer(uplink_buff),           // read data into the uplink buffer
+        remote_udp_endpoint,                        // receive data from the UDP endpoint
+        boost::bind(&TransportLayerMachine::handle_cmd, this)    // callback to send_tcp to forward the data after it has been received
+    );
+}
+
+void TransportLayerMachine::handle_cmd() {
+    // todo: save pointers in these buffers (cmd and uplink) to manage multiple sequential reads/writes safely. Maybe with vector of vectors
+    std::cout << "in handle_cmd()\n";
+
+    char uplink_buff_sys = uplink_buff[0];
+    char uplink_buff_cmd = uplink_buff[1];
+
+    std::vector<char> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
+
+    command_pipe.insert(command_pipe.end(), output_cmd.begin(), output_cmd.end());
+
+    std::cout << "transmitting:\t";
+    for(auto& c: output_cmd) {
+        std::cout << c;
+    }
+
+    local_tcp_sock.async_send(
+        boost::asio::buffer(command_pipe),                   // send out the contents of uplink_buff
+        boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+    );
+
+    // clear the buffer uplink_buff...
+    std::fill(uplink_buff.begin(), uplink_buff.end(), '\0');
+    // clear the buffer command_pipe...
+    std::fill(command_pipe.begin(), command_pipe.end(), '\0');
 }

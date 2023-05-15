@@ -65,27 +65,70 @@ void Command::set_spw_options(
 }
 
 std::vector<char> Command::get_command_bytes() {
-    // hook into Takayuki Yuasa RMAP lib here?
-    std::vector<char> target_spw_address;
-    char target_log_address;
-    char protocol_id;
-    // instruction already have
-    char key;
-    std::vector<char> reply_address;
-    //...
+//     // hook into Takayuki Yuasa RMAP lib here?
 
+//     if (type == SPW) {
+        
+//         // BETTER: just make the whole packet to send raw over TCP link:
+//         //  W command format:
+//         //      Target SpW address      [nB]...
+//         //      Target logical address  [1B]
+//         //      Protocol ID             [1B, = 0x01 for RMAP]
+//         //      Instruction             [1B, = Command::instruction]
+//         //      Key                     [1B]
+//         //      Reply address           [0B, 4B, 8B, or 12B, specified by Reply Addr Len Field in Instruction]
+//         //      Initiator logical addr  [1B]
+//         //      Transaction ID MSB      [1B]
+//         //      Transaction ID LSB      [1B]
+//         //      Extended address        [1B]
+//         //      Memory address (M->LSB) [4B]
+//         //      Data length    (M->LSB) [3B]
+//         //      Header CRC              [1B]
+//         //      Data                    [nB]
+//         //      Data CRC                [1B]
+//         //      EOP char                [1B]
+        
+
+//         // no need to use Target SpW address or Reply address. Can be empty. Just use logical addresses for routing.
+
+//         std::vector<char> target_spw_address;   // this can be empty
+
+
+//         char target_log_address;
+//         char protocol_id;
+//         // instruction already have
+//         char key;
+//         std::vector<char> reply_address;
+//         //...
+
+        
+
+//         std::vector<char> header;
+//         std::vector<char> full_packet;
+//         std::vector<char> result;
+
+//         result.insert(result.end(), target_spw_address.begin(), target_spw_address.end());
+
+//         if(read) {
+
+//             // append more stuff
+//         } else {
+
+//         }
+//     } else if(type == UART) {
+
+//     } else if(type == SPI) {
+
+//     } else {
+//         std::cerr << "unsupported Command type\n";
+//         exit(0);
+//     }
+    
+
+    // return result;'
     std::vector<char> result;
-
-    result.insert(result.end(), target_spw_address.begin(), target_spw_address.end());
-
-    if(read) {
-
-        // append more stuff
-    } else {
-
-    }
-
-    return result;
+    result.push_back(0x00);
+    return  result;
 }
 
 char* Command::get_command_bytes_raw() {
@@ -95,6 +138,8 @@ char* Command::get_command_bytes_raw() {
 
     return std::copy(command_bytes.begin(), command_bytes.end(), out_buff);
 }
+
+
 
 Command::Command(const Command& other): 
     name(other.name),
@@ -339,7 +384,83 @@ Command& CommandDeck::get_command_for_sys_for_code(char sys, char code) {
         throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
     }
     throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.commands\n");
-    
+}
+
+std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char code) {
+    //  W command format:
+        //      Target SpW address      [nB]...
+        //      Target logical address  [1B]
+        //      Protocol ID             [1B, = 0x01 for RMAP]
+        //      Instruction             [1B, = Command::instruction]
+        //      Key                     [1B]
+        //      Reply address           [0B, 4B, 8B, or 12B, specified by Reply Addr Len Field in Instruction]
+        //      Initiator logical addr  [1B]
+        //      Transaction ID MSB      [1B]
+        //      Transaction ID LSB      [1B]
+        //      Extended address        [1B]
+        //      Memory address (M->LSB) [4B]
+        //      Data length    (M->LSB) [3B]
+        //      Header CRC              [1B]
+        //      Data                    [nB]
+        //      Data CRC                [1B]
+        //      EOP char                [1B]
+
+    Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
+    std::vector<char> full_packet;
+    if(cmd.type == SPW) {
+        if(cmd.read) {
+            // SpW read commands
+            std::cerr << "unimplemented command type!\n";
+            return full_packet;
+        } else {
+            // SpW write command
+
+            char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
+            char KEY = 0x02;                        // todo: add this as attribute of System
+            char protocol_id = 0x01;
+            char instruction = cmd.get_spw_instruction();
+            char reply_address = 0x02;              // todo: define this in Parameters or something
+            char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
+            char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
+            char transaction_id_msb = 0x00;
+            char extended_address = 0x00;
+            std::vector<char> memory_address = cmd.get_spw_address();
+            std::vector<char> write_data = cmd.get_spw_write_data();
+            unsigned int write_data_length = write_data.size();
+            const char dl0 = write_data_length & 0xff;
+            const char dl1 = (write_data_length >> 8) & 0xff;
+            std::vector<char> data_length;
+            data_length.push_back(dl1);
+            data_length.push_back(dl0);
+            
+            std::vector<char> header;
+            header.push_back(TARGET_LOGICAL_ADDRESS);
+            header.push_back(protocol_id);
+            header.push_back(instruction);
+            header.push_back(reply_address);
+            header.push_back(initiator_logical_address);
+            header.push_back(transaction_id_msb);
+            header.push_back(transaction_id_lsb);
+            header.push_back(extended_address);
+            header.insert(header.end(), memory_address.begin(), memory_address.end());
+            header.insert(header.end(), data_length.begin(), data_length.end());
+            
+            char header_crc = spw_calculate_crc_F(header);
+            header.push_back(header_crc);
+
+            std::vector<char> data;
+            data.insert(data.end(), write_data.begin(), write_data.end());
+            char data_crc = spw_calculate_crc_F(data);
+            data.push_back(data_crc);
+            
+            full_packet.insert(full_packet.end(), header.begin(), header.end());
+            full_packet.insert(full_packet.end(), data.begin(), data.end());
+            return full_packet;
+        }
+    } else {
+        std::cerr << "unimplemented command type!\n";
+        return full_packet;
+    }
 }
 
 void CommandDeck::print() {

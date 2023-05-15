@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
         context
     );
 
+    frmtr.add_commands(deck);
     frmtr.recv_tcp_fwd_udp();
     frmtr.recv_udp_fwd_tcp();
 

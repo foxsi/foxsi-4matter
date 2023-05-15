@@ -112,6 +112,9 @@ class CommandDeck {
 
         Command&        get_command_for_sys_for_code(char sys, char code);
 
+        std::vector<char> get_command_bytes_for_sys_for_code(char sys, char code);
+        // add a version of the above that takes arguments
+
         // print commands tree
         void            print();
     

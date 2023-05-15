@@ -5,6 +5,7 @@
 #include "UDPInterface.h"
 #include "TCPInterface.h"
 #include "UARTInterface.h"
+#include "Commanding.h"
 #include "Parameters.h"
 // #include <boost/asio.hpp>
 #include <vector>
@@ -21,7 +22,10 @@ class TransportLayerMachine {
 
         std::vector<char> downlink_buff;
         std::vector<char> uplink_buff;
+        std::vector<char> command_pipe;
         std::queue<char> ground_pipe;
+
+        CommandDeck commands;
 
         STATE_ORDER active_state;
         SUBSYSTEM_ORDER active_subsys;
@@ -47,11 +51,16 @@ class TransportLayerMachine {
 
         void update(SUBSYSTEM_ORDER new_subsys, STATE_ORDER new_state);
 
+        void add_commands(CommandDeck& new_commands);
+
         void handle_recv();
         void recv_tcp_fwd_udp();
         void recv_udp_fwd_tcp();
+        void recv_udp_fwd_tcp_cmd();
         void send_tcp();
         void send_udp();
+
+        void handle_cmd();
 };
 
 #endif
