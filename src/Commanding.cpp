@@ -364,7 +364,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
             char KEY = 0x02;                        // todo: add this as attribute of System
             char protocol_id = 0x01;
-            char reply_address = 0x02;              // todo: define this in Parameters or something
+            char REPLY_ADDRESS = 0x02;              // todo: define this in Parameters or something
             char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
             char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
             char transaction_id_msb = 0x00;
@@ -404,7 +404,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             header.push_back(TARGET_LOGICAL_ADDRESS);
             header.push_back(protocol_id);
             header.push_back(instruction);
-            header.push_back(reply_address);
+            header.push_back(REPLY_ADDRESS);
             header.push_back(initiator_logical_address);
             header.push_back(transaction_id_msb);
             header.push_back(transaction_id_lsb);
