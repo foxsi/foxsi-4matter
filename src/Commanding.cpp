@@ -359,6 +359,8 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
     Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
     std::vector<char> full_packet;
     if(cmd.type == SPW) {
+            char TARGET_PATH_ADDRESS_OUT = 0x02;        // todo: add this as attribute of System? this info from Nagasawa
+            char TARGET_PATH_ADDRESS_IN = 0x01;        // todo: add this as attribute of System? this info from Nagasawa
             char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
             char KEY = 0x02;                        // todo: add this as attribute of System
             char protocol_id = 0x01;
@@ -398,6 +400,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             data_length.push_back(dl0);
             
             std::vector<char> header;
+            header.push_back(TARGET_PATH_ADDRESS_OUT);
             header.push_back(TARGET_LOGICAL_ADDRESS);
             header.push_back(protocol_id);
             header.push_back(instruction);
