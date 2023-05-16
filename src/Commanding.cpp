@@ -65,67 +65,7 @@ void Command::set_spw_options(
 }
 
 std::vector<char> Command::get_command_bytes() {
-//     // hook into Takayuki Yuasa RMAP lib here?
-
-//     if (type == SPW) {
-        
-//         // BETTER: just make the whole packet to send raw over TCP link:
-//         //  W command format:
-//         //      Target SpW address      [nB]...
-//         //      Target logical address  [1B]
-//         //      Protocol ID             [1B, = 0x01 for RMAP]
-//         //      Instruction             [1B, = Command::instruction]
-//         //      Key                     [1B]
-//         //      Reply address           [0B, 4B, 8B, or 12B, specified by Reply Addr Len Field in Instruction]
-//         //      Initiator logical addr  [1B]
-//         //      Transaction ID MSB      [1B]
-//         //      Transaction ID LSB      [1B]
-//         //      Extended address        [1B]
-//         //      Memory address (M->LSB) [4B]
-//         //      Data length    (M->LSB) [3B]
-//         //      Header CRC              [1B]
-//         //      Data                    [nB]
-//         //      Data CRC                [1B]
-//         //      EOP char                [1B]
-        
-
-//         // no need to use Target SpW address or Reply address. Can be empty. Just use logical addresses for routing.
-
-//         std::vector<char> target_spw_address;   // this can be empty
-
-
-//         char target_log_address;
-//         char protocol_id;
-//         // instruction already have
-//         char key;
-//         std::vector<char> reply_address;
-//         //...
-
-        
-
-//         std::vector<char> header;
-//         std::vector<char> full_packet;
-//         std::vector<char> result;
-
-//         result.insert(result.end(), target_spw_address.begin(), target_spw_address.end());
-
-//         if(read) {
-
-//             // append more stuff
-//         } else {
-
-//         }
-//     } else if(type == UART) {
-
-//     } else if(type == SPI) {
-
-//     } else {
-//         std::cerr << "unsupported Command type\n";
-//         exit(0);
-//     }
-    
-
-    // return result;'
+    // hook into Takayuki Yuasa RMAP lib here?
     std::vector<char> result;
     result.push_back(0x00);
     return  result;
@@ -381,9 +321,16 @@ Command& CommandDeck::get_command_for_sys_for_code(char sys, char code) {
             debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys));
             return (commands[sys][code]);
         }
-        throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        std::cout << "couldn't find " + std::to_string(code) + " in CommandDeck.commands\n";
+        static Command null_command = Command();
+        return null_command;
     }
-    throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.commands\n");
+    // throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n");
+    std::cout << "couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n";
+    static Command null_command = Command();
+    return null_command;
+    
 }
 
 std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char code) {
@@ -405,25 +352,42 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
         //      Data CRC                [1B]
         //      EOP char                [1B]
 
+        // read commands the same, but:
+        //      Instruction should specify a read command
+        //      Packet ends (EOP) after Header CRC.
+
     Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
     std::vector<char> full_packet;
     if(cmd.type == SPW) {
-        if(cmd.read) {
-            // SpW read commands
-            std::cerr << "unimplemented command type!\n";
-            return full_packet;
-        } else {
-            // SpW write command
-
             char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
             char KEY = 0x02;                        // todo: add this as attribute of System
             char protocol_id = 0x01;
-            char instruction = cmd.get_spw_instruction();
             char reply_address = 0x02;              // todo: define this in Parameters or something
             char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
             char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
             char transaction_id_msb = 0x00;
             char extended_address = 0x00;
+
+        if(cmd.read) {
+            // SpW read commands
+
+            /* to make a read command, would want to pass in read 
+            address as argument. System/TransportLayerMachine could 
+            store a property `data_address` (initialized to offset of 
+            read address memory) and `frame_size`. Then each read 
+            operation increments `frame_size`. */
+
+            char instruction = cmd.get_spw_instruction();
+
+            // TODO: handle read address here
+
+            std::cerr << "unimplemented command type!\n";
+            return full_packet;
+        } else {
+            // SpW write command
+
+            char instruction = cmd.get_spw_instruction();
+
             std::vector<char> memory_address = cmd.get_spw_address();
             std::vector<char> write_data = cmd.get_spw_write_data();
             unsigned int write_data_length = write_data.size();
