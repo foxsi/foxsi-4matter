@@ -63,6 +63,14 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "test_spw_crc" using source files
+add_executable(test_spw_crc ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
+target_include_directories(
+    test_spw_crc
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
 target_include_directories(
@@ -82,6 +90,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     target_link_libraries(cli_example PRIVATE Threads::Threads)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
+    target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     
     # add_library(nlohmann_json INTERFACE)
     # add_library(nlohmann_json INTERFACE ${NLOHMANNJSON_ROOT})
@@ -139,6 +148,7 @@ if(Boost_FOUND)
     target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
     target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()

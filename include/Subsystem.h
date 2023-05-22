@@ -60,6 +60,8 @@ class TransportLayerMachine {
         void send_tcp();
         void send_udp();
 
+        void print_udp_basic();
+
         void handle_cmd();
 };
 
