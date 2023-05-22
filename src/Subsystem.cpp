@@ -151,10 +151,7 @@ void TransportLayerMachine::send_udp() {
 
     std::vector<char> filtered;
     std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](char i){return i != '0';});
-    std::cout << "received:\t0x";
-    for(auto& c: filtered) {
-        std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)(c & 0xff) << " ";
-    }
+    hex_print(filtered);
     std::cout << "\n";
 
     // forward the buffer downlink_buff over UDP...
@@ -202,21 +199,12 @@ void TransportLayerMachine::handle_cmd() {
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
     std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
 
-    // std::vector<char> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
-    // static std::vector<uint8_t> output_cmd = commands.get_write_command_bytes_for_sys_for_HARDCODE(uplink_buff_sys, uplink_buff_cmd);
-
-    // static std::vector<uint8_t> output_cmd = commands.get_read_command_bytes_for_sys_for_HARDCODE(uplink_buff_sys, uplink_buff_cmd);
-
     std::vector<char> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
 
     command_pipe.insert(command_pipe.end(), output_cmd.begin(), output_cmd.end());
     // command_pipe.push_back('\0');
 
     std::cout << "transmitting:\t";
-    // for(auto& c: output_cmd) {
-    //     std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)(c & 0xff);
-    //     std::cout << " ";
-    // }
     hex_print(output_cmd);
     std::cout << "\n";
     std::cout << "to " << local_tcp_sock.remote_endpoint().address().to_string() << ":" << std::to_string(local_tcp_sock.remote_endpoint().port()) << "\n";
@@ -225,11 +213,6 @@ void TransportLayerMachine::handle_cmd() {
         boost::asio::buffer(output_cmd),                   // send out the contents of uplink_buff
         boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
     );
-    
-    // local_tcp_sock.async_send(
-    //     boost::asio::buffer(command_pipe),                   // send out the contents of uplink_buff
-    //     boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
-    // );
 
     // clear the buffer uplink_buff...
     std::fill(uplink_buff.begin(), uplink_buff.end(), '\0');

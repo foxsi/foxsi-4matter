@@ -7,7 +7,7 @@
 // Versioning
 static const unsigned short         MAJOR_VERSION   = 0;
 static const unsigned short         MINOR_VERSION   = 0;
-static const unsigned short         PATCH_VERSION   = 1;
+static const unsigned short         PATCH_VERSION   = 2;
 
 // Debugging
 static bool DEBUG = true;
