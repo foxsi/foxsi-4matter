@@ -10,6 +10,9 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
+set(GOOGLETEST_ROOT /usr/local/include)
+
+enable_testing()
 
 # Add other sources and headers here:
 set(
@@ -71,6 +74,8 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
+
 # Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
 target_include_directories(
@@ -91,6 +96,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(cli_example PRIVATE Threads::Threads)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
+    target_link_libraries(test PRIVATE Threads::Threads)
     
     # add_library(nlohmann_json INTERFACE)
     # add_library(nlohmann_json INTERFACE ${NLOHMANNJSON_ROOT})
@@ -106,11 +112,19 @@ if(UNIX AND NOT APPLE)
         PUBLIC
         ${NLOHMANNJSON_ROOT}
     )
+    target_include_directories(
+        lib
+        PUBLIC
+        ${GOOGLETEST_ROOT}
+    )
 
 elseif(UNIX AND APPLE)
     # this usually builds fine
     find_package(nlohmann_json 3.11.2 REQUIRED)
     target_link_libraries(lib PUBLIC nlohmann_json::nlohmann_json)
+
+    find_package(GTest REQUIRED)
+    target_link_libraries(lib PUBLIC GTest::gtest)
 
 else()
     error("Unsupported OS.")

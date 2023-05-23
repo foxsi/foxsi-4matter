@@ -119,8 +119,6 @@ class CommandDeck {
         std::vector<uint8_t> get_read_command_bytes_for_sys_for_HARDCODE(char sys, char code);
         
 
-        
-
         // print commands tree
         void            print();
     
