@@ -79,4 +79,10 @@ enum COMMAND_TYPE_OPTIONS{
     SPI
 };
 
+enum SPW_END_OPTIONS{
+    EOP = 0x00,
+    EEP = 0x01,
+    JUMBO = 0x02
+};
+
 #endif

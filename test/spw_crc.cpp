@@ -39,5 +39,14 @@ int main(int argc, char* argv[]) {
     hex_print(cdtede_r_cmd);
     std::cout << "\n";
 
+    std::vector<char> rmap_part = {cdtede_w_cmd.begin()+12, cdtede_w_cmd.end()};
+    std::vector<char> ether_head = deck.get_spw_ether_header(rmap_part);
+    std::cout << "ether head: ";
+    hex_print(ether_head);
+    std::cout << "\n";
+    std::cout << "original: ";
+    hex_print(cdtede_w_cmd);
+    std::cout << "\n";
+
     return 0;
 }

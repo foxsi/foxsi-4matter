@@ -130,7 +130,6 @@ System& System::operator=(const System& other) {
     return *this;
 }
 
-
 CommandDeck::CommandDeck(std::unordered_map<std::string, std::string> named_paths) {
     did_add_systems_ = false;
     std::cout << "constructing command deck...\n";
@@ -368,24 +367,25 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
 
     Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
     std::vector<char> full_packet;
-    std::vector<char> ethernet_header;
-
     
 
     if(cmd.type == SPW) {
-            // std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07,0x02};        // todo: add this as attribute of System? this info from Nagasawa
+        std::vector<char> ethernet_header;
+        std::vector<char> rmap_packet;
 
-            std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07, 0x02};
-            char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
-            char KEY = 0x02;                        // todo: add this as attribute of System
-            char protocol_id = 0x01;
-            std::vector<char> REPLY_ADDRESS = {0x00,0x00,0x06,0x03};
-            // std::vector<char> REPLY_ADDRESS = {0x00, 0x00, 0x06,0x03};              // todo: define this in Parameters or something
-            // std::vector<char> REPLY_ADDRESS = {0x01,0x03};              // todo: for flight I think it will be {0x01, 0x03}
-            char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
-            char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
-            char transaction_id_msb = 0x00;
-            char extended_address = 0x00;
+        // std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07,0x02};        // todo: add this as attribute of System? this info from Nagasawa
+
+        std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07, 0x02};
+        char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
+        char KEY = 0x02;                        // todo: add this as attribute of System
+        char protocol_id = 0x01;
+        std::vector<char> REPLY_ADDRESS = {0x00,0x00,0x06,0x03};
+        // std::vector<char> REPLY_ADDRESS = {0x00, 0x00, 0x06,0x03};              // todo: define this in Parameters or something
+        // std::vector<char> REPLY_ADDRESS = {0x01,0x03};              // todo: for flight I think it will be {0x01, 0x03}
+        char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
+        char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
+        char transaction_id_msb = 0x00;
+        char extended_address = 0x00;
 
         if(cmd.read) {
             // SpW read commands
@@ -395,8 +395,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             store a property `data_address` (initialized to offset of 
             read address memory) and `frame_size`. Then each read 
             operation increments `frame_size`. */
-
-            std::vector<uint8_t> rmap_packet;
+            
             std::vector<char> header;
 
             char instruction = cmd.get_spw_instruction();
@@ -435,48 +434,22 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             header.push_back(header_crc);
 
             rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
-            
+
             rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
 
-            const unsigned long rmap_packet_size = rmap_packet.size();
-            std::cout << "\trmap packet size: " << std::to_string(rmap_packet_size) << "\n";
-            const char edl0 = rmap_packet_size & 0xff;
-            const char edl1 = (rmap_packet_size >> 8) & 0xff;
-            const char edl2 = (rmap_packet_size >> 16) & 0xff;
-            const char edl3 = (rmap_packet_size >> 24) & 0xff;
-
-            ethernet_header.push_back(0x00);   // terminate packet with EOP
-            ethernet_header.push_back(0x00);   // prefix byte 2 is ALWAYS 0x00
-            ethernet_header.push_back(0x00);   // 10-B size field MSB
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(edl3);
-            ethernet_header.push_back(edl2);
-            ethernet_header.push_back(edl1);
-            ethernet_header.push_back(edl0);    // 10-B size field LSB
             
-            full_packet.insert(full_packet.end(), ethernet_header.begin(), ethernet_header.end());
-            full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
-
 
             // TODO: handle read address here
 
             // std::cerr << "unimplemesnted command type!\n";
-            return full_packet;
         } else {
             // SpW write command
 
             // char instruction = cmd.get_spw_instruction();            
-
             // std::vector<char> memory_address = cmd.get_spw_address();
-
             // TODO: un-hardcode the instructions (format read JSON correctly)
 
             std::vector<char> header;
-            std::vector<char> rmap_packet;
 
             char instruction = cmd.get_spw_instruction();
             std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
@@ -529,34 +502,14 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
             rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
 
-            
-            // full_packet.insert(full_packet.end(), header.begin(), header.end());
-            // full_packet.insert(full_packet.end(), data.begin(), data.end());
-            
-            const unsigned long rmap_packet_size = rmap_packet.size();
-            std::cout << "\trmap packet size: " << std::to_string(rmap_packet_size) << "\n";
-            const char edl0 = rmap_packet_size & 0xff;
-            const char edl1 = (rmap_packet_size >> 8) & 0xff;
-            const char edl2 = (rmap_packet_size >> 16) & 0xff;
-            const char edl3 = (rmap_packet_size >> 24) & 0xff;
-
-            ethernet_header.push_back(0x00);   // terminate packet with EOP
-            ethernet_header.push_back(0x00);   // prefix byte 2 is ALWAYS 0x00
-            ethernet_header.push_back(0x00);   // 10-B size field MSB
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(0x00);
-            ethernet_header.push_back(edl3);
-            ethernet_header.push_back(edl2);
-            ethernet_header.push_back(edl1);
-            ethernet_header.push_back(edl0);    // 10-B size field LSB
-            
-            full_packet.insert(full_packet.end(), ethernet_header.begin(), ethernet_header.end());
-            full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
-            return full_packet;
         }
+
+        ethernet_header = CommandDeck::get_spw_ether_header(rmap_packet);
+        full_packet.insert(full_packet.end(), ethernet_header.begin(), ethernet_header.end());
+        full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
+
+        return full_packet;
+
     } else {
         std::cerr << "unimplemented command type!\n";
         return full_packet;
@@ -715,6 +668,25 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ch
     full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
 
     return full_packet;
+}
+
+std::vector<char> CommandDeck::get_spw_ether_header(std::vector<char> rmap_packet) {
+    // NOTE: this method does not support RMAP packets with sizes that require more than 8B to represent (~1.84e19 B)
+    std::vector<char> ether_prefix;
+    const unsigned long long rmap_packet_size = rmap_packet.size();
+
+    ether_prefix.push_back(EOP);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+
+    const unsigned long long mask = 0xff;
+    for(int i = 7; i >= 0; --i) {
+        const unsigned long long size_byte = (rmap_packet_size >> (8*i)) & mask;
+        ether_prefix.push_back((char)size_byte);
+    }
+
+    return ether_prefix;
 }
 
 void CommandDeck::print() {
