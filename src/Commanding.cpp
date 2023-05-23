@@ -66,26 +66,9 @@ void Command::set_spw_options(
 
 std::vector<char> Command::get_command_bytes() {
     // hook into Takayuki Yuasa RMAP lib here?
-    std::vector<char> target_spw_address;
-    char target_log_address;
-    char protocol_id;
-    // instruction already have
-    char key;
-    std::vector<char> reply_address;
-    //...
-
     std::vector<char> result;
-
-    result.insert(result.end(), target_spw_address.begin(), target_spw_address.end());
-
-    if(read) {
-
-        // append more stuff
-    } else {
-
-    }
-
-    return result;
+    result.push_back(0x00);
+    return  result;
 }
 
 char* Command::get_command_bytes_raw() {
@@ -95,6 +78,8 @@ char* Command::get_command_bytes_raw() {
 
     return std::copy(command_bytes.begin(), command_bytes.end(), out_buff);
 }
+
+
 
 Command::Command(const Command& other): 
     name(other.name),
@@ -144,7 +129,6 @@ System& System::operator=(const System& other) {
     hex = other.hex;
     return *this;
 }
-
 
 CommandDeck::CommandDeck(std::unordered_map<std::string, std::string> named_paths) {
     did_add_systems_ = false;
@@ -262,12 +246,22 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::string this_spw_write_data_str = this_entry.value()["length"];
 
                     char this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
-                    std::vector<char> this_spw_addr(this_spw_addr_str.begin(), this_spw_addr_str.end());
                     // TODO: add reply length explicitly to JSON file field.
 
-                    std::vector<char> this_spw_write_data(this_spw_write_data_str.begin(), this_spw_write_data_str.end());
+                    std::vector<char> this_spw_write_data;
+                    std::vector<char> this_spw_addr;
 
-                    this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, 0);
+                    unsigned short this_spw_reply_length = 0;
+                    if(this_read) {
+                        this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                    } else {
+                        this_spw_write_data = string_to_chars(this_spw_write_data_str);
+                    }
+                    
+
+                    this_spw_addr = string_to_chars(this_spw_addr_str);
+
+                    this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
 
                     // add the command to the deck for this subsystem
                     commands[CommandDeck::get_sys_code_for_name(path_key)].insert(std::make_pair(this_hex, this_command));
@@ -336,10 +330,363 @@ Command& CommandDeck::get_command_for_sys_for_code(char sys, char code) {
             debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys));
             return (commands[sys][code]);
         }
-        throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        std::cout << "couldn't find " + std::to_string(code) + " in CommandDeck.commands\n";
+        static Command null_command = Command();
+        return null_command;
     }
-    throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.commands\n");
+    // throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n");
+    std::cout << "couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n";
+    static Command null_command = Command();
+    return null_command;
     
+}
+
+std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char code) {
+    //  W command format:
+        //      Target SpW address      [nB]...
+        //      Target logical address  [1B]
+        //      Protocol ID             [1B, = 0x01 for RMAP]
+        //      Instruction             [1B, = Command::instruction]
+        //      Key                     [1B]
+        //      Reply address           [0B, 4B, 8B, or 12B, specified by Reply Addr Len Field in Instruction]
+        //      Initiator logical addr  [1B]
+        //      Transaction ID MSB      [1B]
+        //      Transaction ID LSB      [1B]
+        //      Extended address        [1B]
+        //      Memory address (M->LSB) [4B]
+        //      Data length    (M->LSB) [3B]
+        //      Header CRC              [1B]
+        //      Data                    [nB]
+        //      Data CRC                [1B]
+        //      EOP char                [1B]
+
+        // read commands the same, but:
+        //      Instruction should specify a read command
+        //      Packet ends (EOP) after Header CRC.
+
+    Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
+    std::vector<char> full_packet;
+    
+
+    if(cmd.type == SPW) {
+        std::vector<char> ethernet_header;
+        std::vector<char> rmap_packet;
+
+        // std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07,0x02};        // todo: add this as attribute of System? this info from Nagasawa
+
+        std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07, 0x02};
+        char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
+        char KEY = 0x02;                        // todo: add this as attribute of System
+        char protocol_id = 0x01;
+        std::vector<char> REPLY_ADDRESS = {0x00,0x00,0x06,0x03};
+        // std::vector<char> REPLY_ADDRESS = {0x00, 0x00, 0x06,0x03};              // todo: define this in Parameters or something
+        // std::vector<char> REPLY_ADDRESS = {0x01,0x03};              // todo: for flight I think it will be {0x01, 0x03}
+        char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
+        char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
+        char transaction_id_msb = 0x00;
+        char extended_address = 0x00;
+
+        if(cmd.read) {
+            // SpW read commands
+
+            /* to make a read command, would want to pass in read 
+            address as argument. System/TransportLayerMachine could 
+            store a property `data_address` (initialized to offset of 
+            read address memory) and `frame_size`. Then each read 
+            operation increments `frame_size`. */
+            
+            std::vector<char> header;
+
+            char instruction = cmd.get_spw_instruction();
+            std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
+            
+            // TODO: un-hardcode the instructions (format read JSON correctly)
+            instruction = 0x4d;
+
+            // TODO: increment read address
+            std::vector<char> memory_address = {0x00,0x00,0x00,0x00};
+            // TODO: find correct frame size value
+            // unsigned int read_data_length = 32000;
+            unsigned short read_data_length = cmd.get_spw_reply_length();
+
+            const char dl0 = read_data_length & 0xff;
+            const char dl1 = (read_data_length >> 8) & 0xff;
+            const char dl2 = (read_data_length >> 16) & 0xff;
+            std::vector<char> data_length;
+            data_length.push_back(dl2);
+            data_length.push_back(dl1);
+            data_length.push_back(dl0);
+            
+            header.push_back(TARGET_LOGICAL_ADDRESS);
+            header.push_back(protocol_id);
+            header.push_back(instruction);
+            header.push_back(KEY);
+            header.insert(header.end(), REPLY_ADDRESS.begin(), REPLY_ADDRESS.end());
+            header.push_back(initiator_logical_address);
+            header.push_back(transaction_id_msb);
+            header.push_back(transaction_id_lsb);
+            header.push_back(extended_address);
+            header.insert(header.end(), memory_address.begin(), memory_address.end());
+            header.insert(header.end(), data_length.begin(), data_length.end());
+            
+            char header_crc = spw_calculate_crc_F(header);
+            header.push_back(header_crc);
+
+            rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
+
+            rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+
+            
+
+            // TODO: handle read address here
+
+            // std::cerr << "unimplemesnted command type!\n";
+        } else {
+            // SpW write command
+
+            // char instruction = cmd.get_spw_instruction();            
+            // std::vector<char> memory_address = cmd.get_spw_address();
+            // TODO: un-hardcode the instructions (format read JSON correctly)
+
+            std::vector<char> header;
+
+            char instruction = cmd.get_spw_instruction();
+            std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
+
+            instruction = 0x7d;
+
+            // TODO: un-hardcode the read address
+            std::vector<char> memory_address = {0x00, 0x00, 0x00, 0x00};
+
+            std::vector<char> write_data = cmd.get_spw_write_data();
+            hex_print(write_data);
+            debug_print("");
+
+            unsigned int write_data_length = write_data.size();
+            debug_print("write data size: " + std::to_string(write_data_length));
+            const char dl0 = write_data_length & 0xff;
+            const char dl1 = (write_data_length >> 8) & 0xff;
+            const char dl2 = (write_data_length >> 16) & 0xff;
+            std::vector<char> data_length;
+            data_length.push_back(dl2);
+            data_length.push_back(dl1);
+            data_length.push_back(dl0);
+            
+            
+            header.push_back(TARGET_LOGICAL_ADDRESS);
+            header.push_back(protocol_id);
+            header.push_back(instruction);
+            header.push_back(KEY);
+            header.insert(header.end(), REPLY_ADDRESS.begin(), REPLY_ADDRESS.end());
+            header.push_back(initiator_logical_address);
+            header.push_back(transaction_id_msb);
+            header.push_back(transaction_id_lsb);
+            header.push_back(extended_address);
+            header.insert(header.end(), memory_address.begin(), memory_address.end());
+            header.insert(header.end(), data_length.begin(), data_length.end());
+            
+            char header_crc = spw_calculate_crc_F(header);
+            header.push_back(header_crc);
+
+            std::vector<char> data;
+            data.insert(data.end(), write_data.begin(), write_data.end());
+            char data_crc = spw_calculate_crc_F(data);
+            data.push_back(data_crc);
+
+            std::cout << "rmap write data lookup:\t";
+            hex_print(data);
+            std::cout << "\n";
+            
+            rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
+            rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+            rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
+
+        }
+
+        ethernet_header = CommandDeck::get_spw_ether_header(rmap_packet);
+        full_packet.insert(full_packet.end(), ethernet_header.begin(), ethernet_header.end());
+        full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
+
+        return full_packet;
+
+    } else {
+        std::cerr << "unimplemented command type!\n";
+        return full_packet;
+    }
+}
+
+std::vector<uint8_t> CommandDeck::get_write_command_bytes_for_sys_for_HARDCODE(char sys, char code) {
+
+    std::vector<uint8_t> rmap_packet;
+    std::vector<uint8_t> path_address = {
+        0x07,
+        0x02
+    };
+    std::vector<uint8_t> header = {
+        0xfe, // target logical address
+        0x01, // protocol ID (RMAP)
+        0x7D, // instruction field
+        0x02, // key
+        0x00, // reply path addr MS (min 4B)
+        0x00,
+        0x06,
+        0x03, // reply path addr LS
+        0xfe, // initiator logical address
+        0x00, // transaction ID MS
+        0x00, // transaction ID LS
+        0x00, // ext address
+        0x00, // address MS
+        0x00,
+        0x00,
+        0x00, // address LS
+        0x00, // data length MS
+        0x00,
+        0x0c  // data length LS
+    };
+    // CRC should be calculated EXCLUDING PATH ADDRESS
+    uint8_t header_crc = spw_calculate_crc_uint_F(header);
+    header.push_back(header_crc);
+    std::vector<uint8_t> data = {
+        0x3c,
+        0x3c,
+        0x01,
+        0x00,
+        0x03,
+        0x03,
+        0x03,
+        0x03,
+        0x3c,
+        0x3c,
+        0x3c,
+        0x3c
+    };
+    // uint8_t data_crc = spw_calculate_crc_uint_F(data);
+    // data.push_back(data_crc);
+    // TODO: INVESTIGATE, POSSIBLY un-HARDCODE THIS:
+    data.push_back(0x00);
+    
+    
+    rmap_packet.insert(rmap_packet.end(), path_address.begin(), path_address.end());
+    rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+    rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
+
+    // TODO: SPMU-001 RMAP NEEDS A 12B ETHERNET PREFIX TO RECEIVE RMAP.
+    
+    std::vector<uint8_t> ether_prefix;
+    const unsigned long rmap_packet_size = rmap_packet.size();
+    std::cout << "\trmap packet size: " << std::to_string(rmap_packet_size) << "\n";
+    const uint8_t dl0 = rmap_packet_size & 0xff;
+    const uint8_t dl1 = (rmap_packet_size >> 8) & 0xff;
+    const uint8_t dl2 = (rmap_packet_size >> 16) & 0xff;
+    const uint8_t dl3 = (rmap_packet_size >> 24) & 0xff;
+
+    ether_prefix.push_back(0x00);   // terminate packet with EOP
+    ether_prefix.push_back(0x00);   // prefix byte 2 is ALWAYS 0x00
+    ether_prefix.push_back(0x00);   // 10-B size field MSB
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(dl3);
+    ether_prefix.push_back(dl2);
+    ether_prefix.push_back(dl1);
+    ether_prefix.push_back(dl0);    // 10-B size field LSB
+
+    std::vector<uint8_t> full_packet;
+
+    full_packet.insert(full_packet.end(), ether_prefix.begin(), ether_prefix.end());
+    full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
+
+    return full_packet;
+}
+
+std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(char sys, char code) {
+
+    std::vector<uint8_t> rmap_packet;
+    std::vector<uint8_t> path_address = {
+        0x07,
+        0x02
+    };
+    std::vector<uint8_t> header = {
+        0xfe, // target logical address
+        0x01, // protocol ID (RMAP)
+        0x4D, // instruction field
+        0x02, // key
+        0x00, // reply path addr MS (min 4B)
+        0x00,
+        0x06,
+        0x03, // reply path addr LS
+        0xfe, // initiator logical address
+        0x00, // transaction ID MS
+        0x00, // transaction ID LS
+        0x00, // ext address
+        0x00, // address MS
+        0x00,
+        0x00,
+        0x00, // address LS
+        0x00, // data length MS
+        0x00,
+        0x0c  // data length LS
+    };
+    // header CRC should be calculated EXCLUDING PATH ADDRESS
+    uint8_t header_crc = spw_calculate_crc_uint_F(header);
+    header.push_back(header_crc);
+    
+    rmap_packet.insert(rmap_packet.end(), path_address.begin(), path_address.end());
+    rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+
+    // rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
+
+    // TODO: SPMU-001 RMAP NEEDS A 12B ETHERNET PREFIX TO RECEIVE RMAP.
+    
+    std::vector<uint8_t> ether_prefix;
+    const unsigned long rmap_packet_size = rmap_packet.size();
+    std::cout << "\trmap packet size: " << std::to_string(rmap_packet_size) << "\n";
+    const uint8_t dl0 = rmap_packet_size & 0xff;
+    const uint8_t dl1 = (rmap_packet_size >> 8) & 0xff;
+    const uint8_t dl2 = (rmap_packet_size >> 16) & 0xff;
+    const uint8_t dl3 = (rmap_packet_size >> 24) & 0xff;
+
+    ether_prefix.push_back(0x00);   // terminate packet with EOP
+    ether_prefix.push_back(0x00);   // prefix byte 2 is ALWAYS 0x00
+    ether_prefix.push_back(0x00);   // 10-B size field MSB
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(dl3);
+    ether_prefix.push_back(dl2);
+    ether_prefix.push_back(dl1);
+    ether_prefix.push_back(dl0);    // 10-B size field LSB
+
+    std::vector<uint8_t> full_packet;
+
+    full_packet.insert(full_packet.end(), ether_prefix.begin(), ether_prefix.end());
+    full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
+
+    return full_packet;
+}
+
+std::vector<char> CommandDeck::get_spw_ether_header(std::vector<char> rmap_packet) {
+    // NOTE: this method does not support RMAP packets with sizes that require more than 8B to represent (~1.84e19 B)
+    std::vector<char> ether_prefix;
+    const unsigned long long rmap_packet_size = rmap_packet.size();
+
+    ether_prefix.push_back(EOP);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+    ether_prefix.push_back(0x00);
+
+    const unsigned long long mask = 0xff;
+    for(int i = 7; i >= 0; --i) {
+        const unsigned long long size_byte = (rmap_packet_size >> (8*i)) & mask;
+        ether_prefix.push_back((char)size_byte);
+    }
+
+    return ether_prefix;
 }
 
 void CommandDeck::print() {

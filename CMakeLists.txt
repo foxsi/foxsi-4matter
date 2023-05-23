@@ -9,6 +9,7 @@ project(
 
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(NLOHMANNJSON_ROOT /usr/local/include)
 
 # Add other sources and headers here:
 set(
@@ -62,6 +63,14 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "test_spw_crc" using source files
+add_executable(test_spw_crc ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
+target_include_directories(
+    test_spw_crc
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
 target_include_directories(
@@ -81,8 +90,28 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     target_link_libraries(cli_example PRIVATE Threads::Threads)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
+    target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
+    
+    # add_library(nlohmann_json INTERFACE)
+    # add_library(nlohmann_json INTERFACE ${NLOHMANNJSON_ROOT})
+    # target_link_libraries(
+    #     lib
+    #     PRIVATE
+    #     nlohmann_json
+    # )
+    # target_link_libraries(lib PUBLIC nlohmann_json)
+
+    target_include_directories(
+        lib
+        PUBLIC
+        ${NLOHMANNJSON_ROOT}
+    )
+
 elseif(UNIX AND APPLE)
     # this usually builds fine
+    find_package(nlohmann_json 3.11.2 REQUIRED)
+    target_link_libraries(lib PUBLIC nlohmann_json::nlohmann_json)
+
 else()
     error("Unsupported OS.")
 endif()
@@ -90,7 +119,7 @@ endif()
 # message(STATUS "CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 # JSON library
-find_package(nlohmann_json 3.11.2 REQUIRED)
+
 # target_link_libraries(lib PRIVATE nlohmann_json::nlohmann_json)
 
 # Boost library
@@ -111,7 +140,7 @@ if(Boost_FOUND)
     endif()
 
     # link the whole user code library to Boost and JSON
-    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options nlohmann_json::nlohmann_json)
+    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options)
 
     # then link it all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem lib)
@@ -119,6 +148,7 @@ if(Boost_FOUND)
     target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
     target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem lib)
+    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()

@@ -109,8 +109,17 @@ class CommandDeck {
 
         Command&        get_command_for_code(char code);
         Command&        get_command_for_name(std::string name);
-
         Command&        get_command_for_sys_for_code(char sys, char code);
+        std::vector<char> get_command_bytes_for_sys_for_code(char sys, char code);
+        // add a version of the above that takes arguments
+
+        std::vector<char> get_spw_ether_header(std::vector<char> rmap_packet);
+
+        std::vector<uint8_t> get_write_command_bytes_for_sys_for_HARDCODE(char sys, char code);
+        std::vector<uint8_t> get_read_command_bytes_for_sys_for_HARDCODE(char sys, char code);
+        
+
+        
 
         // print commands tree
         void            print();
