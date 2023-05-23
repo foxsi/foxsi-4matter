@@ -16,13 +16,13 @@ Command::Command(std::string new_name, char new_hex, bool new_read, COMMAND_TYPE
 void Command::set_type(COMMAND_TYPE_OPTIONS new_type) {
     type = new_type;
     switch(type) {
-        case SPW:
+        case COMMAND_TYPE_OPTIONS::SPW:
             // require set_spw_options()?
             break;
-        case SPI:
+        case COMMAND_TYPE_OPTIONS::SPI:
             // require set_spi_options()?
             break;
-        case UART:
+        case COMMAND_TYPE_OPTIONS::UART:
             // require set_uart_options?
             break;
         default:
@@ -36,7 +36,7 @@ void Command::set_spw_options(
     std::vector<char> new_spw_write_data,
     unsigned short new_spw_reply_length
 ) {
-    if(type != SPW) {
+    if(type != COMMAND_TYPE_OPTIONS::SPW) {
         std::cout << "this Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command.type later\n";
     }
     spw_instruction = new_spw_instruction;
@@ -230,7 +230,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 // add data to command based on specific protocol used
                 if(path_key.compare("TIMEPIX") == 0) {
                     // handle commands for TIMEPIX (over UART)
-                    Command this_command = Command(this_name, this_hex, this_read, UART);
+                    Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::UART);
 
                     //TODO: more here
                 
@@ -238,7 +238,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     // handle commands for CDTE or CMOS (over SPW)
 
                     // make a new Command object to store this information
-                    Command this_command = Command(this_name, this_hex, this_read, SPW);
+                    Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::SPW);
 
                     // fill in protocol-specific details in the Command (for SpaceWire)
                     std::string this_spw_instr_str = this_entry.value()["instruction"];
@@ -268,7 +268,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
 
                 } else if(path_key.compare("HOUSEKEEPING") == 0) {
                     // handle commands for HK (over SPI (via Ethernet))
-                    Command this_command = Command(this_name, this_hex, this_read, SPI);
+                    Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::SPI);
 
                     // TODO: add more here for SPI
 
@@ -369,7 +369,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
     std::vector<char> full_packet;
     
 
-    if(cmd.type == SPW) {
+    if(cmd.type == COMMAND_TYPE_OPTIONS::SPW) {
         std::vector<char> ethernet_header;
         std::vector<char> rmap_packet;
 
@@ -675,7 +675,7 @@ std::vector<char> CommandDeck::get_spw_ether_header(std::vector<char> rmap_packe
     std::vector<char> ether_prefix;
     const unsigned long long rmap_packet_size = rmap_packet.size();
 
-    ether_prefix.push_back(EOP);
+    ether_prefix.push_back((char)SPACEWIRE_END_OPTIONS::EOP);
     ether_prefix.push_back(0x00);
     ether_prefix.push_back(0x00);
     ether_prefix.push_back(0x00);

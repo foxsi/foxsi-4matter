@@ -72,17 +72,17 @@ enum STATE_ORDER {
     STATE_COUNT
 };
 
-enum COMMAND_TYPE_OPTIONS{
+enum class COMMAND_TYPE_OPTIONS: unsigned char {
     NONE,
     SPW,
     UART,
     SPI
 };
 
-enum SPW_END_OPTIONS{
-    EOP = 0x00,
-    EEP = 0x01,
-    JUMBO = 0x02
+enum class SPACEWIRE_END_OPTIONS: unsigned char {
+    EOP     = 0x00,
+    EEP     = 0x01,
+    JUMBO   = 0x02
 };
 
 #endif
