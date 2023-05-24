@@ -3,7 +3,11 @@
 #include <iomanip>
 
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order) {
-    order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_COUNT);
+    // order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_ORDER::SUBSYSTEM_COUNT);
+    order = static_cast<SUBSYSTEM_ORDER>( static_cast<unsigned short>(order) + 1 );
+    if(order == SUBSYSTEM_ORDER::SUBSYSTEM_COUNT) {
+        order = static_cast<SUBSYSTEM_ORDER>(0);
+    }
     return order;
 }
 
@@ -14,7 +18,10 @@ SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order, int) {
 }
 
 STATE_ORDER operator++(STATE_ORDER& order) {
-    order = static_cast<STATE_ORDER>((order + 1) % STATE_COUNT);
+    order = static_cast<STATE_ORDER>( static_cast<unsigned short>(order) + 1 );
+    if(order == STATE_ORDER::STATE_COUNT) {
+        order = static_cast<STATE_ORDER>(0);
+    }
     return order;
 }
 

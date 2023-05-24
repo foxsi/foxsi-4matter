@@ -12,8 +12,8 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock(context), 
     local_tcp_sock(context)
 {
-    active_subsys = HOUSEKEEPING;
-    active_state = IDLE;
+    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    active_state = STATE_ORDER::IDLE;
 
     commands = CommandDeck();
     
@@ -55,8 +55,8 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock(context),
     local_tcp_sock(context)
 {
-    active_subsys = HOUSEKEEPING;
-    active_state = IDLE;
+    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    active_state = STATE_ORDER::IDLE;
 
     commands = CommandDeck();
     
@@ -100,8 +100,8 @@ TransportLayerMachine::TransportLayerMachine(
     remote_udp_endpoint = remote_udp_end;
     remote_tcp_endpoint = remote_tcp_end;
     
-    active_subsys = HOUSEKEEPING;
-    active_state = IDLE;
+    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    active_state = STATE_ORDER::IDLE;
     
     commands = CommandDeck();
     

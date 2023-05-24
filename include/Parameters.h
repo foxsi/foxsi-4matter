@@ -49,27 +49,27 @@ static const unsigned long          RECV_BUFF_LEN   = 4096;
 static const unsigned long          SEND_BUFF_LEN   = 4096;
 
 // loop order for subsystems:
-enum SUBSYSTEM_ORDER {
-    HOUSEKEEPING,
-    CDTE_1,
-    CMOS_1,
-    CDTE_2,
-    TIMEPIX,
-    CDTE_3,
-    CMOS_2,
-    CDTE_4,
-    SUBSYSTEM_COUNT
+enum class SUBSYSTEM_ORDER: unsigned short {
+    HOUSEKEEPING        = 0x00,
+    CDTE_1              = 0x01,
+    CMOS_1              = 0x02,
+    CDTE_2              = 0x03,
+    TIMEPIX             = 0x04,
+    CDTE_3              = 0x05,
+    CMOS_2              = 0x06,
+    CDTE_4              = 0x07,
+    SUBSYSTEM_COUNT     = 0x08
 };
 
 // loop order for states:
-enum STATE_ORDER {
-    CMD_SEND,
-    DATA_REQ,
-    DATA_RECV,
-    DATA_CHECK,
-    DATA_STORE,
-    IDLE,
-    STATE_COUNT
+enum class STATE_ORDER: unsigned short {
+    CMD_SEND            = 0x00,
+    DATA_REQ            = 0x01,
+    DATA_RECV           = 0x02,
+    DATA_CHECK          = 0x03,
+    DATA_STORE          = 0x04,
+    IDLE                = 0x05,
+    STATE_COUNT         = 0x06
 };
 
 enum class COMMAND_TYPE_OPTIONS: unsigned char {

@@ -4,8 +4,8 @@
 #include <iostream>
 
 Metronome::Metronome(double period, boost::asio::io_context& io_context) {
-    subsystem = HOUSEKEEPING;
-    state = CMD_SEND;
+    subsystem = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    state = STATE_ORDER::CMD_SEND;
 
     if(period <= 0) {
         throw "period must be positive\n";
@@ -26,8 +26,8 @@ void Metronome::run() {
 void Metronome::tick() {
 
     std::cout << "tick\n";
-    std::cout << "\tsubsystem: " << std::to_string(subsystem);
-    std::cout << "\tstate: " << std::to_string(state) << "\n";
+    std::cout << "\tsubsystem: " << static_cast<unsigned short>(subsystem);
+    std::cout << "\tstate: " << static_cast<unsigned short>(state) << "\n";
 
     Metronome::update();
 
@@ -37,7 +37,7 @@ void Metronome::tick() {
 }
 
 void Metronome::update() {
-    if(state == DATA_STORE) {
+    if(state == STATE_ORDER::DATA_STORE) {
         ++subsystem;
     }
     ++state;

@@ -22,10 +22,10 @@ int main() {
 
     // durations of each state (currently UNUSED)
     std::map<STATE_ORDER, double> durations{
-        {CMD_SEND, 1.0},
-        {DATA_REQ, 1.0},
-        {DATA_RECV, 1.0},
-        {IDLE, 1.0}
+        {STATE_ORDER::CMD_SEND, 1.0},
+        {STATE_ORDER::DATA_REQ, 1.0},
+        {STATE_ORDER::DATA_RECV, 1.0},
+        {STATE_ORDER::IDLE, 1.0}
     };
 
     // currently UNUSED (not even sure what I wanted to do with this...)
