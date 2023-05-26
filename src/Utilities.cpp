@@ -35,11 +35,11 @@ int inc_mod(int i, int n) {
     return i = (i + 1 == n ? 0: i + 1);
 }
 
-uint8_t spw_calculate_crc_F(std::vector<char>& data) {
+char spw_calculate_crc_F(std::vector<char>& data) {
     /* From Takayuki Yuasa SpaceWireRMAP library https://github.com/yuasatakayuki/SpaceWireRMAPLibrary, 
         * Calculates a CRC code for an array of bytes. */
 
-    static const uint8_t RMAPCRCTable[] = { 0x00, 0x91, 0xe3, 0x72, 0x07, 0x96, 0xe4, 0x75,
+    static const unsigned char RMAPCRCTable[] = { 0x00, 0x91, 0xe3, 0x72, 0x07, 0x96, 0xe4, 0x75,
 0x0e, 0x9f, 0xed, 0x7c, 0x09, 0x98, 0xea, 0x7b,
 0x1c, 0x8d, 0xff, 0x6e, 0x1b, 0x8a, 0xf8, 0x69,
 0x12, 0x83, 0xf1, 0x60, 0x15, 0x84, 0xf6, 0x67,
@@ -72,7 +72,7 @@ uint8_t spw_calculate_crc_F(std::vector<char>& data) {
 0xb4, 0x25, 0x57, 0xc6, 0xb3, 0x22, 0x50, 0xc1,
 0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf};
 
-    uint8_t crc = 0x00;
+    char crc = 0x00;
     size_t length=data.size();
     for (size_t i = 0; i < length; i++) {
         crc = RMAPCRCTable[(crc ^ data[i]) & 0xff];
@@ -147,10 +147,10 @@ void hex_print(std::vector<char>& data) {
     std::cout << "\n";
 }
 
-std::vector<char> string_to_chars(std::string hex_str) {
+std::vector<uint8_t> string_to_chars(std::string hex_str) {
     // will slice 0x or 0X prefix off hex string
 
-    std::vector<char> bytes;
+    std::vector<uint8_t> bytes;
     // prepend to bytes to make it even-length
     
     if(hex_str.substr(0,2).compare("0x") == 0 || hex_str.substr(0,2).compare("0X") == 0) {
@@ -162,7 +162,7 @@ std::vector<char> string_to_chars(std::string hex_str) {
 
     for (unsigned int i = 0; i < hex_str.length(); i += 2) {
         std::string byte_str = hex_str.substr(i, 2);
-        char byte = (char) strtol(byte_str.c_str(), NULL, 16);
+        uint8_t byte = (uint8_t) strtol(byte_str.c_str(), NULL, 16);
         bytes.push_back(byte);
     }
     return bytes;

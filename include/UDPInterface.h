@@ -30,18 +30,18 @@ class UDPInterface: AbstractSerial {
 
         // ~UDPInterface();
 
-        int recv(uint8_t* addr, char* buffer);
-        int async_recv(uint8_t* addr, char* buffer);
+        int recv(uint8_t* addr, uint8_t* buffer);
+        int async_recv(uint8_t* addr, uint8_t* buffer);
 
-        int send(uint8_t* addr, char* buffer);
-        int async_send(uint8_t* addr, char* buffer);
+        int send(uint8_t* addr, uint8_t* buffer);
+        int async_send(uint8_t* addr, uint8_t* buffer);
 
 
-        // int recv(std::queue<std::vector<char>>& q);
-        int recv(std::vector<std::vector<char>>& q);
+        // int recv(std::queue<std::vector<uint8_t>>& q);
+        int recv(std::vector<std::vector<uint8_t>>& q);
 
-        int send(std::queue<std::vector<char>>& q);
-        // int send(std::vector<std::vector<char>>& q);
+        int send(std::queue<std::vector<uint8_t>>& q);
+        // int send(std::vector<std::vector<uint8_t>>& q);
 };
 
 #endif

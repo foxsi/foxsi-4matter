@@ -14,11 +14,11 @@ class UARTInterface: AbstractSerial {
 
         ~UARTInterface();
 
-        int recv(uint8_t* addr, char* buffer);
-        int async_recv(uint8_t* addr, char* buffer);
+        int recv(uint8_t* addr, uint8_t* buffer);
+        int async_recv(uint8_t* addr, uint8_t* buffer);
 
-        int send(uint8_t* addr, char* buffer);
-        int async_send(uint8_t* addr, char* buffer);
+        int send(uint8_t* addr, uint8_t* buffer);
+        int async_send(uint8_t* addr, uint8_t* buffer);
 };
 
 #endif

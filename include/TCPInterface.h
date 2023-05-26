@@ -16,7 +16,7 @@
 class TCPSession: public std::enable_shared_from_this<TCPSession> {
     public:
         boost::asio::ip::tcp::socket local_socket;
-        char data[RECV_BUFF_LEN];
+        uint8_t data[RECV_BUFF_LEN];
         // UDPInterface udpif;
 
         TCPSession(boost::asio::ip::tcp::socket socket);
@@ -66,14 +66,14 @@ class TCPInterface {
 
         // void accept();
 
-        int recv(uint8_t* addr, char* buffer);
-        int async_recv(uint8_t* addr, char* buffer);
+        int recv(uint8_t* addr, uint8_t* buffer);
+        int async_recv(uint8_t* addr, uint8_t* buffer);
 
-        int send(uint8_t* addr, char* buffer);
-        int async_send(uint8_t* addr, char* buffer);
+        int send(uint8_t* addr, uint8_t* buffer);
+        int async_send(uint8_t* addr, uint8_t* buffer);
 
         void recv();
-        void send(const char* buffer, std::size_t len);
+        void send(const uint8_t* buffer, std::size_t len);
 };
 
 

@@ -25,10 +25,10 @@ int main(int argc, char* argv[]) {
     std::cout << "deck data crc:\t0x" << std::hex << (int)hardcode.back() << "\n";
     std::cout << "ref data crc:\t0x" << std::hex << (int)reference.back() << "\n";
 
-    std::vector<char> cdtede_w_cmd;
+    std::vector<uint8_t> cdtede_w_cmd;
     cdtede_w_cmd = deck.get_command_bytes_for_sys_for_code(0x08, 0x18);
 
-    std::vector<char> cdtede_r_cmd;
+    std::vector<uint8_t> cdtede_r_cmd;
     cdtede_r_cmd = deck.get_command_bytes_for_sys_for_code(0x08, 0x9a);
 
     std::cout << "ASIC params hex:\t";
@@ -39,8 +39,8 @@ int main(int argc, char* argv[]) {
     hex_print(cdtede_r_cmd);
     std::cout << "\n";
 
-    std::vector<char> rmap_part = {cdtede_w_cmd.begin()+12, cdtede_w_cmd.end()};
-    std::vector<char> ether_head = deck.get_spw_ether_header(rmap_part);
+    std::vector<uint8_t> rmap_part = {cdtede_w_cmd.begin()+12, cdtede_w_cmd.end()};
+    std::vector<uint8_t> ether_head = deck.get_spw_ether_header(rmap_part);
     std::cout << "ether head: ";
     hex_print(ether_head);
     std::cout << "\n";

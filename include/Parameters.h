@@ -72,14 +72,14 @@ enum class STATE_ORDER: unsigned short {
     STATE_COUNT         = 0x06
 };
 
-enum class COMMAND_TYPE_OPTIONS: unsigned char {
+enum class COMMAND_TYPE_OPTIONS: uint8_t {
     NONE,
     SPW,
     UART,
     SPI
 };
 
-enum class SPACEWIRE_END_OPTIONS: unsigned char {
+enum class SPACEWIRE_END_OPTIONS: uint8_t {
     EOP     = 0x00,
     EEP     = 0x01,
     JUMBO   = 0x02

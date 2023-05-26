@@ -75,29 +75,29 @@ TCPInterface::TCPInterface(
     TCPInterface::recv();
 }
 
-int TCPInterface::recv(uint8_t* addr, char* buffer) {
+int TCPInterface::recv(uint8_t* addr, uint8_t* buffer) {
 
 }
 
-int TCPInterface::async_recv(uint8_t* addr, char* buffer) {
+int TCPInterface::async_recv(uint8_t* addr, uint8_t* buffer) {
     
     return 0;
 }
 
-int TCPInterface::send(uint8_t* addr, char* buffer) {
+int TCPInterface::send(uint8_t* addr, uint8_t* buffer) {
 
 }
 
-int TCPInterface::async_send(uint8_t* addr, char* buffer) {
+int TCPInterface::async_send(uint8_t* addr, uint8_t* buffer) {
     
     return 0;
 }
 
 void TCPInterface::recv() {
-    std::string msg_str = "hello, it's the formatter\n";
-    const char* msg = msg_str.c_str();
+    const std::string msg_str = "hello, it's the formatter\n";
+    const uint8_t* msg = reinterpret_cast<const uint8_t*>(&msg_str[0]);
     std::size_t len = msg_str.length();
-    char recv_buff[RECV_BUFF_LEN];
+    uint8_t recv_buff[RECV_BUFF_LEN];
 
     // memset(recvbuf, 0, sizeof(recvbuf));
 
@@ -107,7 +107,7 @@ void TCPInterface::recv() {
     TCPInterface::send(msg, len);
 }
 
-void TCPInterface::send(const char* buffer, std::size_t len) {
+void TCPInterface::send(const uint8_t* buffer, std::size_t len) {
     std::cout << "sending" << "\n";
     local_socket.send(boost::asio::buffer(buffer, len));
     TCPInterface::recv();

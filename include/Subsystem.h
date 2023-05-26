@@ -20,10 +20,10 @@ class TransportLayerMachine {
         boost::asio::ip::udp::endpoint remote_udp_endpoint;
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
 
-        std::vector<char> downlink_buff;
-        std::vector<char> uplink_buff;
-        std::vector<char> command_pipe;
-        std::queue<char> ground_pipe;
+        std::vector<uint8_t> downlink_buff;
+        std::vector<uint8_t> uplink_buff;
+        std::vector<uint8_t> command_pipe;
+        std::queue<uint8_t> ground_pipe;
 
         CommandDeck commands;
 

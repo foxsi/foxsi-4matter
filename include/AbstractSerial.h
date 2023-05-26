@@ -19,18 +19,18 @@ class AbstractSerial {
     public:
         // virtual ~AbstractSerial() = 0;
 
-        // virtual int recv(uint8_t* addr, char* buffer) = 0;
-        // virtual int async_recv(uint8_t* addr, char* buffer) = 0;
+        // virtual int recv(uint8_t* addr, uint8_t* buffer) = 0;
+        // virtual int async_recv(uint8_t* addr, uint8_t* buffer) = 0;
 
         // // virtual uint8_t* recv_to_memory(uint8_t* addr, SharedMemory* memory) = 0;
-        // virtual int send(uint8_t* addr, char* data) = 0;
-        // virtual int async_send(uint8_t* addr, char* data) = 0;
+        // virtual int send(uint8_t* addr, uint8_t* data) = 0;
+        // virtual int async_send(uint8_t* addr, uint8_t* data) = 0;
 
-        // virtual int recv(std::queue<std::vector<char>>& q) = 0;
-        // virtual int recv(std::vector<std::vector<char>>& q) = 0;
+        // virtual int recv(std::queue<std::vector<uint8_t>>& q) = 0;
+        // virtual int recv(std::vector<std::vector<uint8_t>>& q) = 0;
 
-        // virtual int send(std::queue<std::vector<char>>& q) = 0;
-        // virtual int send(std::vector<std::vector<char>>& q) = 0;
+        // virtual int send(std::queue<std::vector<uint8_t>>& q) = 0;
+        // virtual int send(std::vector<std::vector<uint8_t>>& q) = 0;
 
         // virtual uint8_t* read(std::ifstream& file) = 0;
         // virtual void write(std::ofstream& file, uint8_t* data) = 0;

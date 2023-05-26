@@ -18,10 +18,10 @@ void hex_print(std::vector<uint8_t>& data);
 void hex_print(std::vector<char>& data);
 
 // find a better place to put this
-uint8_t spw_calculate_crc_F(std::vector<char>& data);
+char spw_calculate_crc_F(std::vector<char>& data);
 uint8_t spw_calculate_crc_uint_F(std::vector<uint8_t>& data);
 
-std::vector<char> string_to_chars(std::string hex_str);
+std::vector<uint8_t> string_to_chars(std::string hex_str);
 
 
 #endif

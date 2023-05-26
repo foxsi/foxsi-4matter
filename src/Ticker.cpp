@@ -7,8 +7,8 @@ Ticker::Ticker(
     std::map<STATE_ORDER, double>& duration,
     std::ifstream& log,
     std::map<std::string, std::string>& flag,
-    std::vector<std::vector<char>>& command,
-    std::queue<std::vector<char>>& down
+    std::vector<std::vector<uint8_t>>& command,
+    std::queue<std::vector<uint8_t>>& down
 ):  
     subsystems(systems), 
     period(loop_period),  

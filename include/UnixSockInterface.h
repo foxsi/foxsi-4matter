@@ -16,15 +16,15 @@ class UnixDomainSocketInterface: AbstractSerial {
         UnixDomainSocketInterface(std::string endpoint, boost::asio::io_context& context);
         ~UnixDomainSocketInterface();
 
-        int recv(uint8_t* addr, char* buffer);
-        int async_recv(uint8_t* addr, char* buffer);
+        int recv(uint8_t* addr, uint8_t* buffer);
+        int async_recv(uint8_t* addr, uint8_t* buffer);
 
-        int send(uint8_t* addr, char* data);
-        int async_send(uint8_t* addr, char* data);
+        int send(uint8_t* addr, uint8_t* data);
+        int async_send(uint8_t* addr, uint8_t* data);
 
         // for test
         void recv();
-        void send(char* buff, std::size_t len);
+        void send(uint8_t* buff, std::size_t len);
 };
 
 #endif

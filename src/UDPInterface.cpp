@@ -15,7 +15,7 @@ UDPInterface::UDPInterface(std::string local_ip, unsigned short local_port, std:
 //     // do something to kill ongoing I/O and close socket?   
 // }
 
-int UDPInterface::recv(uint8_t* addr, char* buffer) {
+int UDPInterface::recv(uint8_t* addr, uint8_t* buffer) {
     // build a SpW message using addr
     // wrap socket.recv_from(), recv_from remote_endpoint
 
@@ -23,32 +23,32 @@ int UDPInterface::recv(uint8_t* addr, char* buffer) {
     return 0;
 }
 
-int UDPInterface::async_recv(uint8_t* addr, char* buffer) {
+int UDPInterface::async_recv(uint8_t* addr, uint8_t* buffer) {
     return 0;
 }
 
 
-int UDPInterface::send(uint8_t* addr, char* buffer) {
+int UDPInterface::send(uint8_t* addr, uint8_t* buffer) {
     return 0;
 }
 
-int UDPInterface::async_send(uint8_t* addr, char* buffer) {
+int UDPInterface::async_send(uint8_t* addr, uint8_t* buffer) {
     return 0;
 }
 
-// int recv(std::queue<std::vector<char>>& q) {
+// int recv(std::queue<std::vector<uint8_t>>& q) {
 //     return 0;
 // }
-int recv(std::vector<std::vector<char>>& q) {
+int recv(std::vector<std::vector<uint8_t>>& q) {
     return 0;
 }
-int send(std::queue<std::vector<char>>& q) {
+int send(std::queue<std::vector<uint8_t>>& q) {
     return 0;
 }
-// int send(std::vector<std::vector<char>>& q) {
+// int send(std::vector<std::vector<uint8_t>>& q) {
 //     return 0;
 // }
 
-// void UDPInterface::async_send(char* buffer, std::size_t length) {
+// void UDPInterface::async_send(uint8_t* buffer, std::size_t length) {
 //     // local_socket.send_to(buffer, remote_endpoint);
 // }
