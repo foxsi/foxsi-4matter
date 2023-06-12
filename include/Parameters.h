@@ -73,16 +73,17 @@ enum class STATE_ORDER: unsigned short {
 };
 
 enum class COMMAND_TYPE_OPTIONS: uint8_t {
-    NONE,
-    SPW,
-    UART,
-    SPI
+    NONE                = 0x00,
+    SPW                 = 0x01,
+    UART                = 0x02,
+    SPI                 = 0x03,
+    ETHERNET            = 0x05
 };
 
 enum class SPACEWIRE_END_OPTIONS: uint8_t {
-    EOP     = 0x00,
-    EEP     = 0x01,
-    JUMBO   = 0x02
+    EOP                 = 0x00,
+    EEP                 = 0x01,
+    JUMBO               = 0x02
 };
 
 #endif

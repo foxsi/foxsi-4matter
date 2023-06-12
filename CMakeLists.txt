@@ -12,7 +12,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
 
-enable_testing()
+# enable_testing()
 
 # Add other sources and headers here:
 set(
@@ -74,7 +74,13 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
+# add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp
+add_executable(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
+target_include_directories(
+    test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
@@ -163,6 +169,7 @@ if(Boost_FOUND)
     target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem lib)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem lib)
+    target_link_libraries(test PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()

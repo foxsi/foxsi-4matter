@@ -75,12 +75,44 @@ class Command {
 // object to hold system metadata
 class System {
     public:
+        // generic stuff:
         std::string name;
         uint8_t hex;
+
+        COMMAND_TYPE_OPTIONS type;
+
+        // spacewire stuff:
+        std::vector<uint8_t> target_path_address;
+        std::vector<uint8_t> reply_path_address;
+        uint8_t target_logical_address;
+        uint8_t source_logical_address;
+        uint8_t key;
+        std::string crc_version;
+        std::string hardware_name;
         
+        // uart stuff:
+        unsigned long baud_rate;
+        unsigned short parity_bits;
+        unsigned short data_bits;
+        unsigned short stop_bits;
+
         System(std::string new_name, uint8_t new_hex);
+        System(
+            std::string new_name, 
+            uint8_t new_hex,
+            COMMAND_TYPE_OPTIONS new_type,
+            std::vector<uint8_t> new_target_path_address,
+            std::vector<uint8_t> new_reply_path_address,
+            uint8_t new_target_logical_address,
+            uint8_t new_source_logical_address,
+            uint8_t new_key,
+            std::string new_crc_version,
+            std::string new_hardware_name
+        );
         System(const System& other);
         System& operator=(const System& other);
+
+        void set_type(COMMAND_TYPE_OPTIONS new_type);
 };
 
 
@@ -92,8 +124,10 @@ class CommandDeck {
         std::unordered_map<uint8_t, std::unordered_map<uint8_t, Command>> commands;
         // more on this: will define command maps for each system (CDTE1, 2, etc; CMOS1, 2...) then key into each map by the hex code for each system
 
-        // pass in a map pairing system text names ("CDTE") with json command file paths
+        // construct from a map pairing system text names ("CDTE") with json command file paths
         CommandDeck(std::unordered_map<std::string, std::string> named_paths);
+        // construct from a list of Systems and a map from System::hex to command file name
+        CommandDeck(std::vector<System> new_systems, std::unordered_map<uint8_t, std::string> command_paths);
         CommandDeck() = default;
 
         // add systems definition to object from JSON file
@@ -103,14 +137,17 @@ class CommandDeck {
 
         // getter methods/conversion/convenience
         std::string     get_sys_name_for_code(uint8_t code);
-        uint8_t            get_sys_code_for_name(std::string name);
+        uint8_t         get_sys_code_for_name(std::string name);
         System&         get_sys_for_code(uint8_t code);
         System&         get_sys_for_name(std::string name);
 
-        Command&        get_command_for_code(uint8_t code);
-        Command&        get_command_for_name(std::string name);
         Command&        get_command_for_sys_for_code(uint8_t sys, uint8_t code);
-        std::vector<uint8_t> get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t code);
+
+        // for the dirty work
+        std::vector<uint8_t> make_spw_packet_for_sys_for_command(System sys, Command cmd);
+
+        std::vector<uint8_t> get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t cmd);
+        std::vector<uint8_t> get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code);
         // add a version of the above that takes arguments
 
         std::vector<uint8_t> get_spw_ether_header(std::vector<uint8_t> rmap_packet);

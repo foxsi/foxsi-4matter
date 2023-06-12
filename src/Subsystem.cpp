@@ -199,7 +199,7 @@ void TransportLayerMachine::handle_cmd() {
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
     std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
 
-    std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
+    std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code_old(uplink_buff_sys, uplink_buff_cmd);
 
     command_pipe.insert(command_pipe.end(), output_cmd.begin(), output_cmd.end());
     // command_pipe.push_back('\0');

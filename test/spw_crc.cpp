@@ -26,10 +26,10 @@ int main(int argc, char* argv[]) {
     std::cout << "ref data crc:\t0x" << std::hex << (int)reference.back() << "\n";
 
     std::vector<uint8_t> cdtede_w_cmd;
-    cdtede_w_cmd = deck.get_command_bytes_for_sys_for_code(0x08, 0x18);
+    cdtede_w_cmd = deck.get_command_bytes_for_sys_for_code_old(0x08, 0x18);
 
     std::vector<uint8_t> cdtede_r_cmd;
-    cdtede_r_cmd = deck.get_command_bytes_for_sys_for_code(0x08, 0x9a);
+    cdtede_r_cmd = deck.get_command_bytes_for_sys_for_code_old(0x08, 0x9a);
 
     std::cout << "ASIC params hex:\t";
     hex_print(cdtede_w_cmd);

@@ -1,6 +1,7 @@
 #include "Utilities.h"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order) {
     // order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_ORDER::SUBSYSTEM_COUNT);
@@ -147,6 +148,10 @@ void hex_print(std::vector<char>& data) {
     std::cout << "\n";
 }
 
+void hex_print(uint8_t data) {
+    std::cout << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int)(data & 0xff);
+}
+
 std::vector<uint8_t> string_to_chars(std::string hex_str) {
     // will slice 0x or 0X prefix off hex string
 
@@ -166,4 +171,8 @@ std::vector<uint8_t> string_to_chars(std::string hex_str) {
         bytes.push_back(byte);
     }
     return bytes;
+}
+
+uint8_t string_to_byte(std::string hex_str) {
+    return strtol(hex_str.c_str(), NULL, 16) & 0xff;
 }
