@@ -22,6 +22,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
@@ -173,3 +174,5 @@ if(Boost_FOUND)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
+
+find_package(Doxygen REQUIRED)

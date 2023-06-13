@@ -1,9 +1,7 @@
 #ifndef UARTINTERFACE_H
 #define UARTINTERFACE_H
 
-#include "AbstractSerial.h"
-
-class UARTInterface: AbstractSerial {
+class UARTInterface {
     public:
         unsigned long baud;
         unsigned short parity;

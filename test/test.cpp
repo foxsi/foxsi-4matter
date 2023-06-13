@@ -1,6 +1,7 @@
 #include "Commanding.h"
 #include "LineInterface.h"
 #include "Utilities.h"
+#include "RingBufferInterface.h"
 #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 #include <string>
@@ -56,6 +57,25 @@ int main(int argc, char** argv) {
 
     std::cout << "got new command:\t";
     hex_print(cmd_new);
+
+    std::cout << "checking ring buffer interface:\n";
+    RingBufferInterface rbf = RingBufferInterface(0x00400000, 32124400, 32780, 2);
+
+    uint32_t last_read0 = rbf.read_block_from(0x00400000 + 32780*0);
+    uint32_t last_read1 = rbf.read_block_from(0x00400000 + 32780*1);
+    uint32_t last_read2 = rbf.read_block_from(0x00400000 + 32785);
+    uint32_t last_read3 = rbf.read_block_from(0x00400000 + 32780*2);
+    uint32_t last_read4 = rbf.read_block_from(0x00400000 + 32780*3);
+    uint32_t last_read5 = rbf.read_block_from(0x00400000 + 32780*980);
+    
+    std::cout << last_read0 << std::endl;
+    std::cout << last_read1 << std::endl;
+    std::cout << last_read2 << std::endl;
+    std::cout << last_read3 << std::endl;
+    std::cout << last_read4 << std::endl;
+    std::cout << last_read5 << std::endl;
+    
+    // RingBufferInterface rbf = RingBufferInterface();
 
     return 0;
 }

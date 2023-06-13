@@ -2,7 +2,7 @@
 #include "Utilities.h"
 
 Ticker::Ticker(
-    std::vector<AbstractSerial*> systems, 
+    std::vector<TransportLayerMachine*> systems, 
     double& loop_period,
     std::map<STATE_ORDER, double>& duration,
     std::ifstream& log,

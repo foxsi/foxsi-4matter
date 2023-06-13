@@ -1,12 +1,11 @@
 #ifndef UDPINTERFACE_H
 #define UDPINTERFACE_H
 
-#include "AbstractSerial.h"
 #include <boost/asio.hpp>
 #include <queue>
 #include <vector>
 
-class UDPInterface: AbstractSerial {
+class UDPInterface {
     public:
         boost::asio::ip::address local_address;
         unsigned short local_port;

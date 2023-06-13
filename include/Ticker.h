@@ -6,7 +6,7 @@
 
 class Ticker {
     // believe that "MyClass*" syntax in std::vector allows any class inheriting MyClass to be used.
-    std::vector<AbstractSerial*> subsystems;
+    std::vector<TransportLayerMachine*> subsystems;
     double& period;                                 // period of full loop
     std::map<STATE_ORDER, double>& durations;       // max time to spend in each state
         // get the durations std::map from a higher level map that stores fraction of period (or desired data volumes per period) for each state.
@@ -22,7 +22,7 @@ class Ticker {
     std::size_t downlink_msg_size;                  // size of packet used for downlink messages (<1500B)
 
     Ticker(
-        std::vector<AbstractSerial*> systems, 
+        std::vector<TransportLayerMachine*> systems, 
         double& period,
         std::map<STATE_ORDER, double>& duration,
         std::ifstream& log,
