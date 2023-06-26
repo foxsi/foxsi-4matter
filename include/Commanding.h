@@ -149,6 +149,9 @@ class CommandDeck {
         std::vector<uint8_t> get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t cmd);
         std::vector<uint8_t> get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code);
         // add a version of the above that takes arguments
+        
+        // TODO: IMPLEMENT
+        std::vector<uint8_t> get_read_command_bytes_for_sys_for_code_for_addr(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len);
 
         std::vector<uint8_t> get_spw_ether_header(std::vector<uint8_t> rmap_packet);
 
@@ -162,6 +165,7 @@ class CommandDeck {
     private:
         // track whether systems list has been added yet
         bool did_add_systems_;
+        std::vector<uint8_t> make_spw_header_(System sys, Command cmd);
 
 };
 

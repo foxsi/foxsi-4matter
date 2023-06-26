@@ -247,9 +247,11 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
                 // fill in protocol-specific details in the Command (for SpaceWire)
                 std::string this_spw_instr_str = this_entry.value()["instruction"];
                 std::string this_spw_addr_str = this_entry.value()["address"];
-                std::string this_spw_write_data_str = this_entry.value()["length"];
+                std::string this_spw_write_data_str = this_entry.value()["write_value"];
+                std::string this_spw_reply_len_str = this_entry.value()["reply.length [B]"];
 
-                uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
                 // TODO: add reply length explicitly to JSON file field.
 
                 std::vector<uint8_t> this_spw_write_data;
@@ -257,12 +259,12 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
 
                 unsigned short this_spw_reply_length = 0;
                 if(this_read) {
-                    this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                    // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                    this_spw_reply_length = strtol(this_spw_reply_len_str.c_str(), NULL, 16);
                 } else {
                     this_spw_write_data = string_to_chars(this_spw_write_data_str);
                 }
                 
-
                 this_spw_addr = string_to_chars(this_spw_addr_str);
 
                 this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
@@ -402,7 +404,8 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::string this_spw_addr_str = this_entry.value()["address"];
                     std::string this_spw_write_data_str = this_entry.value()["length"];
 
-                    uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                    // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                    uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
                     // TODO: add reply length explicitly to JSON file field.
 
                     std::vector<uint8_t> this_spw_write_data;
@@ -414,7 +417,6 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     } else {
                         this_spw_write_data = string_to_chars(this_spw_write_data_str);
                     }
-                    
 
                     this_spw_addr = string_to_chars(this_spw_addr_str);
 
@@ -499,11 +501,8 @@ Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     
 }
 
-std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys, Command cmd) {
-    std::vector<uint8_t> full_packet;
-    std::vector<uint8_t> rmap_packet;
+std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     std::vector<uint8_t> header;
-    std::vector<uint8_t> ethernet_header;
 
     std::vector<uint8_t> target_path_address    = sys.target_path_address;
     uint8_t target_logical_address              = sys.target_logical_address;
@@ -516,97 +515,67 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
     uint8_t transaction_id_msb = 0x00;
     uint8_t extended_address = 0x00;
 
+    uint8_t instruction = cmd.get_spw_instruction();
+    std::cout << "instruction: ";
+    hex_print(instruction);
+    std::cout << "\n";
+    
+    size_t raw_data_length;
+
+    // TODO: handle instruciton parsing correctly
     if(cmd.read) {
-        uint8_t instruction = cmd.get_spw_instruction();
-        std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
-        
-        // TODO: un-hardcode the instructions (format read JSON correctly)
-        instruction = 0x4d;
+        // instruction = 0x4d;
+        raw_data_length = cmd.get_spw_reply_length();
+    } else {
+        // instruction = 0x7d;
+        raw_data_length = cmd.get_spw_write_data().size();
+    }
 
-        // TODO: increment read address
-        std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
-        // TODO: find correct frame size value
-        unsigned short read_data_length = cmd.get_spw_reply_length();
+    // TODO: increment read address
+    std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
 
-        const uint8_t dl0 = read_data_length & 0xff;
-        const uint8_t dl1 = (read_data_length >> 8) & 0xff;
-        const uint8_t dl2 = (read_data_length >> 16) & 0xff;
-        std::vector<uint8_t> data_length;
-        data_length.push_back(dl2);
-        data_length.push_back(dl1);
-        data_length.push_back(dl0);
-        
-        header.push_back(target_logical_address);
-        header.push_back(protocol_id);
-        header.push_back(instruction);
-        header.push_back(key);
-        header.insert(header.end(), reply_path_address.begin(), reply_path_address.end());
-        header.push_back(initiator_logical_address);
-        header.push_back(transaction_id_msb);
-        header.push_back(transaction_id_lsb);
-        header.push_back(extended_address);
-        header.insert(header.end(), memory_address.begin(), memory_address.end());
-        header.insert(header.end(), data_length.begin(), data_length.end());
-        
-        uint8_t header_crc;
-        if(sys.crc_version.compare("f") == 0) {
-            header_crc = spw_calculate_crc_uint_F(header);
-        } else {
-            std::cerr << "CRC version not supported!\n";
-            exit(0);
-        }
-        
-        header.push_back(header_crc);
-        rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
+    std::vector<uint8_t> data_length = splat_to_nbytes(3, raw_data_length);
+    
+    header.insert(header.end(), target_path_address.begin(), target_path_address.end());
+    header.push_back(target_logical_address);
+    header.push_back(protocol_id);
+    header.push_back(instruction);
+    header.push_back(key);
+    header.insert(header.end(), reply_path_address.begin(), reply_path_address.end());
+    header.push_back(initiator_logical_address);
+    header.push_back(transaction_id_msb);
+    header.push_back(transaction_id_lsb);
+    header.push_back(extended_address);
+    header.insert(header.end(), memory_address.begin(), memory_address.end());
+    header.insert(header.end(), data_length.begin(), data_length.end());
+    
+    uint8_t header_crc;
+    if(sys.crc_version.compare("f") == 0) {
+        header_crc = spw_calculate_crc_uint_F(header);
+    } else {
+        std::cerr << "CRC version not supported!\n";
+        exit(0);
+    }
+    
+    header.push_back(header_crc);
+    return header;
+}
+
+std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys, Command cmd) {
+    std::vector<uint8_t> full_packet;
+    std::vector<uint8_t> rmap_packet;
+    std::vector<uint8_t> header;
+    std::vector<uint8_t> ethernet_header;
+
+    header = CommandDeck::make_spw_header_(sys, cmd);
+    
+    if(cmd.read) {
         rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
 
     } else {
-        uint8_t instruction = cmd.get_spw_instruction();
-        std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
-
-        // TODO: un-hardcode the instruction field (correct it in source JSON)
-        instruction = 0x7d;
-
-        // TODO: un-hardcode the read address
-        std::vector<uint8_t> memory_address = {0x00, 0x00, 0x00, 0x00};
-
         std::vector<uint8_t> write_data = cmd.get_spw_write_data();
-        hex_print(write_data);
-        debug_print("");
-
-        unsigned int write_data_length = write_data.size();
-        debug_print("write data size: " + std::to_string(write_data_length));
-        const uint8_t dl0 = write_data_length & 0xff;
-        const uint8_t dl1 = (write_data_length >> 8) & 0xff;
-        const uint8_t dl2 = (write_data_length >> 16) & 0xff;
-        std::vector<uint8_t> data_length;
-        data_length.push_back(dl2);
-        data_length.push_back(dl1);
-        data_length.push_back(dl0);
-        
-        
-        header.push_back(target_logical_address);
-        header.push_back(protocol_id);
-        header.push_back(instruction);
-        header.push_back(key);
-        header.insert(header.end(), reply_path_address.begin(), reply_path_address.end());
-        header.push_back(initiator_logical_address);
-        header.push_back(transaction_id_msb);
-        header.push_back(transaction_id_lsb);
-        header.push_back(extended_address);
-        header.insert(header.end(), memory_address.begin(), memory_address.end());
-        header.insert(header.end(), data_length.begin(), data_length.end());
-        
-        uint8_t header_crc;
-        if(sys.crc_version.compare("f") == 0) {
-            header_crc = spw_calculate_crc_uint_F(header);
-        } else {
-            std::cerr << "CRC version not supported!\n";
-            exit(0);
-        }
-        header.push_back(header_crc);
-
         std::vector<uint8_t> data;
+
         data.insert(data.end(), write_data.begin(), write_data.end());
 
         uint8_t data_crc;
@@ -622,7 +591,7 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
         hex_print(data);
         std::cout << "\n";
 
-        rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
+        // rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
         rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
         rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
     }

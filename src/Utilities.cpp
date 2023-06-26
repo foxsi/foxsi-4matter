@@ -128,7 +128,7 @@ uint8_t spw_calculate_crc_uint_F(std::vector<uint8_t>& data) {
 
 void debug_print(std::string msg) {
     if(DEBUG) {
-        std::cout << msg << "\n";
+        std::cout << "\033[1;34m" << msg << "\033[0m" << "\n";
     }
 }
 
@@ -175,4 +175,13 @@ std::vector<uint8_t> string_to_chars(std::string hex_str) {
 
 uint8_t string_to_byte(std::string hex_str) {
     return strtol(hex_str.c_str(), NULL, 16) & 0xff;
+}
+
+std::vector<uint8_t> splat_to_nbytes(size_t n, uint64_t data) {
+    std::vector<uint8_t> result;
+    for(int i=n-1; i>=0; --i) {
+        const uint8_t d = (data >> i*8) & 0xff;
+        result.push_back(d);
+    }
+    return result;
 }

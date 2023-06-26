@@ -5,6 +5,7 @@
 #include "UDPInterface.h"
 #include "TCPInterface.h"
 #include "UARTInterface.h"
+#include "RingBufferInterface.h"
 #include "Commanding.h"
 #include "Parameters.h"
 // #include <boost/asio.hpp>
@@ -26,6 +27,9 @@ class TransportLayerMachine {
         std::queue<uint8_t> ground_pipe;
 
         CommandDeck commands;
+        
+        // to lookup from System hex code to corresponding ring buffer remote interface
+        std::unordered_map<uint8_t, RingBufferInterface> ring_buffers;
 
         STATE_ORDER active_state;
         SUBSYSTEM_ORDER active_subsys;
@@ -52,6 +56,7 @@ class TransportLayerMachine {
         void update(SUBSYSTEM_ORDER new_subsys, STATE_ORDER new_state);
 
         void add_commands(CommandDeck& new_commands);
+        void add_ring_buffer_interface(std::unordered_map<uint8_t, RingBufferInterface> new_ring_buffers);
 
         void handle_recv();
         void recv_tcp_fwd_udp();
@@ -63,6 +68,7 @@ class TransportLayerMachine {
         void print_udp_basic();
 
         void handle_cmd();
+        void handle_remote_buffer_transaction();
 
 };
 
