@@ -77,6 +77,11 @@ int main(int argc, char** argv) {
     hex_print(new_crc);
     std::cout << "\n";
 
+    std::vector<uint8_t> cmos2_train = deck.get_command_bytes_for_sys_for_code(0x0f, 0x1f);
+    std::cout << "got cmos2 train command:\t";
+    hex_print(cmos2_train);
+
+
     std::cout << "checking ring buffer interface:\n";
     RingBufferInterface rbf = RingBufferInterface(0x00400000, 32124400, 32780, 2);
 
