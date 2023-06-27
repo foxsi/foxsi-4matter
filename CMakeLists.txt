@@ -119,11 +119,11 @@ if(UNIX AND NOT APPLE)
         PUBLIC
         ${NLOHMANNJSON_ROOT}
     )
-    target_include_directories(
-        lib
-        PUBLIC
-        ${GOOGLETEST_ROOT}
-    )
+    # target_include_directories(
+    #     lib
+    #     PUBLIC
+    #     ${GOOGLETEST_ROOT}
+    # )
 
 elseif(UNIX AND APPLE)
     # this usually builds fine
@@ -132,6 +132,8 @@ elseif(UNIX AND APPLE)
 
     find_package(GTest REQUIRED)
     target_link_libraries(lib PUBLIC GTest::gtest)
+
+    find_package(Doxygen REQUIRED)
 
 else()
     error("Unsupported OS.")
@@ -175,4 +177,3 @@ elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
 
-find_package(Doxygen REQUIRED)

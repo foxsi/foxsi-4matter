@@ -2,10 +2,11 @@
 #include "LineInterface.h"
 #include "Utilities.h"
 #include "RingBufferInterface.h"
-#include <gtest/gtest.h>
+// #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 #include <string>
 #include <iostream>
+#include <iomanip>
 
 // namespace {
 
