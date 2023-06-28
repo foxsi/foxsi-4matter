@@ -20,14 +20,17 @@ int main(int argc, char* argv[]) {
     bool tcpb = 0;
     bool udpb = 0;
 
+    std::cout << "found " << lif.unique_endpoints.size() << " unique endpoints\n";
+    std::cout << "found " << lif.local_endpoints.size() << " local endpoints\n";
+
     local_udp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
-    local_udp_endpoint.port(lif.endpoints["gse"].port);
+    local_udp_endpoint.port(lif.lookup_endpoints[0x00]->port);
     local_tcp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
-    local_tcp_endpoint.port(lif.endpoints["spmu"].port);
-    remote_udp_endpoint.address(boost::asio::ip::make_address(lif.endpoints["gse"].address));
-    remote_udp_endpoint.port(lif.endpoints["gse"].port);
-    remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.endpoints["spmu"].address));
-    remote_tcp_endpoint.port(lif.endpoints["spmu"].port);
+    local_tcp_endpoint.port(lif.lookup_endpoints[0x08]->port);
+    remote_udp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[0x00]->address));
+    remote_udp_endpoint.port(lif.lookup_endpoints[0x00]->port);
+    remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[0x08]->address));
+    remote_tcp_endpoint.port(lif.lookup_endpoints[0x08]->port);
 
     CommandDeck deck = lif.get_command_deck();
 
