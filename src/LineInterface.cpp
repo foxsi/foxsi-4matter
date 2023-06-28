@@ -303,6 +303,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
 
     // build CommandDeck
+    command_deck = CommandDeck(systems,lookup_command_file);
 
     // =============== OLD ============================================
 
