@@ -17,3 +17,8 @@ See [PISETUP.md](PISETUP.md) for instructions on booting and configuring the Ras
 
 ### Examples
 You can find a few examples in the [examples folder](examples).
+
+## More detail
+The physical system is laid out like this:
+
+![The Formatter is connected to many systems. Sorry, an image would be handy.](doc/assets/formatter_layout.svg "Formatter physical interfaces")
