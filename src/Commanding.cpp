@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 
-Command::Command(std::string new_name, char new_hex, bool new_read, COMMAND_TYPE_OPTIONS new_type) {
+Command::Command(std::string new_name, uint8_t new_hex, bool new_read, COMMAND_TYPE_OPTIONS new_type) {
     name = new_name;
     hex = new_hex;
     read = new_read;
@@ -31,13 +31,13 @@ void Command::set_type(COMMAND_TYPE_OPTIONS new_type) {
 }
 
 void Command::set_spw_options(
-    char new_spw_instruction,
-    std::vector<char> new_spw_address,
-    std::vector<char> new_spw_write_data,
+    uint8_t new_spw_instruction,
+    std::vector<uint8_t> new_spw_address,
+    std::vector<uint8_t> new_spw_write_data,
     unsigned short new_spw_reply_length
 ) {
     if(type != COMMAND_TYPE_OPTIONS::SPW) {
-        std::cout << "this Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command.type later\n";
+        std::cout << "\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command.type later\n";
     }
     spw_instruction = new_spw_instruction;
 
@@ -64,17 +64,17 @@ void Command::set_spw_options(
     spw_reply_length = new_spw_reply_length;
 }
 
-std::vector<char> Command::get_command_bytes() {
+std::vector<uint8_t> Command::get_command_bytes() {
     // hook into Takayuki Yuasa RMAP lib here?
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     result.push_back(0x00);
     return  result;
 }
 
-char* Command::get_command_bytes_raw() {
-    std::vector<char> command_bytes = Command::get_command_bytes();
+uint8_t* Command::get_command_bytes_raw() {
+    std::vector<uint8_t> command_bytes = Command::get_command_bytes();
     // return ref to first element of the vector
-    char* out_buff;
+    uint8_t* out_buff;
 
     return std::copy(command_bytes.begin(), command_bytes.end(), out_buff);
 }
@@ -117,17 +117,176 @@ Command& Command::operator=(const Command& other) {
 
 Command::Command() {}
 
-System::System(std::string new_name, char new_hex) {
+System::System(std::string new_name, uint8_t new_hex): name(new_name), hex(new_hex) {}
+
+System::System(
+    std::string new_name,
+    uint8_t new_hex,
+    COMMAND_TYPE_OPTIONS new_type,
+    std::vector<uint8_t> new_target_path_address,
+    std::vector<uint8_t> new_reply_path_address,
+    uint8_t new_target_logical_address,
+    uint8_t new_source_logical_address,
+    uint8_t new_key,
+    std::string new_crc_version,
+    std::string new_hardware_name
+) {
     name = new_name;
     hex = new_hex;
+    set_type(new_type);
+    target_path_address = new_target_path_address;
+    reply_path_address = new_reply_path_address;
+    target_logical_address = new_target_logical_address;
+    source_logical_address = new_source_logical_address;
+    key = new_key;
+    crc_version = new_crc_version;
+    hardware_name = new_hardware_name;
 }
 
-System::System(const System& other): name(other.name), hex(other.hex) {}
+System::System(const System& other): 
+    name(other.name), 
+    hex(other.hex), 
+    type(other.type),
+    target_path_address(other.target_path_address),
+    reply_path_address(other.reply_path_address),
+    target_logical_address(other.target_logical_address),
+    source_logical_address(other.source_logical_address),
+    key(other.key),
+    crc_version(other.crc_version),
+    hardware_name(other.hardware_name) 
+{}
 
 System& System::operator=(const System& other) {
     name = other.name;
     hex = other.hex;
     return *this;
+}
+
+void System::set_type(COMMAND_TYPE_OPTIONS new_type) {
+    type = new_type;
+    switch(type) {
+        case COMMAND_TYPE_OPTIONS::SPW:
+            // require set_spw_options()?
+            break;
+        case COMMAND_TYPE_OPTIONS::SPI:
+            // require set_spi_options()?
+            break;
+        case COMMAND_TYPE_OPTIONS::UART:
+            // require set_uart_options?
+            break;
+        case COMMAND_TYPE_OPTIONS::ETHERNET:
+            // require set_uart_options?
+            break;
+        case COMMAND_TYPE_OPTIONS::NONE:
+            // require set_uart_options?
+            break;
+        default:
+            std::cerr << "switch/case in Command::set_type fell through\n";
+    }
+}
+
+
+
+CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uint8_t, std::string> command_paths) {
+
+    // add systems
+    for(auto& sys: new_systems) {
+        systems.emplace_back(sys);
+    }
+    did_add_systems_ = true;
+
+    // add the commands:
+    for(const auto &[path_key, path_val]: command_paths) {
+        System this_system = CommandDeck::get_sys_for_code(path_key);
+
+        // maybe wrap this in try{}
+        std::ifstream file;
+        file.open(path_val, std::ios::in);
+        if(!file.is_open()) {
+            std::cerr << "couldn't open file \"" + path_val + "\" in CommandDeck\n";
+            // exit(0);
+
+            continue;
+        }
+
+        // parse the file
+        nlohmann::json data = nlohmann::json::parse(file);
+
+        std::unordered_map<uint8_t, Command> inner_command_map;
+
+        debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...");
+
+        std::cout << "\n\nsystem type:";
+        hex_print((uint8_t)this_system.type);
+        std::cout << "\n";
+        for(auto& this_entry: data.items()) {
+            // set primary command properties
+
+            std::string this_hex_str = this_entry.value()["hex"].get<std::string>();
+            uint8_t this_hex;
+            // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
+            this_hex = string_to_byte(this_hex_str);
+            std::string this_name = this_entry.value()["name"].get<std::string>();
+            std::string this_read_str = this_entry.value()["R=1/W=0"].get<std::string>();
+            bool this_read;
+            std::istringstream(this_read_str) >> this_read;
+
+            // add data to command based on specific protocol used
+            if(this_system.type == COMMAND_TYPE_OPTIONS::UART) {
+                // handle commands for TIMEPIX (over UART)
+                Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::UART);
+
+                //TODO: more here
+            
+            } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPW) {
+                // handle commands for CDTE or CMOS (over SPW)
+
+                // make a new Command object to store this information
+                Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::SPW);
+
+                // fill in protocol-specific details in the Command (for SpaceWire)
+                std::string this_spw_instr_str = this_entry.value()["instruction"];
+                std::string this_spw_addr_str = this_entry.value()["address"];
+                std::string this_spw_write_data_str = this_entry.value()["write_value"];
+                std::string this_spw_reply_len_str = this_entry.value()["reply.length [B]"];
+
+                // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
+                // TODO: add reply length explicitly to JSON file field.
+
+                std::vector<uint8_t> this_spw_write_data;
+                std::vector<uint8_t> this_spw_addr;
+
+                unsigned short this_spw_reply_length = 0;
+                if(this_read) {
+                    // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                    this_spw_reply_length = strtol(this_spw_reply_len_str.c_str(), NULL, 16);
+                } else {
+                    this_spw_write_data = string_to_chars(this_spw_write_data_str);
+                }
+                
+                this_spw_addr = string_to_chars(this_spw_addr_str);
+
+                this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
+
+                // add the command to the deck for this subsystem
+                commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
+
+            } else if(this_system.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+                // handle commands for HK (over SPI (via Ethernet))
+                Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::ETHERNET);
+
+                // TODO: add more here for SPI
+
+            } else {
+                std::cerr << "unknown file for " + this_system.name + " found in CommandDeck constructor.\n";
+                exit(0);
+            }
+        }
+        // add all the commands for this system to the total deck
+        debug_print("\tadded system commands to deck");
+        file.close();
+    }
 }
 
 CommandDeck::CommandDeck(std::unordered_map<std::string, std::string> named_paths) {
@@ -176,8 +335,8 @@ void CommandDeck::add_systems(std::string sys_filename) {
     for(auto& this_entry: settings_data.items()) {
         std::string this_name = this_entry.value()["name"];
         std::string this_hex_str = this_entry.value()["id"];
-        char this_hex;
-        // convert hex code string to char type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
+        uint8_t this_hex;
+        // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
         this_hex = strtol(this_hex_str.c_str(), NULL, 16);
 
         debug_print("adding new System:");
@@ -197,7 +356,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
         std::ifstream file;
         file.open(path_val, std::ios::in);
         if(!file.is_open()) {
-            std::cerr << "couldn't open file in CommandDeck\n";
+            std::cerr << "couldn't open file " + path_val + " in CommandDeck\n";
             exit(0);
         }
 
@@ -209,7 +368,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
             // already did this above, no need to repeat
         } else {
 
-            std::unordered_map<char, Command> inner_command_map;
+            std::unordered_map<uint8_t, Command> inner_command_map;
 
             debug_print("adding commands...");
 
@@ -217,8 +376,8 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 // set primary command properties
 
                 std::string this_hex_str = this_entry.value()["hex"].get<std::string>();
-                char this_hex;
-                // convert hex code string to char type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
+                uint8_t this_hex;
+                // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
                 this_hex = strtol(this_hex_str.c_str(), NULL, 16);
                 std::string this_name = this_entry.value()["name"].get<std::string>();
                 std::string this_read_str = this_entry.value()["R=1/W=0"].get<std::string>();
@@ -245,11 +404,12 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::string this_spw_addr_str = this_entry.value()["address"];
                     std::string this_spw_write_data_str = this_entry.value()["length"];
 
-                    char this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                    // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
+                    uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
                     // TODO: add reply length explicitly to JSON file field.
 
-                    std::vector<char> this_spw_write_data;
-                    std::vector<char> this_spw_addr;
+                    std::vector<uint8_t> this_spw_write_data;
+                    std::vector<uint8_t> this_spw_addr;
 
                     unsigned short this_spw_reply_length = 0;
                     if(this_read) {
@@ -257,7 +417,6 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     } else {
                         this_spw_write_data = string_to_chars(this_spw_write_data_str);
                     }
-                    
 
                     this_spw_addr = string_to_chars(this_spw_addr_str);
 
@@ -298,7 +457,7 @@ System& CommandDeck::get_sys_for_name(std::string name) {
     return null_sys;
 }
 
-System& CommandDeck::get_sys_for_code(char code) {
+System& CommandDeck::get_sys_for_code(uint8_t code) {
     // search for System with name in systems
     for(int i=0; i < systems.size(); i++) {
         if(code == systems[i].hex) {
@@ -312,15 +471,15 @@ System& CommandDeck::get_sys_for_code(char code) {
     return null_sys;
 }
 
-char CommandDeck::get_sys_code_for_name(std::string name) {
+uint8_t CommandDeck::get_sys_code_for_name(std::string name) {
     return CommandDeck::get_sys_for_name(name).hex;
 }
 
-std::string CommandDeck::get_sys_name_for_code(char code) {
+std::string CommandDeck::get_sys_name_for_code(uint8_t code) {
     return CommandDeck::get_sys_for_code(code).name;
 }
 
-Command& CommandDeck::get_command_for_sys_for_code(char sys, char code) {
+Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     // check for key `sys` in outer map
     if(commands.contains(sys)) {
         debug_print("\tcontains sys");
@@ -342,7 +501,133 @@ Command& CommandDeck::get_command_for_sys_for_code(char sys, char code) {
     
 }
 
-std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char code) {
+std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
+    std::vector<uint8_t> header;
+
+    std::vector<uint8_t> target_path_address    = sys.target_path_address;
+    uint8_t target_logical_address              = sys.target_logical_address;
+    uint8_t key                                 = sys.key;
+    uint8_t protocol_id                         = 0x01;                         // const for RMAP
+    std::vector<uint8_t> reply_path_address     = sys.reply_path_address;
+    uint8_t initiator_logical_address           = sys.source_logical_address;
+
+    uint8_t transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
+    uint8_t transaction_id_msb = 0x00;
+    uint8_t extended_address = 0x00;
+
+    uint8_t instruction = cmd.get_spw_instruction();
+    std::cout << "instruction: ";
+    hex_print(instruction);
+    std::cout << "\n";
+    
+    size_t raw_data_length;
+
+    // TODO: handle instruciton parsing correctly
+    if(cmd.read) {
+        // instruction = 0x4d;
+        raw_data_length = cmd.get_spw_reply_length();
+    } else {
+        // instruction = 0x7d;
+        raw_data_length = cmd.get_spw_write_data().size();
+    }
+
+    // TODO: increment read address
+    std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
+
+    std::vector<uint8_t> data_length = splat_to_nbytes(3, raw_data_length);
+    
+    header.insert(header.end(), target_path_address.begin(), target_path_address.end());
+    header.push_back(target_logical_address);
+    header.push_back(protocol_id);
+    header.push_back(instruction);
+    header.push_back(key);
+    header.insert(header.end(), reply_path_address.begin(), reply_path_address.end());
+    header.push_back(initiator_logical_address);
+    header.push_back(transaction_id_msb);
+    header.push_back(transaction_id_lsb);
+    header.push_back(extended_address);
+    header.insert(header.end(), memory_address.begin(), memory_address.end());
+    header.insert(header.end(), data_length.begin(), data_length.end());
+    
+    uint8_t header_crc;
+    if(sys.crc_version.compare("f") == 0) {
+        header_crc = spw_calculate_crc_uint_F(header);
+    } else {
+        std::cerr << "CRC version not supported!\n";
+        exit(0);
+    }
+    
+    header.push_back(header_crc);
+    return header;
+}
+
+std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys, Command cmd) {
+    std::vector<uint8_t> full_packet;
+    std::vector<uint8_t> rmap_packet;
+    std::vector<uint8_t> header;
+    std::vector<uint8_t> ethernet_header;
+
+    header = CommandDeck::make_spw_header_(sys, cmd);
+    
+    if(cmd.read) {
+        rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+
+    } else {
+        std::vector<uint8_t> write_data = cmd.get_spw_write_data();
+        std::vector<uint8_t> data;
+
+        data.insert(data.end(), write_data.begin(), write_data.end());
+
+        uint8_t data_crc;
+        if(sys.crc_version.compare("f") == 0) {
+            data_crc = spw_calculate_crc_uint_F(data);
+        } else {
+            std::cerr << "CRC version not supported!\n";
+            exit(0);
+        }
+        data.push_back(data_crc);
+
+        std::cout << "rmap write data lookup:\t";
+        hex_print(data);
+        std::cout << "\n";
+
+        // rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
+        rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());
+        rmap_packet.insert(rmap_packet.end(), data.begin(), data.end());
+    }
+
+    ethernet_header = CommandDeck::get_spw_ether_header(rmap_packet);
+    full_packet.insert(full_packet.end(), ethernet_header.begin(), ethernet_header.end());
+    full_packet.insert(full_packet.end(), rmap_packet.begin(), rmap_packet.end());
+    return full_packet;
+}
+
+std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t code) {
+    Command command = CommandDeck::get_command_for_sys_for_code(sys, code);
+    System system = CommandDeck::get_sys_for_code(sys);
+    
+    switch(command.type) {
+        case COMMAND_TYPE_OPTIONS::SPW:
+            return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
+            break;
+        case COMMAND_TYPE_OPTIONS::SPI:
+            std::cout << "SPI COMMAND TYPE NOT IMPLEMENTED\n";
+            break;
+        case COMMAND_TYPE_OPTIONS::ETHERNET:
+            std::cout << "ETHERNET COMMAND TYPE NOT IMPLEMENTED\n";
+            break;
+        case COMMAND_TYPE_OPTIONS::UART:
+            std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
+            break;
+        case COMMAND_TYPE_OPTIONS::NONE:
+            std::cout << "NONE COMMAND TYPE NOT IMPLEMENTED\n";
+            break;
+        default:
+            throw "command selection fell through!\n";
+    }
+}
+
+std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code) {
     //  W command format:
         //      Target SpW address      [nB]...
         //      Target logical address  [1B]
@@ -366,26 +651,26 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
         //      Packet ends (EOP) after Header CRC.
 
     Command cmd = CommandDeck::get_command_for_sys_for_code(sys, code);
-    std::vector<char> full_packet;
+    std::vector<uint8_t> full_packet;
     
 
     if(cmd.type == COMMAND_TYPE_OPTIONS::SPW) {
-        std::vector<char> ethernet_header;
-        std::vector<char> rmap_packet;
+        std::vector<uint8_t> ethernet_header;
+        std::vector<uint8_t> rmap_packet;
 
-        // std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07,0x02};        // todo: add this as attribute of System? this info from Nagasawa
+        // std::vector<uint8_t> TARGET_PATH_ADDRESS_OUT = {0x07,0x02};        // todo: add this as attribute of System? this info from Nagasawa
 
-        std::vector<char> TARGET_PATH_ADDRESS_OUT = {0x07, 0x02};
-        char TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
-        char KEY = 0x02;                        // todo: add this as attribute of System
-        char protocol_id = 0x01;
-        std::vector<char> REPLY_ADDRESS = {0x00,0x00,0x06,0x03};
-        // std::vector<char> REPLY_ADDRESS = {0x00, 0x00, 0x06,0x03};              // todo: define this in Parameters or something
-        // std::vector<char> REPLY_ADDRESS = {0x01,0x03};              // todo: for flight I think it will be {0x01, 0x03}
-        char initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
-        char transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
-        char transaction_id_msb = 0x00;
-        char extended_address = 0x00;
+        std::vector<uint8_t> TARGET_PATH_ADDRESS_OUT = {0x07, 0x02};
+        uint8_t TARGET_LOGICAL_ADDRESS = 0xFE;     // todo: add this as attribute of System
+        uint8_t KEY = 0x02;                        // todo: add this as attribute of System
+        uint8_t protocol_id = 0x01;
+        std::vector<uint8_t> REPLY_ADDRESS = {0x00,0x00,0x06,0x03};
+        // std::vector<uint8_t> REPLY_ADDRESS = {0x00, 0x00, 0x06,0x03};              // todo: define this in Parameters or something
+        // std::vector<uint8_t> REPLY_ADDRESS = {0x01,0x03};              // todo: for flight I think it will be {0x01, 0x03}
+        uint8_t initiator_logical_address = 0xFE;  // todo: define this in Parameters or something
+        uint8_t transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
+        uint8_t transaction_id_msb = 0x00;
+        uint8_t extended_address = 0x00;
 
         if(cmd.read) {
             // SpW read commands
@@ -396,24 +681,24 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             read address memory) and `frame_size`. Then each read 
             operation increments `frame_size`. */
             
-            std::vector<char> header;
+            std::vector<uint8_t> header;
 
-            char instruction = cmd.get_spw_instruction();
+            uint8_t instruction = cmd.get_spw_instruction();
             std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
             
             // TODO: un-hardcode the instructions (format read JSON correctly)
             instruction = 0x4d;
 
             // TODO: increment read address
-            std::vector<char> memory_address = {0x00,0x00,0x00,0x00};
+            std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
             // TODO: find correct frame size value
             // unsigned int read_data_length = 32000;
             unsigned short read_data_length = cmd.get_spw_reply_length();
 
-            const char dl0 = read_data_length & 0xff;
-            const char dl1 = (read_data_length >> 8) & 0xff;
-            const char dl2 = (read_data_length >> 16) & 0xff;
-            std::vector<char> data_length;
+            const uint8_t dl0 = read_data_length & 0xff;
+            const uint8_t dl1 = (read_data_length >> 8) & 0xff;
+            const uint8_t dl2 = (read_data_length >> 16) & 0xff;
+            std::vector<uint8_t> data_length;
             data_length.push_back(dl2);
             data_length.push_back(dl1);
             data_length.push_back(dl0);
@@ -430,7 +715,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             header.insert(header.end(), memory_address.begin(), memory_address.end());
             header.insert(header.end(), data_length.begin(), data_length.end());
             
-            char header_crc = spw_calculate_crc_F(header);
+            uint8_t header_crc = spw_calculate_crc_uint_F(header);
             header.push_back(header_crc);
 
             rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
@@ -445,30 +730,30 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
         } else {
             // SpW write command
 
-            // char instruction = cmd.get_spw_instruction();            
-            // std::vector<char> memory_address = cmd.get_spw_address();
+            // uint8_t instruction = cmd.get_spw_instruction();            
+            // std::vector<uint8_t> memory_address = cmd.get_spw_address();
             // TODO: un-hardcode the instructions (format read JSON correctly)
 
-            std::vector<char> header;
+            std::vector<uint8_t> header;
 
-            char instruction = cmd.get_spw_instruction();
+            uint8_t instruction = cmd.get_spw_instruction();
             std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
 
             instruction = 0x7d;
 
             // TODO: un-hardcode the read address
-            std::vector<char> memory_address = {0x00, 0x00, 0x00, 0x00};
+            std::vector<uint8_t> memory_address = {0x00, 0x00, 0x00, 0x00};
 
-            std::vector<char> write_data = cmd.get_spw_write_data();
+            std::vector<uint8_t> write_data = cmd.get_spw_write_data();
             hex_print(write_data);
             debug_print("");
 
             unsigned int write_data_length = write_data.size();
             debug_print("write data size: " + std::to_string(write_data_length));
-            const char dl0 = write_data_length & 0xff;
-            const char dl1 = (write_data_length >> 8) & 0xff;
-            const char dl2 = (write_data_length >> 16) & 0xff;
-            std::vector<char> data_length;
+            const uint8_t dl0 = write_data_length & 0xff;
+            const uint8_t dl1 = (write_data_length >> 8) & 0xff;
+            const uint8_t dl2 = (write_data_length >> 16) & 0xff;
+            std::vector<uint8_t> data_length;
             data_length.push_back(dl2);
             data_length.push_back(dl1);
             data_length.push_back(dl0);
@@ -486,12 +771,12 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
             header.insert(header.end(), memory_address.begin(), memory_address.end());
             header.insert(header.end(), data_length.begin(), data_length.end());
             
-            char header_crc = spw_calculate_crc_F(header);
+            uint8_t header_crc = spw_calculate_crc_uint_F(header);
             header.push_back(header_crc);
 
-            std::vector<char> data;
+            std::vector<uint8_t> data;
             data.insert(data.end(), write_data.begin(), write_data.end());
-            char data_crc = spw_calculate_crc_F(data);
+            uint8_t data_crc = spw_calculate_crc_uint_F(data);
             data.push_back(data_crc);
 
             std::cout << "rmap write data lookup:\t";
@@ -516,7 +801,7 @@ std::vector<char> CommandDeck::get_command_bytes_for_sys_for_code(char sys, char
     }
 }
 
-std::vector<uint8_t> CommandDeck::get_write_command_bytes_for_sys_for_HARDCODE(char sys, char code) {
+std::vector<uint8_t> CommandDeck::get_write_command_bytes_for_sys_for_HARDCODE(uint8_t sys, uint8_t code) {
 
     std::vector<uint8_t> rmap_packet;
     std::vector<uint8_t> path_address = {
@@ -602,7 +887,7 @@ std::vector<uint8_t> CommandDeck::get_write_command_bytes_for_sys_for_HARDCODE(c
     return full_packet;
 }
 
-std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(char sys, char code) {
+std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(uint8_t sys, uint8_t code) {
 
     std::vector<uint8_t> rmap_packet;
     std::vector<uint8_t> path_address = {
@@ -670,12 +955,12 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ch
     return full_packet;
 }
 
-std::vector<char> CommandDeck::get_spw_ether_header(std::vector<char> rmap_packet) {
+std::vector<uint8_t> CommandDeck::get_spw_ether_header(std::vector<uint8_t> rmap_packet) {
     // NOTE: this method does not support RMAP packets with sizes that require more than 8B to represent (~1.84e19 B)
-    std::vector<char> ether_prefix;
+    std::vector<uint8_t> ether_prefix;
     const unsigned long long rmap_packet_size = rmap_packet.size();
 
-    ether_prefix.push_back((char)SPACEWIRE_END_OPTIONS::EOP);
+    ether_prefix.push_back((uint8_t)SPACEWIRE_END_OPTIONS::EOP);
     ether_prefix.push_back(0x00);
     ether_prefix.push_back(0x00);
     ether_prefix.push_back(0x00);
@@ -683,7 +968,7 @@ std::vector<char> CommandDeck::get_spw_ether_header(std::vector<char> rmap_packe
     const unsigned long long mask = 0xff;
     for(int i = 7; i >= 0; --i) {
         const unsigned long long size_byte = (rmap_packet_size >> (8*i)) & mask;
-        ether_prefix.push_back((char)size_byte);
+        ether_prefix.push_back((uint8_t)size_byte);
     }
 
     return ether_prefix;

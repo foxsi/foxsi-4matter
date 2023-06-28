@@ -17,11 +17,11 @@ TransportLayerMachine::TransportLayerMachine(
 
     commands = CommandDeck();
     
-    std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
 
-    std::vector<char> tmp_cmd = {};
+    std::vector<uint8_t> tmp_cmd = {};
     command_pipe = tmp_cmd;
     ground_pipe.push('0');
 
@@ -60,11 +60,11 @@ TransportLayerMachine::TransportLayerMachine(
 
     commands = CommandDeck();
     
-    std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
     
-    std::vector<char> tmp_cmd = {};
+    std::vector<uint8_t> tmp_cmd = {};
     command_pipe = tmp_cmd;
 
     boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
@@ -105,11 +105,11 @@ TransportLayerMachine::TransportLayerMachine(
     
     commands = CommandDeck();
     
-    std::vector<char> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
     
-    std::vector<char> tmp_cmd = {};
+    std::vector<uint8_t> tmp_cmd = {};
     command_pipe = tmp_cmd;
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
@@ -122,6 +122,10 @@ TransportLayerMachine::TransportLayerMachine(
 
 void TransportLayerMachine::add_commands(CommandDeck& new_commands) {
     commands = new_commands;
+}
+
+void TransportLayerMachine::add_ring_buffer_interface(std::unordered_map<uint8_t, RingBufferInterface> new_ring_buffers) {
+    ring_buffers = new_ring_buffers;
 }
 
 
@@ -149,8 +153,8 @@ void TransportLayerMachine::recv_udp_fwd_tcp() {
 void TransportLayerMachine::send_udp() {
     std::cout << "in send_udp\n";
 
-    std::vector<char> filtered;
-    std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](char i){return i != '0';});
+    std::vector<uint8_t> filtered;
+    std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != '0';});
     hex_print(filtered);
     std::cout << "\n";
 
@@ -193,13 +197,13 @@ void TransportLayerMachine::handle_cmd() {
     // todo: save pointers in these buffers (cmd and uplink) to manage multiple sequential reads/writes safely. Maybe with vector of vectors
     std::cout << "in handle_cmd()\n";
 
-    char uplink_buff_sys = uplink_buff[0];
-    char uplink_buff_cmd = uplink_buff[1];
+    uint8_t uplink_buff_sys = uplink_buff[0];
+    uint8_t uplink_buff_cmd = uplink_buff[1];
 
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
     std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
 
-    std::vector<char> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
+    std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
 
     command_pipe.insert(command_pipe.end(), output_cmd.begin(), output_cmd.end());
     // command_pipe.push_back('\0');
@@ -218,6 +222,21 @@ void TransportLayerMachine::handle_cmd() {
     std::fill(uplink_buff.begin(), uplink_buff.end(), '\0');
     // clear the buffer command_pipe...
     std::fill(command_pipe.begin(), command_pipe.end(), '\0');
+}
+
+void TransportLayerMachine::handle_remote_buffer_transaction() {
+    std::cout << "in handle_remote_buffer_transaction()\n";
+    uint8_t uplink_buff_sys = uplink_buff[0];
+    uint8_t uplink_buff_cmd = uplink_buff[1];
+
+    std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
+    std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
+
+    // TODO: CHANGE THIS SO WE GET THE WRITE POINTER ADDRESS FOR SYSTEM
+    std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
+
+    // read the last write pointer
+    local_tcp_sock.send(boost::asio::buffer(output_cmd));
 }
 
 void TransportLayerMachine::print_udp_basic() {

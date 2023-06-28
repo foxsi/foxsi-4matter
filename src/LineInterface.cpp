@@ -3,17 +3,28 @@
 
 #include "Utilities.h"
 #include <iostream>
+#include <fstream>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
-EndpointData::EndpointData(std::string ip, std::string prot, unsigned short pt) {
-    address = ip;
-    protocol = prot;
-    port = pt;
-}
+EndpointData::EndpointData(std::string ip, std::string prot, unsigned short pt): address(ip), protocol(prot), port(pt) {}
+
 EndpointData::EndpointData() {
     address = "";
     protocol = "";
     port = 0;
+}
+
+bool EndpointData::operator==(EndpointData& other) {
+    if(address.compare(other.address) == 0 && protocol.compare(other.protocol) == 0 && port == other.port) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+std::string EndpointData::as_string() {
+    return "("+protocol+")"+address+":"+std::to_string(port);
 }
 
 TimeData::TimeData(double period_s) {
@@ -23,8 +34,31 @@ TimeData::TimeData(double period_s) {
         throw "period must be positive\n";
     } 
 }
+
 TimeData::TimeData() {
     period_seconds = 0.0;
+    command_seconds = 0.0;
+    request_seconds = 0.0;
+    reply_seconds = 0.0;
+    idle_seconds = 0.0;
+}
+
+void TimeData::add_times(double total_allocation, double command_time, double request_time, double reply_time, double idle_time) {
+    period_seconds = total_allocation;
+    command_seconds = command_time;
+    request_seconds = request_time;
+    reply_seconds = reply_time;
+    idle_seconds = idle_time;
+
+    TimeData::resolve_times();
+}
+
+void TimeData::resolve_times() {
+    double sum = command_seconds + request_seconds + reply_seconds + idle_seconds;
+    command_seconds = command_seconds*period_seconds/sum;
+    request_seconds = request_seconds*period_seconds/sum;
+    reply_seconds = reply_seconds*period_seconds/sum;
+    idle_seconds = idle_seconds*period_seconds/sum;
 }
 
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
@@ -32,31 +66,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         ("help,h",                                                              "output help message")
         ("version",                                                             "output software version number")
         ("verbose,v",                                                           "output verbosely")
-        ("file,f",          boost::program_options::value<std::string>(),       "config file with options")
-        ("local.ip,I",      boost::program_options::value<std::string>(),       "local IP address")
-        ("gse.ip",          boost::program_options::value<std::string>(),       "remote GSE IP address")
-        ("evtm.ip",         boost::program_options::value<std::string>(),       "remote EVTM IP address")
-        ("spmu.ip",         boost::program_options::value<std::string>(),       "remote SPMU IP address")
-        ("gse.port",        boost::program_options::value<unsigned short>(),    "port number GSE uses to talk to local")
-        ("evtm.port",       boost::program_options::value<unsigned short>(),    "port number EVTM uses to talk to local")
-        ("spmu.port",       boost::program_options::value<unsigned short>(),    "port number SPMU uses to talk to local")
-        ("local.gseport",   boost::program_options::value<unsigned short>(),    "port number local uses to talk to GSE")
-        ("local.evtmport",  boost::program_options::value<unsigned short>(),    "port number local uses to talk to EVTM")
-        ("local.spmuport",  boost::program_options::value<unsigned short>(),    "port number local uses to talk to SPMU")
-        ("gse.protocol",    boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and GSE")
-        ("evtm.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and EVTM")
-        ("spmu.protocol",   boost::program_options::value<std::string>(),       "protocol (TCP or UDP) used between local and SPMU")
-        ("systems.codepath",boost::program_options::value<std::string>(),       "command JSON file path for CDTE1 system")
-        ("cdte1.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE1 system")
-        ("cdte2.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE2 system")
-        ("cdte3.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE3 system")
-        ("cdte4.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CDTE4 system")
-        ("cdtede.codepath", boost::program_options::value<std::string>(),       "command JSON file path for CDTEDE system")
-        ("cmos1.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CMOS1 system")
-        ("cmos2.codepath",  boost::program_options::value<std::string>(),       "command JSON file path for CMOS2 system")
-        ("timepix.codepath",boost::program_options::value<std::string>(),       "command JSON file path for TIMEPIX system")
-        ("housekeeping.codepath", boost::program_options::value<std::string>(), "command JSON file path for HOUSEKEEPING system")
-        ("period,T",        boost::program_options::value<double>(),            "main loop period in seconds")
+        ("config,c",          boost::program_options::value<std::string>(),       "config file with options")
     ;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
     boost::program_options::notify(vm);
@@ -84,12 +94,218 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         do_verbose = true;
         verbose_print("verbose printing on");
     }
-    if(vm.count("file")) {
-        std::string config_filename = vm["file"].as<std::string>();
+    
+    // =============== NEW ============================================
+
+
+    // convenience maps for lookups:
+    std::unordered_map<uint8_t, System> lookup_system;
+    // std::unordered_map<uint8_t, EndpointData*> lookup_endpoint_data;
+    // std::unordered_map<uint8_t, TimeData*> lookup_timing;
+    // std::unordered_map<uint8_t, std::string> lookup_command_file;
+
+    std::string config_filename;
+    std::ifstream config_file;
+    if(vm.count("config")) {
+        config_filename = vm["config"].as<std::string>();
         verbose_print("reading file from " + config_filename);
-        boost::program_options::store(boost::program_options::parse_config_file(config_filename.c_str(), options), vm);
+
+        try {
+            config_file.open(config_filename, std::ios::in);
+        } catch(const std::exception& e) {
+            std::cout << e.what();
+            // TODO: some default behavior
+        }
     }
-    boost::program_options::notify(vm);
+    nlohmann::json system_configuration = nlohmann::json::parse(config_file);
+    /* Things to pull out:
+        - Systems: first-order in config_file
+        - CommandDeck
+        - Ethernet interfaces 
+    */
+    verbose_print("finding systems...");
+
+    for(auto& this_system: system_configuration.items()) {
+        std::string this_name = this_system.value()["name"];
+        std::string this_hex_str = this_system.value()["hex"];
+        // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
+        uint8_t this_hex = string_to_byte(this_hex_str);
+
+        verbose_print("adding new System:");
+        verbose_print("\tname:    " + this_name);
+        verbose_print("\tid code: " + std::to_string(this_hex));
+
+        System this_system_object = System(this_name, this_hex);
+
+        this_system_object.set_type(COMMAND_TYPE_OPTIONS::NONE);
+
+        bool has_ethernet = false;  // log if this system has ethernet interface
+        bool has_spw = false;       // log if this system has spacewire interface
+        bool has_spi = false;       // log if this system has spi interface
+        bool has_uart = false;      // log if this system has uart interface
+        bool is_local = false;      // log if this system defines the local Ethernet endpoint
+        bool is_command = false;    // log if this system can be commanded (NOR local)
+        std::string command_file_path;
+
+        // check for Ethernet, UART, SPI interfaces:
+        try {
+            auto& ethif = this_system.value()["ethernet_interface"];
+            if(!ethif.is_null()) {
+                has_ethernet = true;
+            }
+
+            std::string this_addr;
+            unsigned short this_port;
+            std::string this_prot;
+
+            // all ethernet_interface s should have an address
+            this_addr = ethif.at("address").get<std::string>();
+            try {
+                // if the interface only has an address (no port/protocol), it is the local address
+                this_prot = ethif.at("protocol").get<std::string>();
+                this_port = ethif.at("port").get<unsigned short>();
+                EndpointData* ept = new EndpointData(this_addr, this_prot, this_port);
+                // store this endpoint data in the lookup table for systems
+                lookup_endpoints.insert(std::make_pair(this_hex, ept));
+                verbose_print("\tadded an endpoint: " + ept->as_string());
+            } catch(std::exception& e) {
+                is_local = true;
+                // store the local address in the object
+                local_address = this_addr;
+            }
+            
+            // check if we can command it
+            try {
+                command_file_path = ethif.at("command_path").get<std::string>();
+                is_command = true;
+
+                // an Ethernet-commandable system
+                lookup_command_file.insert(std::make_pair(this_hex, command_file_path));
+                
+                this_system_object.set_type(COMMAND_TYPE_OPTIONS::ETHERNET);
+                
+            } catch(std::exception& e) {}
+
+            // check for spacewire
+            try {
+                auto& spwif = this_system.value()["ethernet_interface"]["spacewire_interface"];
+                if(!spwif.is_null()) {
+                    has_spw = true;
+                    this_system_object.set_type(COMMAND_TYPE_OPTIONS::SPW);
+                }
+
+                // add the spacewire properties to the System
+                this_system_object.target_path_address = spwif.at("target_path_address").get<std::vector<uint8_t>>();
+                this_system_object.reply_path_address = spwif.at("reply_path_address").get<std::vector<uint8_t>>();
+                this_system_object.target_logical_address = string_to_byte(spwif.at("target_logical_address").get<std::string>());
+                this_system_object.source_logical_address = string_to_byte(spwif.at("source_logical_address").get<std::string>());
+                this_system_object.key = string_to_byte(spwif.at("key").get<std::string>());
+                this_system_object.crc_version = spwif.at("crc_draft").get<std::string>();
+                this_system_object.hardware_name = spwif.at("hardware").get<std::string>();
+
+                // add an entry for this System's commands file in the lookup table (to create Commands later)
+                lookup_command_file.insert(std::make_pair(this_hex, spwif.at("command_path").get<std::string>()));
+                is_command = true;
+
+            } catch(std::exception& e) {
+                // std::cout << "couldn't find a SpaceWire interface.\n";
+            }
+
+            
+
+        } catch(std::exception& e) {
+            // no ethif
+        }
+
+        // check for SPI interface:
+        try {
+            auto& spiif = this_system.value()["spi_interface"];
+
+            // currently (june-8-2023) no SPI interfaces exist in Formatter
+            if(!spiif.is_null()) {
+                std::cout << "Warning: SPI interface NOT IMPLEMENTED" << "\n";
+                has_spi = true;
+                this_system_object.set_type(COMMAND_TYPE_OPTIONS::SPI);
+            }
+
+            // else, do stuff with SPI interface
+            lookup_command_file.insert(std::make_pair(this_hex, spiif.at("command_path").get<std::string>()));
+            is_command = true;
+
+        } catch(std::exception& e) {}
+
+        // check for UART interface:
+        try {
+            auto& uartif = this_system.value()["uart_interface"];
+            if(!uartif.is_null()) {
+                has_uart = true;
+                this_system_object.set_type(COMMAND_TYPE_OPTIONS::UART);
+            }
+            this_system_object.baud_rate = uartif.at("baud_rate").get<unsigned long>();
+            this_system_object.parity_bits = uartif.at("parity_bits").get<unsigned short>();
+            this_system_object.data_bits = uartif.at("data_bits").get<unsigned short>();
+            this_system_object.stop_bits = uartif.at("stop_bits").get<unsigned short>();
+
+            lookup_command_file.insert(std::make_pair(this_hex, uartif.at("command_path").get<std::string>()));
+
+        } catch(std::exception& e) {}
+
+        // TODO:do sanity checks
+        debug_print("\tfound command type: ");
+        if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
+                debug_print("\t\tUART");
+            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
+                debug_print("\t\tSPW");
+            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
+                debug_print("\t\tSPI");
+            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+                debug_print("\t\tETHERNET");
+            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
+                debug_print("\t\tnone");
+            } else {
+                debug_print("\t\tDID NOT FIND TYPE");
+        }
+
+        // now add more command-specific info to this_system_object
+        if(is_command) {
+            try {
+                auto& time_data = this_system.value()["time"];
+                TimeData* this_times = new TimeData();
+                this_times->add_times(
+                    time_data.at("total_allocation").get<double>(),
+                    time_data.at("command").get<double>(),
+                    time_data.at("request").get<double>(),
+                    time_data.at("reply").get<double>(),
+                    time_data.at("idle").get<double>()
+                );
+
+                lookup_times.insert(std::make_pair(this_hex, this_times));
+
+                // do stuff with the time info
+            } catch(std::exception& e) {
+                std::cout << "\texpect timing info to be provided for a commanded system. Discarding system named " << this_name << "\n";
+
+                // TODO: ACTUALLY REMOVE IT? OR JUST ADD EVERYTHING DOWN BELOW
+            }
+        }
+
+        systems.push_back(this_system_object);
+        lookup_system.insert(std::make_pair(this_hex, this_system_object));
+
+    }
+
+    // lookup_endpoints = lookup_endpoint_data;
+    collapse_endpoints();
+    build_local_endpoints();
+
+    // finish parsing
+    config_file.close();
+
+
+    // build CommandDeck
+    command_deck = CommandDeck(systems,lookup_command_file);
+
+    // =============== OLD ============================================
 
     // initialize missings map:
     missings = {
@@ -197,7 +413,33 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             named_paths.insert(std::pair(reduced_name, vm[field_name].as<std::string>()));
         }
     }
-    command_deck = CommandDeck(named_paths);
+    // command_deck = CommandDeck(named_paths);
+}
+
+void LineInterface::collapse_endpoints() {
+    for(auto& ept_map: lookup_endpoints) {
+        EndpointData* ept = ept_map.second;
+        if(unique_endpoints.size() > 0) {
+            bool is_uniq = true;
+            for(auto& uniq: unique_endpoints) {
+                if(*ept == uniq) {
+                    is_uniq = false;
+                }
+            }
+            if(is_uniq) {
+                unique_endpoints.push_back(*ept);
+            }
+        } else {
+            unique_endpoints.push_back(*ept);
+        }
+    }
+}
+
+void LineInterface::build_local_endpoints() {
+    for(auto& ept: unique_endpoints) {
+        EndpointData* local_ept = new EndpointData(local_address, ept.protocol, ept.port);
+        local_endpoints.push_back(*local_ept);
+    }
 }
 
 void LineInterface::verbose_print(std::string msg) {

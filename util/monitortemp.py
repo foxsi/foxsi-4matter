@@ -1,6 +1,6 @@
 import sys, time
 
-T = 5                       # sampling period of temperature sensor, in seconds
+T = 2                       # sampling period of temperature sensor, in seconds
 starttime = time.time()     # the start time, to calculate time offsets
 
 with open("/sys/class/thermal/thermal_zone0/temp", "r") as temperaturefile:

@@ -12,7 +12,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
 
-enable_testing()
+# enable_testing()
 
 # Add other sources and headers here:
 set(
@@ -22,6 +22,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
 )
@@ -74,7 +75,13 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
+# add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp
+add_executable(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
+target_include_directories(
+    test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Build library target "lib" to link to multiple executables
 add_library(lib ${SOURCES})
@@ -112,11 +119,11 @@ if(UNIX AND NOT APPLE)
         PUBLIC
         ${NLOHMANNJSON_ROOT}
     )
-    target_include_directories(
-        lib
-        PUBLIC
-        ${GOOGLETEST_ROOT}
-    )
+    # target_include_directories(
+    #     lib
+    #     PUBLIC
+    #     ${GOOGLETEST_ROOT}
+    # )
 
 elseif(UNIX AND APPLE)
     # this usually builds fine
@@ -125,6 +132,8 @@ elseif(UNIX AND APPLE)
 
     find_package(GTest REQUIRED)
     target_link_libraries(lib PUBLIC GTest::gtest)
+
+    find_package(Doxygen REQUIRED)
 
 else()
     error("Unsupported OS.")
@@ -163,6 +172,8 @@ if(Boost_FOUND)
     target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem lib)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem lib)
+    target_link_libraries(test PUBLIC Boost::filesystem lib)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
+
