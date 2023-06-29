@@ -503,6 +503,7 @@ Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
 
 std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     std::vector<uint8_t> header;
+    std::vector<uint8_t> tailer;
 
     std::vector<uint8_t> target_path_address    = sys.target_path_address;
     uint8_t target_logical_address              = sys.target_logical_address;
@@ -532,32 +533,34 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     }
 
     // TODO: increment read address
-    std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
+    // std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
+    std::vector<uint8_t> memory_address = cmd.get_spw_address();
 
     std::vector<uint8_t> data_length = splat_to_nbytes(3, raw_data_length);
     
     header.insert(header.end(), target_path_address.begin(), target_path_address.end());
-    header.push_back(target_logical_address);
-    header.push_back(protocol_id);
-    header.push_back(instruction);
-    header.push_back(key);
-    header.insert(header.end(), reply_path_address.begin(), reply_path_address.end());
-    header.push_back(initiator_logical_address);
-    header.push_back(transaction_id_msb);
-    header.push_back(transaction_id_lsb);
-    header.push_back(extended_address);
-    header.insert(header.end(), memory_address.begin(), memory_address.end());
-    header.insert(header.end(), data_length.begin(), data_length.end());
+    tailer.push_back(target_logical_address);
+    tailer.push_back(protocol_id);
+    tailer.push_back(instruction);
+    tailer.push_back(key);
+    tailer.insert(tailer.end(), reply_path_address.begin(), reply_path_address.end());
+    tailer.push_back(initiator_logical_address);
+    tailer.push_back(transaction_id_msb);
+    tailer.push_back(transaction_id_lsb);
+    tailer.push_back(extended_address);
+    tailer.insert(tailer.end(), memory_address.begin(), memory_address.end());
+    tailer.insert(tailer.end(), data_length.begin(), data_length.end());
     
-    uint8_t header_crc;
+    uint8_t tailer_crc;
     if(sys.crc_version.compare("f") == 0) {
-        header_crc = spw_calculate_crc_uint_F(header);
+        tailer_crc = spw_calculate_crc_uint_F(tailer);
     } else {
         std::cerr << "CRC version not supported!\n";
         exit(0);
     }
     
-    header.push_back(header_crc);
+    tailer.push_back(tailer_crc);
+    header.insert(header.end(), tailer.begin(), tailer.end());
     return header;
 }
 
