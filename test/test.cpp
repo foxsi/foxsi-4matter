@@ -78,9 +78,9 @@ int main(int argc, char** argv) {
     hex_print(new_crc);
     std::cout << "\n";
 
-    std::vector<uint8_t> cmos2_train = deck.get_command_bytes_for_sys_for_code(0x0f, 0x1f);
-    std::cout << "got cmos2 train command:\t";
-    hex_print(cmos2_train);
+    std::vector<uint8_t> cmos1_train = deck.get_command_bytes_for_sys_for_code(0x0e, 0x1f);
+    std::cout << "got cmos1 train command:\t";
+    hex_print(cmos1_train);
 
 
     std::cout << "checking ring buffer interface:\n";
