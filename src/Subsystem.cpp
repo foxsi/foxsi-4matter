@@ -128,6 +128,14 @@ void TransportLayerMachine::add_ring_buffer_interface(std::unordered_map<uint8_t
     ring_buffers = new_ring_buffers;
 }
 
+void TransportLayerMachine::add_fragmenter(Fragmenter new_fragmenter) {
+    fragmenter = new_fragmenter;
+}
+
+void TransportLayerMachine::add_fragmenter(size_t fragment_size, size_t header_size) {
+    fragmenter = Fragmenter(fragment_size, header_size);
+}
+
 
 void TransportLayerMachine::recv_tcp_fwd_udp() {
     std::cout << "in recv_tcp_fwd_udp()\n";
@@ -157,6 +165,12 @@ void TransportLayerMachine::send_udp() {
     std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != '0';});
     hex_print(filtered);
     std::cout << "\n";
+
+    // fragment the filtered buffer
+    // prepend <sys> code to the buffer
+    // send on UDP.
+
+    
 
     // forward the buffer downlink_buff over UDP...
     local_udp_sock.async_send_to(

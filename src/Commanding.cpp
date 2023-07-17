@@ -615,15 +615,19 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             break;
         case COMMAND_TYPE_OPTIONS::SPI:
             std::cout << "SPI COMMAND TYPE NOT IMPLEMENTED\n";
+            return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::ETHERNET:
             std::cout << "ETHERNET COMMAND TYPE NOT IMPLEMENTED\n";
+            return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::UART:
             std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
+            return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::NONE:
             std::cout << "NONE COMMAND TYPE NOT IMPLEMENTED\n";
+            return {0x00};
             break;
         default:
             throw "command selection fell through!\n";

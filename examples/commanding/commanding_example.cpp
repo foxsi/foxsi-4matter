@@ -1,5 +1,6 @@
 #include "LineInterface.h"
 #include "Subsystem.h"
+#include "Fragmenter.h"
 #include "Metronome.h"
 #include "Commanding.h"
 #include "Parameters.h"
@@ -38,6 +39,10 @@ int main(int argc, char* argv[]) {
     CommandDeck deck = lif.get_command_deck();
 
     deck.print();
+
+    size_t frag_header_size = 6;
+    size_t frag_packet_size = 100;
+    Fragmenter frag(frag_packet_size, frag_header_size);
 
     TransportLayerMachine frmtr(
         local_udp_endpoint,
@@ -81,6 +86,9 @@ int main(int argc, char* argv[]) {
 
     // add the command deck:
     frmtr.add_commands(deck);
+
+    // add the fragmenter to the deck:
+    frmtr.add_fragmenter(frag);
 
     // display configuration:
     std::cout << "network setup:" << "\n";

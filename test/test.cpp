@@ -2,6 +2,7 @@
 #include "LineInterface.h"
 #include "Utilities.h"
 #include "RingBufferInterface.h"
+#include "Fragmenter.h"
 // #include <gtest/gtest.h>
 #include <boost/asio.hpp>
 #include <string>
@@ -78,9 +79,9 @@ int main(int argc, char** argv) {
     hex_print(new_crc);
     std::cout << "\n";
 
-    std::vector<uint8_t> cmos1_train = deck.get_command_bytes_for_sys_for_code(0x0e, 0x1f);
-    std::cout << "got cmos1 train command:\t";
-    hex_print(cmos1_train);
+    std::vector<uint8_t> cmos2_train = deck.get_command_bytes_for_sys_for_code(0x0f, 0x1f);
+    std::cout << "got cmos2 train command:\t";
+    hex_print(cmos2_train);
 
 
     std::cout << "checking ring buffer interface:\n";
@@ -109,6 +110,20 @@ int main(int argc, char** argv) {
     for(auto& b: bs) {
         std::cout << (int)b << "\n";
     }
+
+    std::cout << "testing Fragmenter\n";
+
+    std::vector<uint8_t> long_msg = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34};
+    size_t frag_sz = 10;
+    size_t head_sz = 6;
+    Fragmenter fr = Fragmenter(frag_sz, head_sz);
+
+    std::vector<std::vector<uint8_t>> fr_res = fr.fragment(long_msg);
+    std::cout << "fragmenter made " << fr_res.size() << " fragments\n";
+
+    for(auto fragment: fr_res) {
+        hex_print(fragment);
+    } 
 
     return 0;
 }

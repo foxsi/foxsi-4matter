@@ -6,6 +6,7 @@
 #include "TCPInterface.h"
 #include "UARTInterface.h"
 #include "RingBufferInterface.h"
+#include "Fragmenter.h"
 #include "Commanding.h"
 #include "Parameters.h"
 // #include <boost/asio.hpp>
@@ -30,6 +31,9 @@ class TransportLayerMachine {
         
         // to lookup from System hex code to corresponding ring buffer remote interface
         std::unordered_map<uint8_t, RingBufferInterface> ring_buffers;
+
+        // to decimate packets to MTU size
+        Fragmenter fragmenter;
 
         STATE_ORDER active_state;
         SUBSYSTEM_ORDER active_subsys;
@@ -57,6 +61,8 @@ class TransportLayerMachine {
 
         void add_commands(CommandDeck& new_commands);
         void add_ring_buffer_interface(std::unordered_map<uint8_t, RingBufferInterface> new_ring_buffers);
+        void add_fragmenter(Fragmenter new_fragmenter);
+        void add_fragmenter(size_t fragment_size, size_t header_size);
 
         void handle_recv();
         void recv_tcp_fwd_udp();
