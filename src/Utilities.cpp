@@ -185,3 +185,11 @@ std::vector<uint8_t> splat_to_nbytes(size_t n, uint64_t data) {
     }
     return result;
 }
+
+uint32_t unsplat_from_4bytes(std::vector<uint8_t> data) {
+    uint32_t result = 0;
+    for(int i=0; i < 4; ++i) {
+        result |= (data[i] << (3-i)*8);
+    }
+    return result;
+}

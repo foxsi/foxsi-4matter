@@ -1,5 +1,7 @@
 #include "RingBufferInterface.h"
 
+#include <vector>
+
 RingBufferInterface::RingBufferInterface() {
     start_address = 0x00;
     last_read_address = 0x00;
@@ -53,4 +55,32 @@ uint32_t RingBufferInterface::read_block_from(uint32_t read_address) {
         last_read_address = start_address + size - last_read_address;
     }
     return last_read_address;
+}
+
+std::vector<uint32_t> RingBufferInterface::get_spw_data(uint32_t read_address) {
+    std::vector<uint32_t> data;
+
+    uint32_t last_address = RingBufferInterface::read_block_from(read_address);
+
+    uint32_t start1 = 0;
+    uint32_t length1 = 0;
+    uint32_t start2 = 0;
+    uint32_t length2 = 0;
+
+    if(read_address > last_address) {
+        // all within the buffer
+        start1 = last_address;
+        length1 = read_address - last_address;
+    } else {
+        // wraparound
+        start1 = last_address;
+        length1 = get_size() + get_start_address() - last_address;
+
+        start2 = get_start_address();
+        length2 = read_address - get_start_address();
+    }
+
+    data = {start1, length1, start2, length2};
+
+    return data;
 }

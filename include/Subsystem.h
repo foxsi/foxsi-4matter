@@ -76,6 +76,8 @@ class TransportLayerMachine {
         void handle_cmd();
         void handle_remote_buffer_transaction();
 
+        bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
+
 };
 
 #endif

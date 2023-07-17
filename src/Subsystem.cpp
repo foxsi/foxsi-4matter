@@ -136,6 +136,28 @@ void TransportLayerMachine::add_fragmenter(size_t fragment_size, size_t header_s
     fragmenter = Fragmenter(fragment_size, header_size);
 }
 
+/* -- utility -------------------------------------------- */
+
+bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
+    if(sys == 0x0e) {                       // cmos1
+        if(cmd == 0x8e || cmd == 0x9f) {
+            return true;
+        }
+    } else if(sys == 0x0f) {                // cmos2
+        if(cmd == 0x8e || cmd == 0x9f) {
+            return true;
+        }
+    } else if(sys == 0x08) {                // cdtede
+        if(cmd == 0x8e) {
+            return true;
+        }
+    } else {
+        debug_print("checking for frame read of an unimplemented system!\n");
+    }
+    return false;
+}
+
+/* -- network I/F ---------------------------------------- */
 
 void TransportLayerMachine::recv_tcp_fwd_udp() {
     std::cout << "in recv_tcp_fwd_udp()\n";
@@ -169,8 +191,6 @@ void TransportLayerMachine::send_udp() {
     // fragment the filtered buffer
     // prepend <sys> code to the buffer
     // send on UDP.
-
-    
 
     // forward the buffer downlink_buff over UDP...
     local_udp_sock.async_send_to(
@@ -214,6 +234,8 @@ void TransportLayerMachine::handle_cmd() {
     uint8_t uplink_buff_sys = uplink_buff[0];
     uint8_t uplink_buff_cmd = uplink_buff[1];
 
+    bool is_frame_read_cmd = check_frame_read_cmd(uplink_buff_sys, uplink_buff_cmd);
+
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
     std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
 
@@ -227,10 +249,32 @@ void TransportLayerMachine::handle_cmd() {
     std::cout << "\n";
     std::cout << "to " << local_tcp_sock.remote_endpoint().address().to_string() << ":" << std::to_string(local_tcp_sock.remote_endpoint().port()) << "\n";
 
-    local_tcp_sock.async_send(
-        boost::asio::buffer(output_cmd),                   // send out the contents of uplink_buff
-        boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
-    );
+    if(is_frame_read_cmd) {
+        std::cout << "\tfound frame read command, handling transaction\n";
+        local_tcp_sock.send(boost::asio::buffer(output_cmd));
+        std::vector<uint8_t> reply;
+        local_tcp_sock.receive(boost::asio::buffer(reply));
+        
+        std::cout << "got reply:\t";
+        hex_print(reply);
+        std::cout << "\n";
+        
+        // data in SpW reply packet starts 12 B into the packet (after path address), and ends with CRC.
+        // todo: replace with Parameters.h-defined values.
+        std::vector<uint8_t> remote_wr_ptr(reply.begin() + 12, reply.end() - 1);
+
+        // update the ring buffer interface for this system
+        std::vector<uint32_t> spw_data = ring_buffers[uplink_buff_sys].get_spw_data(unsplat_from_4bytes(remote_wr_ptr));
+
+        // now, destructure the spw_data to send either one or two read commands.
+
+    } else {
+        std::cout << "\tfound non-frame read command, sending\n";
+        local_tcp_sock.async_send(
+            boost::asio::buffer(output_cmd),                   // send out the contents of uplink_buff
+            boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+        );
+    }
 
     // clear the buffer uplink_buff...
     std::fill(uplink_buff.begin(), uplink_buff.end(), '\0');

@@ -28,5 +28,8 @@ uint8_t string_to_byte(std::string hex_str);
 // to extract single value to n-byte vector:
 std::vector<uint8_t> splat_to_nbytes(size_t n, uint64_t data);
 
+// convert 4 bytes to uint32_t
+uint32_t unsplat_from_4bytes(std::vector<uint8_t> data);
+
 
 #endif

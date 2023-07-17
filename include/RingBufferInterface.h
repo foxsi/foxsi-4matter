@@ -25,12 +25,34 @@ class RingBufferInterface {
         void set_read_count_blocks(size_t new_read_count_blocks);
         
         uint32_t read_block_from(uint32_t read_address);
+        
+        std::vector<uint32_t> get_spw_data(uint32_t read_address);
 
-    private: 
+    private:
+        
+        /**
+         * @brief address where ring buffer memory starts
+        */
         uint32_t start_address;
+        
+        /**
+         * @brief last address in buffer that was read (by calling `read_block_from()`).
+        */
         uint32_t last_read_address;
+        
+        /**
+         * @brief total ring buffer size, in bytes.
+        */
         size_t size;
+
+        /**
+         * @brief size of a block, in bytes.
+        */
         size_t block_size;
+
+        /**
+         * @brief number of blocks to read at once.
+        */
         size_t read_count_blocks;
 
         void set_last_read_address(uint32_t new_last_read_address);
