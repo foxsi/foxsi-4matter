@@ -252,21 +252,68 @@ void TransportLayerMachine::handle_cmd() {
     if(is_frame_read_cmd) {
         std::cout << "\tfound frame read command, handling transaction\n";
         local_tcp_sock.send(boost::asio::buffer(output_cmd));
+
         std::vector<uint8_t> reply;
-        local_tcp_sock.receive(boost::asio::buffer(reply));
+        reply.resize(1024);
+        size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
+
+        // std::vector<uint8_t> reply(reply_buff, reply_buff + 1024);
         
-        std::cout << "got reply:\t";
+        std::cout << "got reply of length 0x" << reply.size() << " with reported size 0x" << reply_len << ":\t";
         hex_print(reply);
         std::cout << "\n";
+
+        if(reply_len < 1) {
+            std::cout << "\tgot no response from read command.\n";
+            return;
+        }
+
+        // todo: verify reply length > 0 before proceeding to avoid index outside the vector.
         
         // data in SpW reply packet starts 12 B into the packet (after path address), and ends with CRC.
         // todo: replace with Parameters.h-defined values.
-        std::vector<uint8_t> remote_wr_ptr(reply.begin() + 12, reply.end() - 1);
+        size_t ether_offset_from_start = 12;
+        size_t spw_offset_from_start = 12;
+        size_t offset_from_end = 1;
+        std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
 
         // update the ring buffer interface for this system
         std::vector<uint32_t> spw_data = ring_buffers[uplink_buff_sys].get_spw_data(unsplat_from_4bytes(remote_wr_ptr));
 
-        // now, destructure the spw_data to send either one or two read commands.
+        // check if ring buffer wraps around (2nd piece of buffer is zero-length):
+        if(spw_data[3] == 0) {
+            // send only one command.
+            debug_print("\treading from non-wrapped ring buffer region.\n");
+            // populate template command:
+            std::vector<uint8_t> ring_addr = splat_to_nbytes(4, spw_data[0]);
+            size_t ring_len = spw_data[1];
+            std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr, ring_len);
+            local_tcp_sock.async_send(
+                boost::asio::buffer(ring_read_cmd),                   // send out the contents of uplink_buff
+                boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+            );
+
+        } else {
+            // send two read commands.
+            debug_print("\treading from wrapped ring buffer region.\n");
+            // populate two template commands:
+            std::vector<uint8_t> ring_addr1 = splat_to_nbytes(4, spw_data[0]);
+            size_t ring_len1 = spw_data[1];
+            std::vector<uint8_t> ring_read_cmd1 = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr1, ring_len1);
+            std::vector<uint8_t> ring_addr2 = splat_to_nbytes(4, spw_data[2]);
+            size_t ring_len2 = spw_data[3];
+            std::vector<uint8_t> ring_read_cmd2 = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr2, ring_len2);
+            
+            local_tcp_sock.async_send(
+                boost::asio::buffer(ring_read_cmd1),                   // send out the contents of uplink_buff
+                boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+            );
+
+            local_tcp_sock.async_send(
+                boost::asio::buffer(ring_read_cmd2),                   // send out the contents of uplink_buff
+                boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
+            );
+        }
 
     } else {
         std::cout << "\tfound non-frame read command, sending\n";

@@ -2,6 +2,7 @@
 #include "Utilities.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
+#include <algorithm>
 #include <sstream>
 #include <stdlib.h>
 
@@ -523,7 +524,7 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     
     size_t raw_data_length;
 
-    // TODO: handle instruciton parsing correctly
+    // TODO: handle instruction parsing correctly
     if(cmd.read) {
         // instruction = 0x4d;
         raw_data_length = cmd.get_spw_reply_length();
@@ -632,6 +633,53 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
         default:
             throw "command selection fell through!\n";
     }
+}
+
+std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len) {
+    std::vector<uint8_t> command_template = CommandDeck::get_command_bytes_for_sys_for_code(sys, cmd);
+    System sys_obj = CommandDeck::get_sys_for_code(sys);
+    size_t target_path_addr_len = sys_obj.target_path_address.size();
+    
+    // note: these modifications of template should not affect Ethernet header on SpW packets going to SPMU-001.
+    
+    std::vector<uint8_t> data_length = splat_to_nbytes(3, read_len);
+    
+    // need to index into the back of the SpW packet to avoid variable-length path addresses at beginning.
+    size_t template_len = command_template.size();
+    
+    // offsets from end of SpW packet to get to relevant fields. excludes SpW EOP.
+    size_t ext_addr_bindex = 9;
+    size_t addr_bindex = 8;
+    size_t addr_field_len = 4;
+    size_t data_bindex = 4;
+    size_t data_field_len = 3;
+    
+    size_t ether_header_len = 12;
+
+    // assume no extended address.
+    command_template[template_len - ext_addr_bindex] = 0x00;
+    // modify memory address:
+    for(int i = 0; i < addr_field_len; ++i) {
+        command_template[template_len - addr_bindex + i] = addr[i];
+    }
+    // modify data length:
+    for(int i = 0; i < data_field_len; ++i) {
+        command_template[template_len - data_bindex + i] = data_length[i];
+    }
+
+    // extract eclairs from oven
+    std::vector<uint8_t> new_header(command_template.begin() + ether_header_len + target_path_addr_len, command_template.end() - 1);
+    // ganache them
+    uint8_t crc_header = spw_calculate_crc_uint_F(new_header);
+    new_header.push_back(crc_header);
+    // pipe full and chill
+    for(int i = 0; i < new_header.size(); ++i) {
+        command_template[i + ether_header_len + target_path_addr_len] = new_header[i];
+    }
+
+    return command_template;
+
+    // note: should use ring buffer write pointer read command as template for ring buffer read operations.
 }
 
 std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code) {

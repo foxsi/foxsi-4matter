@@ -1,7 +1,5 @@
 #include "RingBufferInterface.h"
 
-#include <vector>
-
 RingBufferInterface::RingBufferInterface() {
     start_address = 0x00;
     last_read_address = 0x00;
@@ -40,7 +38,7 @@ uint32_t RingBufferInterface::read_block_from(uint32_t read_address) {
     long int dist_to_start = (long int)read_address - (long int)start_address;
     long int dist_to_end = (long int)start_address + (long int)size - (long int)read_address;
     if(dist_to_start < 0 || dist_to_end < 0) {
-        std::cerr << "read address not in buffer!\n";
+        std::cerr << "read address 0x" << std::hex << read_address << " not in buffer!\n";
         throw "buffer overflow/underflow error";
     }
     uint32_t read_start_address = read_address - block_size*read_count_blocks;

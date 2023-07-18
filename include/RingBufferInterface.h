@@ -2,6 +2,7 @@
 #define RINGBUFFERINTERFACE_H
 
 #include <iostream>
+#include <vector>
 
 /**
  * @brief An interface to a ring buffer of data stored in blocks, in a system with 32 bit word length.
@@ -26,6 +27,11 @@ class RingBufferInterface {
         
         uint32_t read_block_from(uint32_t read_address);
         
+        /**
+         * @brief get SpaceWire command data and update `RingBufferInterface::last_read_address`.
+         * 
+         * @return a `std::vector<uint32_t>` with four values: start address in the remote ring buffer and data length for region one of memory, start address in the remote ring before and data length for region two of memory. If the ring buffer does not wrap around, the data length value for region two will be zero.
+        */
         std::vector<uint32_t> get_spw_data(uint32_t read_address);
 
     private:

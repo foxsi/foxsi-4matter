@@ -83,6 +83,13 @@ int main(int argc, char** argv) {
     std::cout << "got cmos2 train command:\t";
     hex_print(cmos2_train);
 
+    std::cout << "checking substitution command...\n";
+    std::vector<uint8_t> template_cmd = deck.get_command_bytes_for_sys_for_code(0x08, 0x8e);
+    std::vector<uint8_t> modified_cmd = deck.get_read_command_from_template(0x08, 0x8e, {0x01,0x01,0x01,0x01}, 0xe3f8);
+    std::cout << "got template command:\t";
+    hex_print(template_cmd);
+    std::cout << "got modified command:\t";
+    hex_print(modified_cmd);
 
     std::cout << "checking ring buffer interface:\n";
     RingBufferInterface rbf = RingBufferInterface(0x00400000, 32124400, 32780, 2);

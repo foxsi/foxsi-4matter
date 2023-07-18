@@ -89,7 +89,7 @@ class System {
         uint8_t key;
         std::string crc_version;
         std::string hardware_name;
-        
+
         // uart stuff:
         unsigned long baud_rate;
         unsigned short parity_bits;
@@ -146,12 +146,27 @@ class CommandDeck {
         // for the dirty work
         std::vector<uint8_t> make_spw_packet_for_sys_for_command(System sys, Command cmd);
 
+        /**
+         * @brief use to obtain full byte list to transmit (TCP) to SPMU-001 to send a SpaceWire command.
+        */
         std::vector<uint8_t> get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t cmd);
+
+        /**
+         * @deprecated retained for debugging use and comparison.
+        */
         std::vector<uint8_t> get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code);
-        // add a version of the above that takes arguments
         
         // TODO: IMPLEMENT
-        std::vector<uint8_t> get_read_command_bytes_for_sys_for_code_for_addr(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len);
+
+        /**
+         * @brief uses provided `sys`, `cmd` to create a template command, into which the specified memory address `addr` and read length `read_len` are inserted.
+         * 
+         * Calls `CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t cmd)` to 
+         * provide template. Use case driving implementation: remote ring buffer read based on 
+         * dynamic write pointer position. For that use case, advise to use ring buffer write pointer 
+         * read command as template command.
+        */
+        std::vector<uint8_t> get_read_command_from_template(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len);
 
         std::vector<uint8_t> get_spw_ether_header(std::vector<uint8_t> rmap_packet);
 

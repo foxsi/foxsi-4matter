@@ -1,6 +1,7 @@
 #include "LineInterface.h"
 #include "Subsystem.h"
 #include "Fragmenter.h"
+#include "RingBufferInterface.h"
 #include "Metronome.h"
 #include "Commanding.h"
 #include "Parameters.h"
@@ -40,9 +41,26 @@ int main(int argc, char* argv[]) {
 
     deck.print();
 
+    // todo: add these to foxsi4-commands/systems.json for the GSE Ethernet interfaces (take minimum of all options):
     size_t frag_header_size = 6;
     size_t frag_packet_size = 100;
     Fragmenter frag(frag_packet_size, frag_header_size);
+
+    std::cout << "initialized fragmenter\n";
+
+    // todo: add these to foxsi4-commands/systems.json for each system with a ring buffer.
+    uint32_t cdte_ring_start_addr = 0x00400000;
+    size_t cdte_ring_size = 32124400;
+    size_t cdte_ring_block_size = 32780;
+    size_t cdte_read_block_count = 2;
+    RingBufferInterface cdte_rbif = RingBufferInterface(cdte_ring_start_addr, cdte_ring_size, cdte_ring_block_size, cdte_read_block_count);
+
+    std::cout << "initialized ring buffer interface\n";
+
+    std::unordered_map<uint8_t, RingBufferInterface> rbif_map;
+    rbif_map[0x08] = cdte_rbif;
+
+    std::cout << "added ring buffer interface to map\n";
 
     TransportLayerMachine frmtr(
         local_udp_endpoint,
@@ -87,8 +105,11 @@ int main(int argc, char* argv[]) {
     // add the command deck:
     frmtr.add_commands(deck);
 
-    // add the fragmenter to the deck:
+    // add the packet fragmenter:
     frmtr.add_fragmenter(frag);
+
+    // add the ring buffer interface:
+    frmtr.add_ring_buffer_interface(rbif_map);
 
     // display configuration:
     std::cout << "network setup:" << "\n";
