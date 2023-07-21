@@ -7,9 +7,6 @@
 int main(int argc, char** argv){
     std::cout << "maiiiinnnn...\n";
     // std::string name = "CdTe";
-    // AbstractSubsystem sys = AbstractSubsystem(name);
-
-    // std::cout << "AbstractSubsystem name:\t " << sys.get_name() << std::endl;
 
     std::cout << "max state: " << static_cast<unsigned short>(STATE_ORDER::STATE_COUNT) << "\n";
 

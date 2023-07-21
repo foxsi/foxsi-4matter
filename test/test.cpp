@@ -133,7 +133,14 @@ int main(int argc, char** argv) {
 
     for(auto fragment: fr_res) {
         hex_print(fragment);
-    } 
+    }
+
+    std::cout << "testing string to uint8_t...\n";
+    std::vector<uint8_t> unpack1 = string_to_chars("0x022b0314");
+    std::vector<uint8_t> unpack2 = string_to_chars("0x00");
+    hex_print(unpack1);
+    hex_print(unpack2);
+    std::cout << "\n";
 
     return 0;
 }

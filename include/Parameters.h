@@ -48,6 +48,15 @@ static const unsigned short         PLENUM_PORT     = 0;
 static const unsigned long          RECV_BUFF_LEN   = 4096;
 static const unsigned long          SEND_BUFF_LEN   = 4096;
 
+enum class RING_READ_CMD: uint8_t {
+    CDTE_1              = 0x8e,
+    CDTE_2              = 0x8e,
+    CDTE_3              = 0x8e,
+    CDTE_4              = 0x8e,
+    CMOS_1              = 0x8e,
+    CMOS_2              = 0x8e
+};
+
 // loop order for subsystems:
 enum class SUBSYSTEM_ORDER: unsigned short {
     HOUSEKEEPING        = 0x00,

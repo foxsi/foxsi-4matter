@@ -140,15 +140,27 @@ void TransportLayerMachine::add_fragmenter(size_t fragment_size, size_t header_s
 
 bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
     if(sys == 0x0e) {                       // cmos1
-        if(cmd == 0x8e || cmd == 0x9f) {
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CMOS_1) || cmd == 0x9f) {
             return true;
         }
     } else if(sys == 0x0f) {                // cmos2
-        if(cmd == 0x8e || cmd == 0x9f) {
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CMOS_2) || cmd == 0x9f) {
             return true;
         }
-    } else if(sys == 0x08) {                // cdtede
-        if(cmd == 0x8e) {
+    } else if(sys == 0x09) {                // cdte1
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_1)) {
+            return true;
+        }
+    } else if(sys == 0x0a) {                // cdte2
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_2)) {
+            return true;
+        }
+    } else if(sys == 0x0b) {                // cdte3
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_3)) {
+            return true;
+        }
+    } else if(sys == 0x0c) {                // cdte4
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_4)) {
             return true;
         }
     } else {
@@ -184,7 +196,7 @@ void TransportLayerMachine::send_udp() {
     std::cout << "in send_udp\n";
 
     std::vector<uint8_t> filtered;
-    std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != '0';});
+    std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != 0x00;});
     hex_print(filtered);
     std::cout << "\n";
 
@@ -278,6 +290,7 @@ void TransportLayerMachine::handle_cmd() {
         std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
 
         // update the ring buffer interface for this system
+        // todo: resolve question for IPMU team---does the returned write pointer include required offset? or do I need to add it?
         std::vector<uint32_t> spw_data = ring_buffers[uplink_buff_sys].get_spw_data(unsplat_from_4bytes(remote_wr_ptr));
 
         // check if ring buffer wraps around (2nd piece of buffer is zero-length):
