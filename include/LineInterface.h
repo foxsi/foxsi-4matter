@@ -22,16 +22,16 @@ class EndpointData {
 
 class TimeData {
     public:
-        double period_seconds;
-        double command_seconds;
-        double request_seconds;
-        double reply_seconds;
-        double idle_seconds;
+        unsigned int period_millis;
+        unsigned int command_millis;
+        unsigned int request_millis;
+        unsigned int reply_millis;
+        unsigned int idle_millis;
 
-        TimeData(double period_s);
+        // TimeData(double period_s);
         TimeData();
 
-        void add_times(double total_allocation, double command_time, double request_time, double reply_time, double idle_time);
+        void add_times_seconds(double total_allocation, double command_time, double request_time, double reply_time, double idle_time);
         void resolve_times();
 };
 

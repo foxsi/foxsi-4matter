@@ -27,38 +27,38 @@ std::string EndpointData::as_string() {
     return "("+protocol+")"+address+":"+std::to_string(port);
 }
 
-TimeData::TimeData(double period_s) {
-    if(period_s > 0) {
-        period_seconds = period_s;
-    } else {
-        throw "period must be positive\n";
-    } 
-}
+// TimeData::TimeData(double period_s) {
+//     if(period_s > 0) {
+//         period_millis = period_s;
+//     } else {
+//         throw "period must be positive\n";
+//     } 
+// }
 
 TimeData::TimeData() {
-    period_seconds = 0.0;
-    command_seconds = 0.0;
-    request_seconds = 0.0;
-    reply_seconds = 0.0;
-    idle_seconds = 0.0;
+    period_millis = 0.0;
+    command_millis = 0.0;
+    request_millis = 0.0;
+    reply_millis = 0.0;
+    idle_millis = 0.0;
 }
 
-void TimeData::add_times(double total_allocation, double command_time, double request_time, double reply_time, double idle_time) {
-    period_seconds = total_allocation;
-    command_seconds = command_time;
-    request_seconds = request_time;
-    reply_seconds = reply_time;
-    idle_seconds = idle_time;
+void TimeData::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
+    period_millis = (unsigned int)(total_allocation_seconds*1000);
+    command_millis = (unsigned int)(command_time_seconds*1000);
+    request_millis = (unsigned int)(request_time_seconds*1000);
+    reply_millis = (unsigned int)(reply_time_seconds*1000);
+    idle_millis = (unsigned int)(idle_time_seconds*1000);
 
     TimeData::resolve_times();
 }
 
 void TimeData::resolve_times() {
-    double sum = command_seconds + request_seconds + reply_seconds + idle_seconds;
-    command_seconds = command_seconds*period_seconds/sum;
-    request_seconds = request_seconds*period_seconds/sum;
-    reply_seconds = reply_seconds*period_seconds/sum;
-    idle_seconds = idle_seconds*period_seconds/sum;
+    double sum = command_millis + request_millis + reply_millis + idle_millis;
+    command_millis = command_millis*period_millis/sum;
+    request_millis = request_millis*period_millis/sum;
+    reply_millis = reply_millis*period_millis/sum;
+    idle_millis = idle_millis*period_millis/sum;
 }
 
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
@@ -271,7 +271,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             try {
                 auto& time_data = this_system.value()["time"];
                 TimeData* this_times = new TimeData();
-                this_times->add_times(
+                this_times->add_times_seconds(
                     time_data.at("total_allocation").get<double>(),
                     time_data.at("command").get<double>(),
                     time_data.at("request").get<double>(),
@@ -300,7 +300,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
     // finish parsing
     config_file.close();
-
 
     // build CommandDeck
     command_deck = CommandDeck(systems,lookup_command_file);
@@ -376,7 +375,8 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     // get timing info
     if(vm.count("period")) {
         verbose_print("loop period: " + std::to_string(vm["period"].as<double>()));
-        TimeData temp(vm["period"].as<double>());
+        // TimeData temp(vm["period"].as<double>());
+        TimeData temp;
         times = temp;
     }
 
