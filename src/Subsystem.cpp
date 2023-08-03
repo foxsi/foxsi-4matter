@@ -177,7 +177,11 @@ void TransportLayerMachine::recv_tcp_fwd_udp() {
     // read incoming TCP data...
     local_tcp_sock.async_read_some(
         boost::asio::buffer(downlink_buff),         // read data into the downlink buffer
-        boost::bind(&TransportLayerMachine::send_udp, this)    // callback to send_udp to forward the data after it has been received
+        boost::bind(
+            &TransportLayerMachine::send_udp, 
+            this,
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred
+        )    // callback to send_udp to forward the data after it has been received
     );
 }
 
@@ -192,18 +196,20 @@ void TransportLayerMachine::recv_udp_fwd_tcp() {
     );
 }
 
-void TransportLayerMachine::send_udp() {
+void TransportLayerMachine::send_udp(const boost::system::error_code& err, std::size_t byte_count) {
     std::cout << "in send_udp\n";
 
-    std::vector<uint8_t> filtered;
-    std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != 0x00;});
+    // std::vector<uint8_t> filtered = downlink_buff;
+    std::vector<uint8_t> filtered(downlink_buff.begin(), downlink_buff.begin() + byte_count);
+    // std::vector<uint8_t> filtered;
+    // std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != 0x00;});
+    std::cout << "received " << byte_count << " bytes:\n";
     hex_print(filtered);
     std::cout << "\n";
 
     // fragment the filtered buffer
     // prepend <sys> code to the buffer
     // send on UDP.
-
     // forward the buffer downlink_buff over UDP...
     local_udp_sock.async_send_to(
         boost::asio::buffer(downlink_buff),                 // send out the contents of downlink_buff
@@ -258,7 +264,6 @@ void TransportLayerMachine::handle_cmd() {
 
     std::cout << "transmitting:\t";
     hex_print(output_cmd);
-    std::cout << "\n";
     std::cout << "to " << local_tcp_sock.remote_endpoint().address().to_string() << ":" << std::to_string(local_tcp_sock.remote_endpoint().port()) << "\n";
 
     if(is_frame_read_cmd) {

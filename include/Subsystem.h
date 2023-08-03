@@ -69,7 +69,7 @@ class TransportLayerMachine {
         void recv_udp_fwd_tcp();
         void recv_udp_fwd_tcp_cmd();
         void send_tcp();
-        void send_udp();
+        void send_udp(const boost::system::error_code& err, std::size_t byte_count);
 
         void print_udp_basic();
 
