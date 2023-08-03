@@ -28,7 +28,7 @@ class Command {
             uint8_t new_spw_instruction,
             std::vector<uint8_t> new_spw_address,
             std::vector<uint8_t> new_spw_write_data,
-            unsigned short new_spw_reply_length
+            unsigned long new_spw_reply_length
         );
 
         void set_uart_options(std::vector<uint8_t> new_uart_instruction);
@@ -47,7 +47,7 @@ class Command {
         const uint8_t get_spw_instruction() const {return spw_instruction;}
         const std::vector<uint8_t> get_spw_write_data() const {return spw_write_data;}
         const std::vector<uint8_t> get_spw_address()  const {return spw_address;}
-        const unsigned short get_spw_reply_length() const {return spw_reply_length;}
+        const unsigned long get_spw_reply_length() const {return spw_reply_length;}
         const std::vector<uint8_t> get_full_command() const {return full_command;}
 
         const std::vector<uint8_t> get_uart_instruction() const {return uart_instruction;}
@@ -60,7 +60,7 @@ class Command {
         uint8_t spw_instruction;
         std::vector<uint8_t> spw_address;
         std::vector<uint8_t> spw_write_data;
-        unsigned short spw_reply_length;
+        unsigned long spw_reply_length;
         std::vector<uint8_t> full_command;
 
         // UART-related data:

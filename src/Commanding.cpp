@@ -35,7 +35,7 @@ void Command::set_spw_options(
     uint8_t new_spw_instruction,
     std::vector<uint8_t> new_spw_address,
     std::vector<uint8_t> new_spw_write_data,
-    unsigned short new_spw_reply_length
+    unsigned long new_spw_reply_length
 ) {
     if(type != COMMAND_TYPE_OPTIONS::SPW) {
         std::cout << "\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command.type later\n";
@@ -258,10 +258,10 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
                 std::vector<uint8_t> this_spw_write_data;
                 std::vector<uint8_t> this_spw_addr;
 
-                unsigned short this_spw_reply_length = 0;
+                unsigned long this_spw_reply_length = 0;
                 if(this_read) {
                     // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
-                    this_spw_reply_length = strtol(this_spw_reply_len_str.c_str(), NULL, 16);
+                    this_spw_reply_length = strtoul(this_spw_reply_len_str.c_str(), NULL, 16);
                 } else {
                     this_spw_write_data = string_to_chars(this_spw_write_data_str);
                 }
@@ -412,9 +412,9 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::vector<uint8_t> this_spw_write_data;
                     std::vector<uint8_t> this_spw_addr;
 
-                    unsigned short this_spw_reply_length = 0;
+                    unsigned long this_spw_reply_length = 0;
                     if(this_read) {
-                        this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                        this_spw_reply_length = strtoul(this_spw_write_data_str.c_str(), NULL, 16);
                     } else {
                         this_spw_write_data = string_to_chars(this_spw_write_data_str);
                     }
@@ -748,7 +748,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
             // TODO: find correct frame size value
             // unsigned int read_data_length = 32000;
-            unsigned short read_data_length = cmd.get_spw_reply_length();
+            unsigned long read_data_length = cmd.get_spw_reply_length();
 
             const uint8_t dl0 = read_data_length & 0xff;
             const uint8_t dl1 = (read_data_length >> 8) & 0xff;
