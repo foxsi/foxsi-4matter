@@ -51,7 +51,9 @@ int main(int argc, char* argv[]) {
     // todo: add these to foxsi4-commands/systems.json for each system with a ring buffer.
     uint32_t cdte_ring_start_addr = 0x00400000;
     size_t cdte_ring_size = 32124400;
-    size_t cdte_ring_block_size = 32780;
+    // size_t cdte_ring_block_size = 32780;
+    // testing more, smaller blocks:
+    size_t cdte_ring_block_size = 2000;
     size_t cdte_read_block_count = 17;
     RingBufferInterface cdte_rbif = RingBufferInterface(cdte_ring_start_addr, cdte_ring_size, cdte_ring_block_size, cdte_read_block_count);
 

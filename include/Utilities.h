@@ -14,6 +14,7 @@ STATE_ORDER operator++(STATE_ORDER& order, int);
 int inc_mod(int i, int n);
 
 void debug_print(std::string msg);
+void error_print(std::string msg);
 void hex_print(std::vector<uint8_t>& data);
 void hex_print(std::vector<char>& data);
 void hex_print(uint8_t data);

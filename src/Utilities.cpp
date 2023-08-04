@@ -128,8 +128,12 @@ uint8_t spw_calculate_crc_uint_F(std::vector<uint8_t>& data) {
 
 void debug_print(std::string msg) {
     if(DEBUG) {
-        std::cout << "\033[1;34m" << msg << "\033[0m" << "\n";
+        std::cout << "\033[1;34m" << msg << "\033[0m";
     }
+}
+
+void error_print(std::string msg) {
+    std::cout << "\033[1;31m" << msg << "\033[0m";
 }
 
 void hex_print(std::vector<uint8_t>& data) {

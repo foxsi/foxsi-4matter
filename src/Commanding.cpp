@@ -215,7 +215,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
 
         std::unordered_map<uint8_t, Command> inner_command_map;
 
-        debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...");
+        debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
 
         std::cout << "\n\nsystem type:";
         hex_print((uint8_t)this_system.type);
@@ -285,7 +285,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
             }
         }
         // add all the commands for this system to the total deck
-        debug_print("\tadded system commands to deck");
+        debug_print("\tadded system commands to deck\n");
         file.close();
     }
 }
@@ -340,9 +340,9 @@ void CommandDeck::add_systems(std::string sys_filename) {
         // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
         this_hex = strtol(this_hex_str.c_str(), NULL, 16);
 
-        debug_print("adding new System:");
-        debug_print("\tname:    " + this_name);
-        debug_print("\tid code: " + std::to_string(this_hex));
+        debug_print("adding new System:\n");
+        debug_print("\tname:    " + this_name + "\n");
+        debug_print("\tid code: " + std::to_string(this_hex) + "\n");
         
         systems.push_back(System(this_name, this_hex));
     }
@@ -365,13 +365,13 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
         nlohmann::json data = nlohmann::json::parse(file);
         
         if(path_key.compare("SYSTEMS") == 0) {
-            debug_print("\tgot system again");
+            debug_print("\tgot system again\n");
             // already did this above, no need to repeat
         } else {
 
             std::unordered_map<uint8_t, Command> inner_command_map;
 
-            debug_print("adding commands...");
+            debug_print("adding commands...\n");
 
             for(auto& this_entry: data.items()) {
                 // set primary command properties
@@ -385,7 +385,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 bool this_read;
                 std::istringstream(this_read_str) >> this_read;
 
-                debug_print("\tadding protocol-specific data...");
+                debug_print("\tadding protocol-specific data...\n");
                 
                 // add data to command based on specific protocol used
                 if(path_key.compare("TIMEPIX") == 0) {
@@ -438,7 +438,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 }
             }
             // add all the commands for this system to the total deck
-            debug_print("\tadded system commands to deck");
+            debug_print("\tadded system commands to dec\n");
         }
         file.close();
     }
@@ -483,11 +483,11 @@ std::string CommandDeck::get_sys_name_for_code(uint8_t code) {
 Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     // check for key `sys` in outer map
     if(commands.contains(sys)) {
-        debug_print("\tcontains sys");
+        debug_print("\tcontains sys\n");
         // check for key `code` in inner map
         if(commands[sys].contains(code)) {
-            debug_print("\tcontains code");
-            debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys));
+            debug_print("\tcontains code\n");
+            debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
             return (commands[sys][code]);
         }
         // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
@@ -804,7 +804,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             debug_print("");
 
             unsigned int write_data_length = write_data.size();
-            debug_print("write data size: " + std::to_string(write_data_length));
+            debug_print("write data size: " + std::to_string(write_data_length) + "\n");
             const uint8_t dl0 = write_data_length & 0xff;
             const uint8_t dl1 = (write_data_length >> 8) & 0xff;
             const uint8_t dl2 = (write_data_length >> 16) & 0xff;

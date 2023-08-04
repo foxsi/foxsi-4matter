@@ -337,6 +337,19 @@ void TransportLayerMachine::handle_cmd() {
             std::vector<uint8_t> ring_addr = splat_to_nbytes(4, spw_data[0]);
             size_t ring_len = spw_data[1];
             std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr, ring_len);
+
+            /**
+             * todo: read memory block-by-block in for loop.
+             * Blocks should be transferrable on SPMU-001, so 2kB or so max.
+             * for each block transfer:
+             *      send (synchronous)
+             *      recv (synchronous)
+             *      append recv data to block
+             *      send whole block UDP when done.
+             * 
+             */
+
+
             local_tcp_sock.async_send(
                 boost::asio::buffer(ring_read_cmd),                   // send out the contents of uplink_buff
                 boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
