@@ -251,19 +251,19 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         } catch(std::exception& e) {}
 
         // TODO:do sanity checks
-        debug_print("\tfound command type: ");
+        debug_print("\tfound command type: \n");
         if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
-                debug_print("\t\tUART");
+                debug_print("\t\tUART\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
-                debug_print("\t\tSPW");
+                debug_print("\t\tSPW\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
-                debug_print("\t\tSPI");
+                debug_print("\t\tSPI\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-                debug_print("\t\tETHERNET");
+                debug_print("\t\tETHERNET\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
-                debug_print("\t\tnone");
+                debug_print("\t\tnone\n");
             } else {
-                debug_print("\t\tDID NOT FIND TYPE");
+                debug_print("\t\tDID NOT FIND TYPE\n");
         }
 
         // now add more command-specific info to this_system_object

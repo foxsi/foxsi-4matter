@@ -28,6 +28,9 @@ int main(int argc, char** argv) {
 
     LineInterface lif = LineInterface(argc, argv, context);
     
+    error_print("testing error print!\n");
+    debug_print("testing debug print!\n");
+
     std::cout << lif.local_address << "\n";
     std::cout << "\n\n";
     for(auto& ept: lif.unique_endpoints) {
@@ -141,6 +144,7 @@ int main(int argc, char** argv) {
     hex_print(unpack1);
     hex_print(unpack2);
     std::cout << "\n";
+
 
     return 0;
 }
