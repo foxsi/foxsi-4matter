@@ -208,6 +208,7 @@ void TransportLayerMachine::send_udp(const boost::system::error_code& err, std::
     std::cout << "\n";
 
     debug_print("trying spw data isolation: ");
+    // todo: REPLACE HARDCODED 0x08 with lookup CdTe DE
     std::vector<uint8_t> reply_data = TransportLayerMachine::get_reply_data(downlink_buff, 0x08);
     hex_print(reply_data);
 
@@ -296,8 +297,15 @@ void TransportLayerMachine::handle_cmd() {
         size_t ether_offset_from_start = 12;
         size_t spw_offset_from_start = 12;
         size_t offset_from_end = 1;
+        
         // todo: replace this with a clean function that takes `reply` and `system` as parameters.
-        std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
+        // std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
+
+        // todo: REPLACE HARDCODED 0x08 with lookup CdTe DE
+        std::vector<uint8_t> remote_wr_ptr = TransportLayerMachine::get_reply_data(reply, 0x08);
+        if(remote_wr_ptr.size() != 4) {
+            error_print("got bad write pointer length!");
+        }
 
         // update the ring buffer interface for this system
         // todo: resolve question for IPMU team---does the returned write pointer include required offset? or do I need to add it?
@@ -307,6 +315,24 @@ void TransportLayerMachine::handle_cmd() {
         if(spw_data[3] == 0) {
             // send only one command.
             debug_print("\treading from non-wrapped ring buffer region.\n");
+            
+            size_t blocks = ring_buffers[uplink_buff_sys].get_read_count_blocks();
+            size_t block_size = ring_buffers[uplink_buff_sys].get_block_size();
+
+            for(size_t i = 0; i < blocks; ++i) {
+                debug_print("\t reading block " + std::to_string(i) + " of " + std::to_string(blocks - 1));
+
+                std::vector<uint8_t> ring_read_addr = splat_to_nbytes(4, spw_data[0] + i*block_size);
+
+                size_t ring_len = spw_data[1];
+                std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_read_addr, ring_len);
+
+                local_tcp_sock.send(boost::asio::buffer(ring_read_cmd));
+            }
+
+
+            }
+
             // populate template command:
             std::vector<uint8_t> ring_addr = splat_to_nbytes(4, spw_data[0]);
             size_t ring_len = spw_data[1];
@@ -319,6 +345,10 @@ void TransportLayerMachine::handle_cmd() {
         } else {
             // send two read commands.
             debug_print("\treading from wrapped ring buffer region.\n");
+            error_print("\tnevermind, I won't implement this yet :(\n");
+            
+            /**********************************************************
+
             // populate two template commands:
             std::vector<uint8_t> ring_addr1 = splat_to_nbytes(4, spw_data[0]);
             size_t ring_len1 = spw_data[1];
@@ -336,6 +366,8 @@ void TransportLayerMachine::handle_cmd() {
                 boost::asio::buffer(ring_read_cmd2),                   // send out the contents of uplink_buff
                 boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
             );
+
+            */
         }
 
     } else {

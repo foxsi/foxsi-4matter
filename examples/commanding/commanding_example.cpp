@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     uint32_t cdte_ring_start_addr = 0x00400000;
     size_t cdte_ring_size = 32124400;
     size_t cdte_ring_block_size = 32780;
-    size_t cdte_read_block_count = 2;
+    size_t cdte_read_block_count = 17;
     RingBufferInterface cdte_rbif = RingBufferInterface(cdte_ring_start_addr, cdte_ring_size, cdte_ring_block_size, cdte_read_block_count);
 
     std::cout << "initialized ring buffer interface\n";
