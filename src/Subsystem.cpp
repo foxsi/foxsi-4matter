@@ -207,6 +207,10 @@ void TransportLayerMachine::send_udp(const boost::system::error_code& err, std::
     hex_print(filtered);
     std::cout << "\n";
 
+    debug_print("trying spw data isolation: ");
+    std::vector<uint8_t> reply_data = TransportLayerMachine::get_reply_data(downlink_buff, 0x08);
+    hex_print(reply_data);
+
     // fragment the filtered buffer
     // prepend <sys> code to the buffer
     // send on UDP.
@@ -292,6 +296,7 @@ void TransportLayerMachine::handle_cmd() {
         size_t ether_offset_from_start = 12;
         size_t spw_offset_from_start = 12;
         size_t offset_from_end = 1;
+        // todo: replace this with a clean function that takes `reply` and `system` as parameters.
         std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
 
         // update the ring buffer interface for this system
@@ -360,6 +365,85 @@ void TransportLayerMachine::handle_remote_buffer_transaction() {
 
     // read the last write pointer
     local_tcp_sock.send(boost::asio::buffer(output_cmd));
+}
+
+std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> spw_reply, System& sys) {
+
+    debug_print("\tlength of reply: " + std::to_string(spw_reply.size()));
+
+    size_t ether_prefix_length = 12; // using SPMU-001, this is always true
+    size_t target_path_address_length = 0; // path address is removed by the time we receive reply.
+
+    // size_t target_path_address_length = sys.target_path_address.size() - 1;
+    /**
+     * 1B initiator logical address
+     * 1B protocol id
+     * 1B instruction
+     * 1B status
+     * 1B target logical address
+     * 2B transaction id
+     * 1B reserved
+     * 3B data length
+     * 1B header CRC
+     */
+
+    // now extract data based on data length field
+    size_t data_length_start_offset = 9;
+    size_t data_length_length = 3;
+
+    debug_print("\tlast header access: " + std::to_string(ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length));
+
+    std::vector<uint8_t> data_length_vec(
+        spw_reply.begin() 
+            + ether_prefix_length 
+            + target_path_address_length 
+            + data_length_start_offset
+            - 1, 
+        spw_reply.begin() 
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length
+            - 1
+    );
+
+    // pre-pad `data_length_vec` with zero to use with `unsplat_from_4bytes()`
+    std::vector<uint8_t> zero_prefix(1); 
+    zero_prefix[0] = 0x00;
+    data_length_vec.insert(data_length_vec.begin(), zero_prefix.begin(), zero_prefix.end());
+
+    debug_print("\tvector data length field result: ");
+    for(auto& el: data_length_vec) {
+        debug_print("\t\t" + std::to_string(el));
+    }
+
+    uint32_t data_length = unsplat_from_4bytes(data_length_vec);
+    
+    debug_print("\tconverted data length field result: ");
+    debug_print("\t\t" + std::to_string(data_length));
+
+    // now read rest of spw_reply based on data_length
+    std::vector<uint8_t> reply_data(
+        spw_reply.begin()
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length,
+        spw_reply.begin()
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length
+            + data_length
+    );
+
+    return reply_data;
+}
+
+std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> spw_reply, uint8_t sys) {
+    System& sys_obj = commands.get_sys_for_code(sys);
+    
+    return TransportLayerMachine::get_reply_data(spw_reply, sys_obj);
 }
 
 void TransportLayerMachine::print_udp_basic() {

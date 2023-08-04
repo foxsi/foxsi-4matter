@@ -76,6 +76,9 @@ class TransportLayerMachine {
         void handle_cmd();
         void handle_remote_buffer_transaction();
 
+        std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply, System& sys);
+        std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply, uint8_t sys);
+
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
 
 };
