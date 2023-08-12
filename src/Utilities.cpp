@@ -181,6 +181,16 @@ uint8_t string_to_byte(std::string hex_str) {
     return strtol(hex_str.c_str(), NULL, 16) & 0xff;
 }
 
+std::vector<uint8_t> swap_endian4(std::vector<uint8_t> data) {
+    std::vector<uint8_t> out;
+    out.push_back(data[3]);
+    out.push_back(data[2]);
+    out.push_back(data[1]);
+    out.push_back(data[0]);
+
+    return out;
+}
+
 std::vector<uint8_t> splat_to_nbytes(size_t n, uint64_t data) {
     std::vector<uint8_t> result;
     for(int i=n-1; i>=0; --i) {
