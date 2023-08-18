@@ -105,15 +105,6 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     target_link_libraries(test PRIVATE Threads::Threads)
-    
-    # add_library(nlohmann_json INTERFACE)
-    # add_library(nlohmann_json INTERFACE ${NLOHMANNJSON_ROOT})
-    # target_link_libraries(
-    #     lib
-    #     PRIVATE
-    #     nlohmann_json
-    # )
-    # target_link_libraries(lib PUBLIC nlohmann_json)
 
     target_include_directories(
         lib
