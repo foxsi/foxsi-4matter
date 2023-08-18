@@ -142,13 +142,6 @@ int main(int argc, char* argv[]) {
     frmtr.recv_udp_fwd_tcp_cmd();
     frmtr.recv_tcp_fwd_udp();
 
-
-    // while(1) {
-    //     frmtr.print_udp_basic();
-    // }
-    
-    
-
     // Metronome metronome(
     //     lif.times.period_seconds,
     //     context

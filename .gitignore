@@ -17,5 +17,8 @@ bin/
 *.dylib
 #.so
 
+# docs
+doc/*
+
 # remote testing
 # examples/CLI/config.ini
