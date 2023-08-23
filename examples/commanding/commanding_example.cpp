@@ -55,12 +55,28 @@ int main(int argc, char* argv[]) {
     // testing more, smaller blocks:
     size_t cdte_ring_block_size = 2000;
     size_t cdte_read_block_count = 17;
+
+    uint32_t cmos_ring_start_addr = 0x00001000;
+    // size_t cmos_ring_size = 0x041e0000; // total ring size
+    size_t cmos_ring_size = 0x001e0014;
+    // size_t cmos_ring_block_size = 0x00220000;
+    size_t cmos_ring_block_size = 2000;
+    size_t cmos_read_block_count = 984;
+
     RingBufferInterface cdte_rbif = RingBufferInterface(cdte_ring_start_addr, cdte_ring_size, cdte_ring_block_size, cdte_read_block_count);
+
+    RingBufferInterface cmos_rbif = RingBufferInterface(cmos_ring_start_addr, cmos_ring_size, cmos_ring_block_size, cmos_read_block_count);
 
     std::cout << "initialized ring buffer interface\n";
 
     std::unordered_map<uint8_t, RingBufferInterface> rbif_map;
     rbif_map[0x08] = cdte_rbif;
+    rbif_map[0x09] = cdte_rbif;
+    rbif_map[0x0a] = cdte_rbif;
+    rbif_map[0x0b] = cdte_rbif;
+    rbif_map[0x0c] = cdte_rbif;
+    rbif_map[0x0e] = cmos_rbif;
+    rbif_map[0x0f] = cmos_rbif;
 
     std::cout << "added ring buffer interface to map\n";
 
@@ -125,13 +141,6 @@ int main(int argc, char* argv[]) {
     // give the io_context work to do:
     frmtr.recv_udp_fwd_tcp_cmd();
     frmtr.recv_tcp_fwd_udp();
-
-
-    // while(1) {
-    //     frmtr.print_udp_basic();
-    // }
-    
-    
 
     // Metronome metronome(
     //     lif.times.period_seconds,

@@ -56,8 +56,6 @@ void Metronome::update_state() {
 }
 
 void Metronome::manage_system() {
-    
-    // 
     if(subsystem == SUBSYSTEM_ORDER::CDTE_1 || subsystem == SUBSYSTEM_ORDER::CDTE_2 || subsystem == SUBSYSTEM_ORDER::CDTE_3 || subsystem == SUBSYSTEM_ORDER::CDTE_4) {
         Metronome::manage_cdte_state();
     } else if(subsystem == SUBSYSTEM_ORDER::CMOS_1 || subsystem == SUBSYSTEM_ORDER::CMOS_2) {

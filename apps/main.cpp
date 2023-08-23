@@ -5,8 +5,6 @@
 #include <boost/asio.hpp>
 
 int main(int argc, char** argv){
-    std::cout << "maiiiinnnn...\n";
-    // std::string name = "CdTe";
 
     std::cout << "max state: " << static_cast<unsigned short>(STATE_ORDER::STATE_COUNT) << "\n";
 
