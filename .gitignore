@@ -19,3 +19,5 @@ bin/
 
 # remote testing
 # examples/CLI/config.ini
+
+/doc/*
