@@ -385,28 +385,6 @@ void TransportLayerMachine::handle_cmd() {
 
             TransportLayerMachine::recv_udp_fwd_tcp_cmd();
 
-            // populate template command:
-            // std::vector<uint8_t> ring_addr = splat_to_nbytes(4, spw_data[0]);
-            // size_t ring_len = spw_data[1];
-            // std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr, ring_len);
-
-            /**
-             * todo: read memory block-by-block in for loop.
-             * Blocks should be transferrable on SPMU-001, so 2kB or so max.
-             * for each block transfer:
-             *      send (synchronous)
-             *      recv (synchronous)
-             *      append recv data to block
-             *      send whole block UDP when done.
-             * 
-             */
-
-
-            // local_tcp_sock.async_send(
-            //     boost::asio::buffer(ring_read_cmd),                   // send out the contents of uplink_buff
-            //     boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
-            // );
-
         } else {
             // send two read commands.
             debug_print("\treading from wrapped ring buffer region.\n");
@@ -448,28 +426,6 @@ void TransportLayerMachine::handle_cmd() {
             hex_print(reply_stack);
 
             TransportLayerMachine::recv_udp_fwd_tcp_cmd();
-
-            /**********************************************************
-
-            // populate two template commands:
-            std::vector<uint8_t> ring_addr1 = splat_to_nbytes(4, spw_data[0]);
-            size_t ring_len1 = spw_data[1];
-            std::vector<uint8_t> ring_read_cmd1 = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr1, ring_len1);
-            std::vector<uint8_t> ring_addr2 = splat_to_nbytes(4, spw_data[2]);
-            size_t ring_len2 = spw_data[3];
-            std::vector<uint8_t> ring_read_cmd2 = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_addr2, ring_len2);
-            
-            local_tcp_sock.async_send(
-                boost::asio::buffer(ring_read_cmd1),                   // send out the contents of uplink_buff
-                boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
-            );
-
-            local_tcp_sock.async_send(
-                boost::asio::buffer(ring_read_cmd2),                   // send out the contents of uplink_buff
-                boost::bind(&TransportLayerMachine::recv_udp_fwd_tcp_cmd, this)    // callback to recv_udp_fwd_tcp after send to continue listening
-            );
-
-            */
         }
 
     } else {
@@ -494,7 +450,6 @@ void TransportLayerMachine::handle_remote_buffer_transaction() {
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
     std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
 
-    // TODO: CHANGE THIS SO WE GET THE WRITE POINTER ADDRESS FOR SYSTEM
     std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
 
     // read the last write pointer
@@ -502,8 +457,6 @@ void TransportLayerMachine::handle_remote_buffer_transaction() {
 }
 
 std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> spw_reply, System& sys) {
-
-    // debug_print("\tlength of reply: " + std::to_string(spw_reply.size()) + "\n");
 
     size_t ether_prefix_length = 12; // using SPMU-001, this is always true
     size_t target_path_address_length = 0; // path address is removed by the time we receive reply.
