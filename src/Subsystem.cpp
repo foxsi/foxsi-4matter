@@ -281,8 +281,6 @@ void TransportLayerMachine::handle_cmd() {
 
         // wrap the reply vector to the correct length
         reply.resize(reply_len);
-
-        // std::vector<uint8_t> reply(reply_buff, reply_buff + 1024);
         
         std::cout << "got reply of length 0x" << reply.size() << " with reported size 0x" << reply_len << ":\t";
         hex_print(reply);
@@ -295,15 +293,6 @@ void TransportLayerMachine::handle_cmd() {
 
         // todo: verify reply length > 0 before proceeding to avoid index outside the vector.
         
-        // data in SpW reply packet starts 12 B into the packet (after path address), and ends with CRC.
-        // todo: replace with Parameters.h-defined values.
-        // size_t ether_offset_from_start = 12;
-        // size_t spw_offset_from_start = 12;
-        // size_t offset_from_end = 1;
-        
-        // todo: replace this with a clean function that takes `reply` and `system` as parameters.
-        // std::vector<uint8_t> remote_wr_ptr(reply.begin() + spw_offset_from_start + ether_offset_from_start, reply.end() - offset_from_end);
-
         std::vector<uint8_t> remote_wr_ptr = TransportLayerMachine::get_reply_data(reply, uplink_buff_sys);
         if(remote_wr_ptr.size() != 4) {
             error_print("got bad write pointer length!\n");
@@ -313,11 +302,6 @@ void TransportLayerMachine::handle_cmd() {
         if(uplink_buff_sys == 0x0f || uplink_buff_sys == 0x0e) {
             remote_wr_ptr = swap_endian4(remote_wr_ptr);
         }
-
-        // update the ring buffer interface for this system
-        // todo: resolve question for IPMU team---does the returned write pointer include required offset? or do I need to add it?
-        
-        // std::vector<uint32_t> spw_data = ring_buffers[uplink_buff_sys].get_spw_data(unsplat_from_4bytes(remote_wr_ptr));
 
         // todo: handle this in a sustainable way
         std::vector<uint32_t> spw_data;
@@ -386,6 +370,8 @@ void TransportLayerMachine::handle_cmd() {
             TransportLayerMachine::recv_udp_fwd_tcp_cmd();
 
         } else {
+            // this is copy-paste of the above case. todo: use your brain. write same stuff as a separate method. differentiate if its needed.
+
             // send two read commands.
             debug_print("\treading from wrapped ring buffer region.\n");
             error_print("\tI haven't really implemented this yet :{}\n");
