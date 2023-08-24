@@ -14,22 +14,52 @@ set(GOOGLETEST_ROOT /usr/local/include)
 
 # enable_testing()
 
-# Add other sources and headers here:
-set(
-    SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp
+# Build library targets "lib..." to link to multiple executables
+add_library(
+    libcom 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp  
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
+)
+add_library(
+    libsubsys 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
+)
+add_library(
+    libutil 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp 
+)
+add_library(
+    liboth 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
+)
+
+target_include_directories(
+    libcom
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_include_directories(
+    libsubsys
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_include_directories(
+    libutil
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_include_directories(
+    liboth
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Build the target "formatter" using source files
-add_executable(formatter ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp)
+add_executable(formatter ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp)
 target_include_directories(
     formatter 
     PRIVATE 
@@ -37,7 +67,7 @@ target_include_directories(
 )
 
 # Build the target "tcp_example" using source files
-add_executable(tcp_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
+add_executable(tcp_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
 target_include_directories(
     tcp_example
     PRIVATE
@@ -45,7 +75,7 @@ target_include_directories(
 )
 
 # Build the target "forwarding_example" using source files
-add_executable(forwarding_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
+add_executable(forwarding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
 target_include_directories(
     forwarding_example
     PRIVATE
@@ -53,7 +83,7 @@ target_include_directories(
 )
 
 # Build the target "cli_example" using source files
-add_executable(cli_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
+add_executable(cli_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
 target_include_directories(
     cli_example
     PRIVATE
@@ -61,7 +91,7 @@ target_include_directories(
 )
 
 # Build the target "commanding_example" using source files
-add_executable(commanding_example ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/examples/commanding/commanding_example.cpp)
+add_executable(commanding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/commanding/commanding_example.cpp)
 target_include_directories(
     commanding_example
     PRIVATE
@@ -69,7 +99,7 @@ target_include_directories(
 )
 
 # Build the target "test_spw_crc" using source files
-add_executable(test_spw_crc ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
+add_executable(test_spw_crc ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
 target_include_directories(
     test_spw_crc
     PRIVATE
@@ -84,20 +114,12 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Build library target "lib" to link to multiple executables
-add_library(lib ${SOURCES})
-target_include_directories(
-    lib
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
 # Check which OS we're using to use correct thread library
 if(UNIX AND NOT APPLE)
     # Force use pthreads (for Boost/asio)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
-    target_link_libraries(lib PRIVATE Threads::Threads)
+    target_link_libraries(libcom PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
@@ -107,7 +129,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(test PRIVATE Threads::Threads)
 
     target_include_directories(
-        lib
+        libcom
         PUBLIC
         ${NLOHMANNJSON_ROOT}
     )
@@ -120,10 +142,10 @@ if(UNIX AND NOT APPLE)
 elseif(UNIX AND APPLE)
     # this usually builds fine
     find_package(nlohmann_json 3.11.2 REQUIRED)
-    target_link_libraries(lib PUBLIC nlohmann_json::nlohmann_json)
+    target_link_libraries(libcom PUBLIC nlohmann_json::nlohmann_json)
 
     find_package(GTest REQUIRED)
-    target_link_libraries(lib PUBLIC GTest::gtest)
+    target_link_libraries(libcom PUBLIC GTest::gtest)
 
     find_package(Doxygen REQUIRED)
 
@@ -154,17 +176,20 @@ if(Boost_FOUND)
             INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
     endif()
 
-    # link the whole user code library to Boost and JSON
-    target_link_libraries(lib PUBLIC Boost::filesystem Boost::program_options)
-
-    # then link it all to the executables
-    target_link_libraries(formatter PUBLIC Boost::filesystem lib)
-    target_link_libraries(tcp_example PUBLIC Boost::filesystem lib)
-    target_link_libraries(forwarding_example PUBLIC Boost::filesystem lib)
-    target_link_libraries(cli_example PUBLIC Boost::filesystem lib)
-    target_link_libraries(commanding_example PUBLIC Boost::filesystem lib)
-    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem lib)
-    target_link_libraries(test PUBLIC Boost::filesystem lib)
+    # link the user libraries to Boost
+    target_link_libraries(libcom PUBLIC Boost::filesystem Boost::program_options)
+    target_link_libraries(libsubsys PUBLIC Boost::filesystem Boost::program_options)
+    target_link_libraries(libutil PUBLIC Boost::filesystem Boost::program_options)
+    target_link_libraries(liboth PUBLIC Boost::filesystem Boost::program_options)
+   
+    # then link them all to the executables
+    target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(tcp_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
