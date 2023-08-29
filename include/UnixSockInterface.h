@@ -5,7 +5,10 @@
 #include <boost/asio.hpp>
 #include <string>
 
-/* This is for datagram-oriented sockets. Prefer to send/receive full packet at once. */
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class UnixDomainSocketInterface: AbstractSerial {
     public:
         std::string endpoint_name;

@@ -4,6 +4,10 @@
 #include "Parameters.h"
 #include <string>
 
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class AbstractState {
     public:
         STATE_ORDER state;

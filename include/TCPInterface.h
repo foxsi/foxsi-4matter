@@ -11,7 +11,10 @@
 
 // see https://stackoverflow.com/questions/66875712/how-to-create-boostasio-server-that-listen-to-two-different-ports
 
-// like TCP Session
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class TCPSession: public std::enable_shared_from_this<TCPSession> {
     public:
         boost::asio::ip::tcp::socket local_socket;
@@ -23,6 +26,10 @@ class TCPSession: public std::enable_shared_from_this<TCPSession> {
         void write(std::size_t length);
 };
 
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class TCPServer {
     public:
         boost::asio::ip::tcp::acceptor acceptor;

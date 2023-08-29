@@ -1,6 +1,12 @@
 #ifndef UARTINTERFACE_H
 #define UARTINTERFACE_H
 
+#include <boost/asio.hpp>
+
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class UARTInterface {
     public:
         unsigned long baud;
