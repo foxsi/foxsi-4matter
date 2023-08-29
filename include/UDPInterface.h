@@ -5,6 +5,10 @@
 #include <queue>
 #include <vector>
 
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class UDPInterface {
     public:
         boost::asio::ip::address local_address;

@@ -5,8 +5,10 @@
 #include <map>
 #include <boost/interprocess/shared_memory_object.hpp>
 
-// MAY NOT NEED SOME OBJECT LIKE THIS TO WRAP THE Boost STUFF.
-
+/**
+ * @deprecated unused, ignore.
+ * 
+ */
 class SharedMemory{
     // memory map: takes string keys and reads/writes the memory for the key
     std::map<std::string, boost::interprocess::shared_memory_object> map;

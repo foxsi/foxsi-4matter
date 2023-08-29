@@ -7,17 +7,55 @@
 #include <string>
 #include <map>
 
-
-// EndpointData, TimeData really just exist to be consumed by/instantiate a TransportLayerMachine.
+/**
+ * @brief A convenience datastructure for passing Ethernet protocol, port number, and IP address information.
+ * 
+ * This class is used to extract TCP or UDP endpoint information from the JSON configuration file and pass it into the software. 
+ */
 class EndpointData {
     public:
-        std::string address;
-        std::string protocol;
-        unsigned short port;
+
+        /**
+         * @brief Construct a new Endpoint Data object explicitly.
+         * Populates `EndpointData::address`, `EndpointData::protocol`, `EndpointData::port` from the provided parameters.
+         * @param ip the IP address of the endpoint, formatted "xxx.xxx.xxx.xxx".
+         * @param prot the connection type for the endpoint. Consumers of this class within the Formatter software expect either "tcp" or "udp" for this value.
+         * @param pt the port number for the endpoint. 
+         */
         EndpointData(std::string ip, std::string prot, unsigned short pt);
+        /**
+         * @brief Construct a new empty `EndpointData` object with empty IP address, empty protocol type, and zero port.
+         * 
+         */
         EndpointData();
+        /**
+         * @brief Compares two `EndpointData` objects.
+         * 
+         * @param other the other `EndpointData` object to compare to.
+         * @return true if all the fields are equal.
+         * @return false if all the fields are not all equal.
+         */
         bool operator==(EndpointData& other);
+        /**
+         * @brief Returns a string representation of the `EndpointData` in the format: `(protocol)xxx.xxx.xxx.xxx:yyyyy`.
+         * 
+         * @return std::string the string representation of the `EndpointData` object.
+         */
         std::string as_string();
+
+        /**
+         * @brief The IP address of the endpoint.
+         */
+        std::string address;
+        /**
+         * @brief The connection type of the endpoint (e.g. "tcp" or "udp").
+         * Any `std::string` can be used here, but consumers of this class in the Formatter software expect "tcp" or "udp" as value.
+         */
+        std::string protocol;
+        /**
+         * @brief The port number to connect on (0-65535, with 0-1023 typically reserved for system use).
+         */
+        unsigned short port;
 };
 
 class TimeData {
