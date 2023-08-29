@@ -28,10 +28,7 @@ add_library(
     libutil 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp 
-)
-add_library(
-    liboth 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
@@ -49,11 +46,6 @@ target_include_directories(
 )
 target_include_directories(
     libutil
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_include_directories(
-    liboth
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -122,7 +114,6 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libcom PRIVATE Threads::Threads)
     target_link_libraries(libsubsys PRIVATE Threads::Threads)
     target_link_libraries(libutil PRIVATE Threads::Threads)
-    target_link_libraries(liboth PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(tcp_example PRIVATE Threads::Threads)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
@@ -183,16 +174,15 @@ if(Boost_FOUND)
     target_link_libraries(libcom PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libsubsys PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libutil PUBLIC Boost::filesystem Boost::program_options)
-    target_link_libraries(liboth PUBLIC Boost::filesystem Boost::program_options)
    
     # then link them all to the executables
-    target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(tcp_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
-    target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil liboth)
+    target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(tcp_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
