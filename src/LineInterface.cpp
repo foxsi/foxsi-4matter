@@ -7,15 +7,18 @@
 #include <algorithm>
 #include <nlohmann/json.hpp>
 
+// this constructor uses initializer lists.
 EndpointData::EndpointData(std::string ip, std::string prot, unsigned short pt): address(ip), protocol(prot), port(pt) {}
 
 EndpointData::EndpointData() {
+    // build an EndpointData object with empty fields
     address = "";
     protocol = "";
     port = 0;
 }
 
 bool EndpointData::operator==(EndpointData& other) {
+    // check that all the fields are equal
     if(address.compare(other.address) == 0 && protocol.compare(other.protocol) == 0 && port == other.port) {
         return true;
     } else {
