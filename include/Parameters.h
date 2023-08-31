@@ -2,6 +2,7 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#include <stdint.h>
 #include <string>
 
 // Versioning

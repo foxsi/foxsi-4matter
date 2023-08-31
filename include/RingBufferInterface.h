@@ -4,10 +4,6 @@
 #include <iostream>
 #include <vector>
 
-/**
- * @brief An interface to a ring buffer of data stored in blocks, in a system with 32 bit word length.
- * 
- */
 class RingBufferInterface {
     
     public:

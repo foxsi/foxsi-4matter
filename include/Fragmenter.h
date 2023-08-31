@@ -3,7 +3,7 @@
 #define FRAGMENTER_H
 
 #include <vector>
-#include <stdint.h>
+#include "Parameters.h"
 
 class Fragmenter {
 
