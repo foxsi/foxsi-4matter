@@ -178,7 +178,7 @@ if(Boost_FOUND)
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(tcp_example PUBLIC Boost::filesystem libcom libsubsys libutil)
-    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
     target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
