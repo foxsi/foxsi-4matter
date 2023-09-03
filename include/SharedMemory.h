@@ -7,7 +7,6 @@
 
 /**
  * @deprecated unused, ignore.
- * 
  */
 class SharedMemory{
     // memory map: takes string keys and reads/writes the memory for the key

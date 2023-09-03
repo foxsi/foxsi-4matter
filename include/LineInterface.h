@@ -58,19 +58,49 @@ class EndpointData {
         unsigned short port;
 };
 
+/**
+ * @brief A convenience datastructure for passing inner loop timing information.
+ * 
+ * The inner timing loop is run for each onboard system the Formatter communicates with. The inner loop has a different period for each onboard system. Inside the inner loop, 
+ * 1. commands are sent to the system,
+ * 2. a data request is sent to the system,
+ * 3. the system responds with buffered data to telemeter to the ground,
+ * 4. there is a grace period to end the exchange with the system.
+ * 
+ * This class stores these fields for the inner loop.
+ */
 class TimeData {
     public:
+        /**
+         * @brief Construct a new empty `TimeData` object.
+         * 
+         * The object's fields can then be populated with `TimeData::add_times_seconds(...).
+         */
+        TimeData();
+        
+        /**
+         * @brief Populate fields of `TimeData`.
+         * 
+         * @param total_allocation the total amount of time (in seconds) that comprises `TimeData::command_millis`, `TimeData::request_millis`, `TimeData::reply_millis`, and `TimeData::idle_millis`. 
+         * 
+         * @param command_time the amount of time (in seconds) spent sending commands.
+         * @param request_time the amount of time (in seconds) spent requesting data.
+         * @param reply_time the amount of time (in seconds) spent receiving response data/forwarding.
+         * @param idle_time the amount of idle time (in seconds) at the end.
+         */
+        void add_times_seconds(double total_allocation, double command_time, double request_time, double reply_time, double idle_time);
+
+        /**
+         * @brief Clean up fields of `TimeData` so that `TimeData::command_millis`, `TimeData::request_millis`, `TimeData::reply_millis`, and `TimeData::idle_millis` sum to `TimeData::period_millis`.
+         * 
+         */
+        void resolve_times();
+
         unsigned int period_millis;
         unsigned int command_millis;
         unsigned int request_millis;
         unsigned int reply_millis;
         unsigned int idle_millis;
-
-        // TimeData(double period_s);
-        TimeData();
-
-        void add_times_seconds(double total_allocation, double command_time, double request_time, double reply_time, double idle_time);
-        void resolve_times();
 };
 
 class LineInterface {

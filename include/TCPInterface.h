@@ -13,7 +13,6 @@
 
 /**
  * @deprecated unused, ignore.
- * 
  */
 class TCPSession: public std::enable_shared_from_this<TCPSession> {
     public:

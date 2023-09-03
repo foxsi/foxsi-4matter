@@ -6,7 +6,6 @@
 
 /**
  * @deprecated unused, ignore.
- * 
  */
 class AbstractState {
     public:
