@@ -17,7 +17,7 @@
 class TCPSession: public std::enable_shared_from_this<TCPSession> {
     public:
         boost::asio::ip::tcp::socket local_socket;
-        uint8_t data[RECV_BUFF_LEN];
+        uint8_t data[config::buffer::RECV_BUFF_LEN];
         // UDPInterface udpif;
 
         TCPSession(boost::asio::ip::tcp::socket socket);

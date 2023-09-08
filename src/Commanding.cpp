@@ -215,10 +215,10 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
 
         std::unordered_map<uint8_t, Command> inner_command_map;
 
-        debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
+        utilities::debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
 
         std::cout << "\n\nsystem type:";
-        hex_print((uint8_t)this_system.type);
+        utilities::hex_print((uint8_t)this_system.type);
         std::cout << "\n";
         for(auto& this_entry: data.items()) {
             // set primary command properties
@@ -226,7 +226,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
             std::string this_hex_str = this_entry.value()["hex"].get<std::string>();
             uint8_t this_hex;
             // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
-            this_hex = string_to_byte(this_hex_str);
+            this_hex = utilities::string_to_byte(this_hex_str);
             std::string this_name = this_entry.value()["name"].get<std::string>();
             std::string this_read_str = this_entry.value()["R=1/W=0"].get<std::string>();
             bool this_read;
@@ -252,7 +252,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
                 std::string this_spw_reply_len_str = this_entry.value()["reply.length [B]"];
 
                 // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
-                uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
+                uint8_t this_spw_instr = utilities::string_to_byte(this_spw_instr_str);
                 // TODO: add reply length explicitly to JSON file field.
 
                 std::vector<uint8_t> this_spw_write_data;
@@ -263,10 +263,10 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
                     // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
                     this_spw_reply_length = strtoul(this_spw_reply_len_str.c_str(), NULL, 16);
                 } else {
-                    this_spw_write_data = string_to_chars(this_spw_write_data_str);
+                    this_spw_write_data = utilities::string_to_chars(this_spw_write_data_str);
                 }
                 
-                this_spw_addr = string_to_chars(this_spw_addr_str);
+                this_spw_addr = utilities::string_to_chars(this_spw_addr_str);
 
                 this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
 
@@ -285,7 +285,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
             }
         }
         // add all the commands for this system to the total deck
-        debug_print("\tadded system commands to deck\n");
+        utilities::debug_print("\tadded system commands to deck\n");
         file.close();
     }
 }
@@ -340,9 +340,9 @@ void CommandDeck::add_systems(std::string sys_filename) {
         // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
         this_hex = strtol(this_hex_str.c_str(), NULL, 16);
 
-        debug_print("adding new System:\n");
-        debug_print("\tname:    " + this_name + "\n");
-        debug_print("\tid code: " + std::to_string(this_hex) + "\n");
+        utilities::debug_print("adding new System:\n");
+        utilities::debug_print("\tname:    " + this_name + "\n");
+        utilities::debug_print("\tid code: " + std::to_string(this_hex) + "\n");
         
         systems.push_back(System(this_name, this_hex));
     }
@@ -365,13 +365,13 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
         nlohmann::json data = nlohmann::json::parse(file);
         
         if(path_key.compare("SYSTEMS") == 0) {
-            debug_print("\tgot system again\n");
+            utilities::debug_print("\tgot system again\n");
             // already did this above, no need to repeat
         } else {
 
             std::unordered_map<uint8_t, Command> inner_command_map;
 
-            debug_print("adding commands...\n");
+            utilities::debug_print("adding commands...\n");
 
             for(auto& this_entry: data.items()) {
                 // set primary command properties
@@ -385,7 +385,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 bool this_read;
                 std::istringstream(this_read_str) >> this_read;
 
-                debug_print("\tadding protocol-specific data...\n");
+                utilities::debug_print("\tadding protocol-specific data...\n");
                 
                 // add data to command based on specific protocol used
                 if(path_key.compare("TIMEPIX") == 0) {
@@ -406,7 +406,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::string this_spw_write_data_str = this_entry.value()["length"];
 
                     // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
-                    uint8_t this_spw_instr = string_to_byte(this_spw_instr_str);
+                    uint8_t this_spw_instr = utilities::string_to_byte(this_spw_instr_str);
                     // TODO: add reply length explicitly to JSON file field.
 
                     std::vector<uint8_t> this_spw_write_data;
@@ -416,10 +416,10 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     if(this_read) {
                         this_spw_reply_length = strtoul(this_spw_write_data_str.c_str(), NULL, 16);
                     } else {
-                        this_spw_write_data = string_to_chars(this_spw_write_data_str);
+                        this_spw_write_data = utilities::string_to_chars(this_spw_write_data_str);
                     }
 
-                    this_spw_addr = string_to_chars(this_spw_addr_str);
+                    this_spw_addr = utilities::string_to_chars(this_spw_addr_str);
 
                     this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
 
@@ -438,7 +438,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 }
             }
             // add all the commands for this system to the total deck
-            debug_print("\tadded system commands to dec\n");
+            utilities::debug_print("\tadded system commands to dec\n");
         }
         file.close();
     }
@@ -483,11 +483,11 @@ std::string CommandDeck::get_sys_name_for_code(uint8_t code) {
 Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     // check for key `sys` in outer map
     if(commands.contains(sys)) {
-        debug_print("\tcontains sys\n");
+        utilities::debug_print("\tcontains sys\n");
         // check for key `code` in inner map
         if(commands[sys].contains(code)) {
-            debug_print("\tcontains code\n");
-            debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
+            utilities::debug_print("\tcontains code\n");
+            utilities::debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
             return (commands[sys][code]);
         }
         // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
@@ -519,7 +519,7 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
 
     uint8_t instruction = cmd.get_spw_instruction();
     std::cout << "instruction: ";
-    hex_print(instruction);
+    utilities::hex_print(instruction);
     std::cout << "\n";
     
     size_t raw_data_length;
@@ -537,7 +537,7 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     // std::vector<uint8_t> memory_address = {0x00,0x00,0x00,0x00};
     std::vector<uint8_t> memory_address = cmd.get_spw_address();
 
-    std::vector<uint8_t> data_length = splat_to_nbytes(3, raw_data_length);
+    std::vector<uint8_t> data_length = utilities::splat_to_nbytes(3, raw_data_length);
     
     header.insert(header.end(), target_path_address.begin(), target_path_address.end());
     tailer.push_back(target_logical_address);
@@ -554,7 +554,7 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     
     uint8_t tailer_crc;
     if(sys.crc_version.compare("f") == 0) {
-        tailer_crc = spw_calculate_crc_uint_F(tailer);
+        tailer_crc = config::spw::spw_calculate_crc_uint_F(tailer);
     } else {
         std::cerr << "CRC version not supported!\n";
         exit(0);
@@ -584,7 +584,7 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
 
         uint8_t data_crc;
         if(sys.crc_version.compare("f") == 0) {
-            data_crc = spw_calculate_crc_uint_F(data);
+            data_crc = config::spw::spw_calculate_crc_uint_F(data);
         } else {
             std::cerr << "CRC version not supported!\n";
             exit(0);
@@ -592,7 +592,7 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
         data.push_back(data_crc);
 
         std::cout << "rmap write data lookup:\t";
-        hex_print(data);
+        utilities::hex_print(data);
         std::cout << "\n";
 
         // rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
@@ -642,7 +642,7 @@ std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, ui
     
     // note: these modifications of template should not affect Ethernet header on SpW packets going to SPMU-001.
     
-    std::vector<uint8_t> data_length = splat_to_nbytes(3, read_len);
+    std::vector<uint8_t> data_length = utilities::splat_to_nbytes(3, read_len);
     
     // need to index into the back of the SpW packet to avoid variable-length path addresses at beginning.
     size_t template_len = command_template.size();
@@ -670,7 +670,7 @@ std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, ui
     // extract eclairs from oven
     std::vector<uint8_t> new_header(command_template.begin() + ether_header_len + target_path_addr_len, command_template.end() - 1);
     // ganache them
-    uint8_t crc_header = spw_calculate_crc_uint_F(new_header);
+    uint8_t crc_header = config::spw::spw_calculate_crc_uint_F(new_header);
     new_header.push_back(crc_header);
     // pipe full and chill
     for(int i = 0; i < new_header.size(); ++i) {
@@ -770,7 +770,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             header.insert(header.end(), memory_address.begin(), memory_address.end());
             header.insert(header.end(), data_length.begin(), data_length.end());
             
-            uint8_t header_crc = spw_calculate_crc_uint_F(header);
+            uint8_t header_crc = config::spw::spw_calculate_crc_uint_F(header);
             header.push_back(header_crc);
 
             rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
@@ -800,11 +800,11 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             std::vector<uint8_t> memory_address = {0x00, 0x00, 0x00, 0x00};
 
             std::vector<uint8_t> write_data = cmd.get_spw_write_data();
-            hex_print(write_data);
-            debug_print("");
+            utilities::hex_print(write_data);
+            utilities::debug_print("");
 
             unsigned int write_data_length = write_data.size();
-            debug_print("write data size: " + std::to_string(write_data_length) + "\n");
+            utilities::debug_print("write data size: " + std::to_string(write_data_length) + "\n");
             const uint8_t dl0 = write_data_length & 0xff;
             const uint8_t dl1 = (write_data_length >> 8) & 0xff;
             const uint8_t dl2 = (write_data_length >> 16) & 0xff;
@@ -826,16 +826,16 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             header.insert(header.end(), memory_address.begin(), memory_address.end());
             header.insert(header.end(), data_length.begin(), data_length.end());
             
-            uint8_t header_crc = spw_calculate_crc_uint_F(header);
+            uint8_t header_crc = config::spw::spw_calculate_crc_uint_F(header);
             header.push_back(header_crc);
 
             std::vector<uint8_t> data;
             data.insert(data.end(), write_data.begin(), write_data.end());
-            uint8_t data_crc = spw_calculate_crc_uint_F(data);
+            uint8_t data_crc = config::spw::spw_calculate_crc_uint_F(data);
             data.push_back(data_crc);
 
             std::cout << "rmap write data lookup:\t";
-            hex_print(data);
+            utilities::hex_print(data);
             std::cout << "\n";
             
             rmap_packet.insert(rmap_packet.end(), TARGET_PATH_ADDRESS_OUT.begin(), TARGET_PATH_ADDRESS_OUT.end());
@@ -885,7 +885,7 @@ std::vector<uint8_t> CommandDeck::get_write_command_bytes_for_sys_for_HARDCODE(u
         0x0c  // data length LS
     };
     // CRC should be calculated EXCLUDING PATH ADDRESS
-    uint8_t header_crc = spw_calculate_crc_uint_F(header);
+    uint8_t header_crc = config::spw::spw_calculate_crc_uint_F(header);
     header.push_back(header_crc);
     std::vector<uint8_t> data = {
         0x3c,
@@ -971,7 +971,7 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ui
         0x0c  // data length LS
     };
     // header CRC should be calculated EXCLUDING PATH ADDRESS
-    uint8_t header_crc = spw_calculate_crc_uint_F(header);
+    uint8_t header_crc = config::spw::spw_calculate_crc_uint_F(header);
     header.push_back(header_crc);
     
     rmap_packet.insert(rmap_packet.end(), path_address.begin(), path_address.end());
