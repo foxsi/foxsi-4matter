@@ -47,8 +47,8 @@ void Ticker::tick(double& duration_millis) {
 
 
     // advance state
-    state = inc_mod(state, durations.size());
+    state = utilities::inc_mod(state, durations.size());
     if (state == 0) {
-        inc_mod(subsystem, subsystems.size());
+        utilities::inc_mod(subsystem, subsystems.size());
     }
 }
