@@ -10,7 +10,7 @@ int main() {
     // boost::asio::ip::tcp::endpoint endpoint(address, 9000);
     // TCPServer server(endpoint, context);
 
-    TCPInterface tcpif(LOCAL_IP, LOCAL_PORT, GSE_IP, GSE_PORT, context);
+    TCPInterface tcpif(config::ethernet::LOCAL_IP, config::ethernet::LOCAL_PORT, config::ethernet::GSE_IP, config::ethernet::GSE_PORT, context);
 
     context.run();
 
