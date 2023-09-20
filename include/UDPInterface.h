@@ -7,7 +7,6 @@
 
 /**
  * @deprecated unused, ignore.
- * 
  */
 class UDPInterface {
     public:
