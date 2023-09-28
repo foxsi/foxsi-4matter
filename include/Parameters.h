@@ -90,6 +90,12 @@ enum class COMMAND_TYPE_OPTIONS: uint8_t {
     ETHERNET            = 0x05
 };
 
+enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
+    PC                  = 0x00,
+    QL                  = 0x01,
+    NONE                = 0xff
+};
+
 enum class SPACEWIRE_END_OPTIONS: uint8_t {
     EOP                 = 0x00,
     EEP                 = 0x01,

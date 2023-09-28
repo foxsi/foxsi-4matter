@@ -1,4 +1,5 @@
 #include "Commanding.h"
+#include "Systems.h"
 #include "Utilities.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -26,6 +27,9 @@ void Command::set_type(COMMAND_TYPE_OPTIONS new_type) {
         case COMMAND_TYPE_OPTIONS::UART:
             // require set_uart_options?
             break;
+        case COMMAND_TYPE_OPTIONS::ETHERNET:
+            // require set_uart_options?
+            break;
         default:
             std::cerr << "switch/case in Command::set_type fell through\n";
     }
@@ -38,7 +42,7 @@ void Command::set_spw_options(
     unsigned long new_spw_reply_length
 ) {
     if(type != COMMAND_TYPE_OPTIONS::SPW) {
-        std::cout << "\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command.type later\n";
+        std::cout << "\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command::type later\n";
     }
     spw_instruction = new_spw_instruction;
 
@@ -63,6 +67,15 @@ void Command::set_spw_options(
 
     spw_write_data = new_spw_write_data;
     spw_reply_length = new_spw_reply_length;
+}
+
+void Command::set_eth_options(std::vector<uint8_t> new_eth_packet, size_t new_eth_reply_len) {
+    if (type != COMMAND_TYPE_OPTIONS::ETHERNET) {
+        std::cout << "\tthis Command was not initialized as an Ethernet command, but is being provided Ethernet field data. May need to change Command::type later\n";
+    }
+
+    eth_packet = new_eth_packet;
+    eth_reply_length = new_eth_reply_len;
 }
 
 std::vector<uint8_t> Command::get_command_bytes() {
@@ -95,7 +108,9 @@ Command::Command(const Command& other):
     uart_instruction(other.get_uart_instruction()),
     spi_address(other.get_spi_address()),
     spi_write_data(other.get_spi_write_data()),
-    spi_reply_length(other.get_spi_reply_length())
+    spi_reply_length(other.get_spi_reply_length()),
+    eth_packet(other.get_eth_packet()),
+    eth_reply_length(other.get_eth_reply_length())
 {}
 
 Command& Command::operator=(const Command& other) {
@@ -112,18 +127,21 @@ Command& Command::operator=(const Command& other) {
     spi_address = other.get_spi_address();
     spi_write_data = other.get_spi_write_data();
     spi_reply_length = other.get_spi_reply_length();
+    eth_packet = other.get_eth_packet();
+    eth_reply_length = other.get_eth_reply_length();
 
     return *this;
 }
 
 Command::Command() {}
-
+/*
 System::System(std::string new_name, uint8_t new_hex): name(new_name), hex(new_hex) {}
 
 System::System(
     std::string new_name,
     uint8_t new_hex,
     COMMAND_TYPE_OPTIONS new_type,
+    unsigned short new_max_ethernet_payload,
     std::vector<uint8_t> new_target_path_address,
     std::vector<uint8_t> new_reply_path_address,
     uint8_t new_target_logical_address,
@@ -135,6 +153,7 @@ System::System(
     name = new_name;
     hex = new_hex;
     set_type(new_type);
+    max_ethernet_payload = new_max_ethernet_payload,
     target_path_address = new_target_path_address;
     reply_path_address = new_reply_path_address;
     target_logical_address = new_target_logical_address;
@@ -148,6 +167,7 @@ System::System(const System& other):
     name(other.name), 
     hex(other.hex), 
     type(other.type),
+    max_ethernet_payload(other.max_ethernet_payload),
     target_path_address(other.target_path_address),
     reply_path_address(other.reply_path_address),
     target_logical_address(other.target_logical_address),
@@ -156,6 +176,20 @@ System::System(const System& other):
     crc_version(other.crc_version),
     hardware_name(other.hardware_name) 
 {}
+
+System::System() {
+    name = "";
+    hex = 0xff;
+    set_type(COMMAND_TYPE_OPTIONS::NONE);
+    max_ethernet_payload = 1;
+    target_path_address = {};
+    reply_path_address = {};
+    target_logical_address = 0x00;
+    source_logical_address = 0x00;
+    key = 0x00;
+    crc_version = "f";
+    hardware_name = "";
+}
 
 System& System::operator=(const System& other) {
     name = other.name;
@@ -186,9 +220,9 @@ void System::set_type(COMMAND_TYPE_OPTIONS new_type) {
     }
 }
 
+*/
 
-
-CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uint8_t, std::string> command_paths) {
+CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<System, std::string> command_paths) {
 
     // add systems
     for(auto& sys: new_systems) {
@@ -198,8 +232,8 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
 
     // add the commands:
     for(const auto &[path_key, path_val]: command_paths) {
-        System this_system = CommandDeck::get_sys_for_code(path_key);
-
+        // System this_system = CommandDeck::get_sys_for_code(path_key);
+        System this_system = path_key;
         // maybe wrap this in try{}
         std::ifstream file;
         file.open(path_val, std::ios::in);
@@ -277,6 +311,26 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<uin
                 // handle commands for HK (over SPI (via Ethernet))
                 Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::ETHERNET);
 
+                std::string this_eth_instr_str = this_entry.value()["instruction"];
+                std::string this_eth_addr_str = this_entry.value()["address"];
+                std::string this_eth_write_str = this_entry.value()["write_value"];
+                std::string this_eth_reply_len_str = this_entry.value()["reply.length [B]"];
+
+                uint8_t this_eth_instr = string_to_byte(this_eth_instr_str);
+                uint8_t this_eth_addr = string_to_byte(this_eth_addr_str);
+                uint8_t this_eth_write = string_to_byte(this_eth_write_str);
+                unsigned long this_reply_len = strtoul(this_eth_reply_len_str.c_str(), NULL, 16);
+
+                std::vector<uint8_t> this_eth_packet;
+                this_eth_packet.push_back(this_eth_instr);
+                this_eth_packet.push_back(this_eth_addr);
+                this_eth_packet.push_back(this_eth_write);
+
+                this_command.set_eth_options(this_eth_packet,this_reply_len);
+                commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
+            
+            } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPI) {
+                error_print("SPI commands are unimplemented!\n");
                 // TODO: add more here for SPI
 
             } else {
@@ -429,7 +483,25 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                 } else if(path_key.compare("HOUSEKEEPING") == 0) {
                     // handle commands for HK (over SPI (via Ethernet))
                     Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::SPI);
+                    
+                    std::string this_eth_instr_str = this_entry.value()["instruction"];
+                    std::string this_eth_addr_str = this_entry.value()["address"];
+                    std::string this_eth_write_str = this_entry.value()["write_value"];
+                    std::string this_eth_reply_len_str = this_entry.value()["reply.length [B]"];
 
+                    uint8_t this_eth_instr = string_to_byte(this_eth_instr_str);
+                    uint8_t this_eth_addr = string_to_byte(this_eth_addr_str);
+                    uint8_t this_eth_write = string_to_byte(this_eth_write_str);
+                    unsigned long this_reply_len = strtoul(this_eth_reply_len_str.c_str(), NULL, 16);
+
+                    std::vector<uint8_t> this_eth_packet;
+                    this_eth_packet.push_back(this_eth_instr);
+                    this_eth_packet.push_back(this_eth_addr);
+                    this_eth_packet.push_back(this_eth_write);
+
+                    this_command.set_eth_options(this_eth_packet,this_reply_len);
+
+                    commands[CommandDeck::get_sys_code_for_name(path_key)].insert(std::make_pair(this_hex, this_command));
                     // TODO: add more here for SPI
 
                 } else {
@@ -503,22 +575,28 @@ Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
 }
 
 std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
+    if (sys.type != COMMAND_TYPE_OPTIONS::SPW) {
+        // todo: throw
+        std::cout << "future exception in CommandDeck::make_spw_header_()\n";
+    }
+
     std::vector<uint8_t> header;
     std::vector<uint8_t> tailer;
 
-    std::vector<uint8_t> target_path_address    = sys.target_path_address;
-    uint8_t target_logical_address              = sys.target_logical_address;
-    uint8_t key                                 = sys.key;
+    // refactor System 20230922
+    std::vector<uint8_t> target_path_address    = sys.spacewire->target_path_address;
+    uint8_t target_logical_address              = sys.spacewire->target_logical_address;
+    uint8_t key                                 = sys.spacewire->key;
     uint8_t protocol_id                         = 0x01;                         // const for RMAP
-    std::vector<uint8_t> reply_path_address     = sys.reply_path_address;
-    uint8_t initiator_logical_address           = sys.source_logical_address;
+    std::vector<uint8_t> reply_path_address     = sys.spacewire->reply_path_address;
+    uint8_t initiator_logical_address           = sys.spacewire->source_logical_address;
 
     uint8_t transaction_id_lsb = 0x00;         // todo: move this to a higher scope and increment
     uint8_t transaction_id_msb = 0x00;
     uint8_t extended_address = 0x00;
 
     uint8_t instruction = cmd.get_spw_instruction();
-    std::cout << "instruction: ";
+    // std::cout << "instruction: ";
     hex_print(instruction);
     std::cout << "\n";
     
@@ -552,13 +630,15 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     tailer.insert(tailer.end(), memory_address.begin(), memory_address.end());
     tailer.insert(tailer.end(), data_length.begin(), data_length.end());
     
-    uint8_t tailer_crc;
-    if(sys.crc_version.compare("f") == 0) {
-        tailer_crc = spw_calculate_crc_uint_F(tailer);
-    } else {
-        std::cerr << "CRC version not supported!\n";
-        exit(0);
-    }
+    uint8_t tailer_crc = sys.spacewire->crc(tailer);
+
+    // refactor System 20230922
+    // if(sys.crc_version.compare("f") == 0) {
+    //     tailer_crc = spw_calculate_crc_uint_F(tailer);
+    // } else {
+    //     std::cerr << "CRC version not supported!\n";
+    //     exit(0);
+    // }
     
     tailer.push_back(tailer_crc);
     header.insert(header.end(), tailer.begin(), tailer.end());
@@ -582,13 +662,14 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
 
         data.insert(data.end(), write_data.begin(), write_data.end());
 
-        uint8_t data_crc;
-        if(sys.crc_version.compare("f") == 0) {
-            data_crc = spw_calculate_crc_uint_F(data);
-        } else {
-            std::cerr << "CRC version not supported!\n";
-            exit(0);
-        }
+        uint8_t data_crc = sys.spacewire->crc(data);
+        // refactor System 20230922
+        // if(sys.crc_version.compare("f") == 0) {
+        //     data_crc = spw_calculate_crc_uint_F(data);
+        // } else {
+        //     std::cerr << "CRC version not supported!\n";
+        //     exit(0);
+        // }
         data.push_back(data_crc);
 
         std::cout << "rmap write data lookup:\t";
@@ -638,7 +719,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
 std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len) {
     std::vector<uint8_t> command_template = CommandDeck::get_command_bytes_for_sys_for_code(sys, cmd);
     System sys_obj = CommandDeck::get_sys_for_code(sys);
-    size_t target_path_addr_len = sys_obj.target_path_address.size();
+    size_t target_path_addr_len = sys_obj.spacewire->target_path_address.size();
     
     // note: these modifications of template should not affect Ethernet header on SpW packets going to SPMU-001.
     
@@ -739,7 +820,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             std::vector<uint8_t> header;
 
             uint8_t instruction = cmd.get_spw_instruction();
-            std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
+            // std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
             
             // TODO: un-hardcode the instructions (format read JSON correctly)
             instruction = 0x4d;
@@ -792,7 +873,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code_old(uint8_t
             std::vector<uint8_t> header;
 
             uint8_t instruction = cmd.get_spw_instruction();
-            std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
+            // std::cout << "\tinstruction: " << std::hex << (int)instruction << "\n";
 
             instruction = 0x7d;
 

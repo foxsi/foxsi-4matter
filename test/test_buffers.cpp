@@ -5,6 +5,7 @@
 #include "LineInterface.h"
 #include <boost/asio.hpp>
 #include <iostream>
+#include <algorithm>
 #include <queue>
 
 int main(int argc, char* argv[]) {
@@ -13,31 +14,110 @@ int main(int argc, char* argv[]) {
     LineInterface lif(argc, argv, context);
     System sys = lif.systems[0];
 
-    DownlinkBufferElement a(sys, 100);
-    a.set_num_packets_in_frame(20);
-    a.set_this_packet_index(1);
-    a.set_payload({0x00,0x01,0x02,0x03,0x04});
-    std::vector<uint8_t> pre_queue_payload = a.get_payload();
-    std::vector<uint8_t> pre_queue_packet = a.get_packet();
+    CommandDeck deck = lif.get_command_deck();
+
+    // setup test of buffer pipe
+    System cdte1 = deck.get_sys_for_name("cdte1");
+    System gse = deck.get_sys_for_name("gse");
+
+    std::queue<DownlinkBufferElement> downlink_buffer; 
+    PacketFramer pf(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp(cdte1, gse, RING_BUFFER_TYPE_OPTIONS::PC);
     
-    std::cout << "payload before enqueueing: \n";
-    hex_print(pre_queue_payload);
-    std::cout << "packet before enqueueing: \n";
-    hex_print(pre_queue_packet);
-    std::cout << "\n";
+    // print out pf and fp to check
+    std::cout << pf.to_string();
+    std::cout << fp.to_string();
 
-    std::queue<DownlinkBufferElement> q_downlink;
-
-    for(int i = 0; i < 0x64; ++i) {
-        q_downlink.push(a);
+    // build false frame data 
+    size_t false_data_length = cdte1.get_frame_size(RING_BUFFER_TYPE_OPTIONS::PC);
+    std::vector<uint8_t> false_data;
+    false_data.push_back(0x01);
+    for (int i = 0; i < false_data_length - 2; ++i) {
+        false_data.push_back(0x00);
     }
-    std::cout << "pushed " << q_downlink.size() << " elements onto the downlink queue\n";
+    false_data.push_back(0x01);
 
-    DownlinkBufferElement b = q_downlink.front();
-    q_downlink.pop();
-    std::cout << "popped packet: \n";
-    std::vector<uint8_t> queue_out_packet = b.get_packet();
-    hex_print(queue_out_packet);
+    // make packets out of false data, add spw header to each:
+    size_t false_spw_header_size = 24;
+    size_t packet_size = cdte1.spacewire->max_payload_size - false_spw_header_size;
     
+    std::vector<uint8_t> false_spw_header(false_spw_header_size);
+    for (size_t i = 0; i < false_spw_header_size; ++i) {
+        false_spw_header[i] = i;
+    }
+
+    // assemble vector of packets of false data:
+    std::vector<std::vector<uint8_t>> false_input_packets;
+    for (size_t i = 0; i < false_data.size(); i += packet_size) {
+        size_t last_element = std::min(false_data.size(), i + packet_size);
+        std::vector<uint8_t> this_packet;
+        std::vector<uint8_t> this_data(false_data.begin() + i, false_data.begin() + last_element);
+        this_packet.insert(this_packet.begin(), false_spw_header.begin(), false_spw_header.end());
+        this_packet.insert(this_packet.end(), this_data.begin(), this_data.end());
+        false_input_packets.push_back(this_packet);
+
+        // std::cout << "\nfalse packet (size " << this_packet.size() << "): ";
+        // for (size_t j = 0; j < this_packet.size(); ++j) {
+        //     std::cout << " " << std::to_string(this_packet[j]);
+        // }
+    }
+    std::cout << "\n";
+    // now, can loop over false_input_packets like they are received from SPMU-001
+
+    // false_data represents one frame.
+    for (int i = 0; i < false_input_packets.size(); ++i) {
+        // std::cout << "loop " << std::to_string(i) << "/" << std::to_string(false_input_packets.size()) << "\n";
+        pf.push_to_frame(false_input_packets[i]);
+    }
+
+    std::cout << "\n";
+    std::cout << "PacketFramer::check_frame_done(): " << std::to_string(pf.check_frame_done()) << "\n";
+
+    // hand the frame over to FramePacketizer:
+    fp.set_frame(pf.get_frame());
+
+    while(!fp.frame_emptied()) {
+        DownlinkBufferElement this_db(fp.pop_buffer_element());
+        // std::cout << this_db.to_string() << "\n";
+        downlink_buffer.push(this_db);
+        std::vector<uint8_t> this_pack(this_db.get_packet());
+        // hex_print(this_pack);
+        // std::cout << "payload.size(): " << std::to_string(this_db.get_payload().size()) << "\n";
+        // std::cout << "packet.size(): " << std::to_string(this_db.get_packet().size()) << "\n";
+        // std::cout << fp.to_string() << "\n";
+    }
+
+    std::cout << "pushed frame to downlink queue. FramePacketizer::frame_emptied(): " << fp.frame_emptied() << "\n";
+
+    // pop buffer to emulate downlink, and remove header "on ground". Reassemble frame.
+    std::vector<uint8_t> false_downlink;
+    while(downlink_buffer.size() > 0) {
+        DownlinkBufferElement this_downlink = downlink_buffer.front();
+        downlink_buffer.pop();
+        std::vector<uint8_t> this_packet = this_downlink.get_packet();
+        // std::cout << this_downlink.to_string() << "\n";
+
+        std::vector<uint8_t> this_payload = {this_packet.begin() + 8, this_packet.end()};
+        // std::cout << "this_payload.size(): " << std::to_string(this_payload.size()) << "\n";
+        // hex_print(this_payload);
+        // std::cout << "\n";
+        
+        false_downlink.insert(false_downlink.end(), this_payload.begin(), this_payload.end());
+    }
+
+    // check if source data is reconstructed correctly.
+    if (false_downlink == false_data) {
+        std::cout << "\nSUCCESS.\n";
+    } else {
+        std::cout << "\ntry again :(\n";
+        std::cout << "\t received " << std::to_string(false_downlink.size()) << " bytes of data: \n";
+        for (size_t i = 0; i < false_downlink.size(); ++i) {
+            std::cout << " " << std::to_string(false_downlink[i]);
+        }
+        std::cout << "\n";
+    }
+
+
+    std::cout << "end of main.\n";
     return 0;
 }

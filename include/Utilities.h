@@ -19,7 +19,7 @@ void hex_print(std::vector<uint8_t>& data);
 void hex_print(std::vector<char>& data);
 void hex_print(uint8_t data);
 
-// find a better place to put this
+// SpaceWire CRC functions
 char spw_calculate_crc_F(std::vector<char>& data);
 uint8_t spw_calculate_crc_uint_F(std::vector<uint8_t>& data);
 

@@ -2,6 +2,7 @@
 #define COMMANDING_H
 
 #include "Parameters.h"
+#include "Systems.h"
 #include <unordered_map>
 #include <vector>
 #include <fstream>
@@ -32,6 +33,8 @@ class Command {
         );
 
         void set_uart_options(std::vector<uint8_t> new_uart_instruction);
+
+        void set_eth_options(std::vector<uint8_t> new_eth_packet, unsigned long new_eth_reply_len);
         
         void set_spi_options(
             std::vector<uint8_t> new_spi_address,
@@ -51,6 +54,10 @@ class Command {
         const std::vector<uint8_t> get_full_command() const {return full_command;}
 
         const std::vector<uint8_t> get_uart_instruction() const {return uart_instruction;}
+
+        const unsigned long get_eth_reply_length() const {return eth_reply_length;}
+        const std::vector<uint8_t> get_eth_packet() const {return eth_packet;}
+
         const std::vector<uint8_t> get_spi_address() const {return spi_address;}
         const std::vector<uint8_t> get_spi_write_data() const {return spi_write_data;}
         const unsigned short get_spi_reply_length() const {return spi_reply_length;}
@@ -66,54 +73,16 @@ class Command {
         // UART-related data:
         std::vector<uint8_t> uart_instruction;
 
+        // Ethernet-related data:
+        std::vector<uint8_t> eth_packet;
+        unsigned long eth_reply_length;
+
         // SPI-related data:
         std::vector<uint8_t> spi_address;
         std::vector<uint8_t> spi_write_data;
         unsigned short spi_reply_length;
 };
 
-// object to hold system metadata
-class System {
-    public:
-        // generic stuff:
-        std::string name;
-        uint8_t hex;
-
-        COMMAND_TYPE_OPTIONS type;
-
-        // spacewire stuff:
-        std::vector<uint8_t> target_path_address;
-        std::vector<uint8_t> reply_path_address;
-        uint8_t target_logical_address;
-        uint8_t source_logical_address;
-        uint8_t key;
-        std::string crc_version;
-        std::string hardware_name;
-
-        // uart stuff:
-        unsigned long baud_rate;
-        unsigned short parity_bits;
-        unsigned short data_bits;
-        unsigned short stop_bits;
-
-        System(std::string new_name, uint8_t new_hex);
-        System(
-            std::string new_name, 
-            uint8_t new_hex,
-            COMMAND_TYPE_OPTIONS new_type,
-            std::vector<uint8_t> new_target_path_address,
-            std::vector<uint8_t> new_reply_path_address,
-            uint8_t new_target_logical_address,
-            uint8_t new_source_logical_address,
-            uint8_t new_key,
-            std::string new_crc_version,
-            std::string new_hardware_name
-        );
-        System(const System& other);
-        System& operator=(const System& other);
-
-        void set_type(COMMAND_TYPE_OPTIONS new_type);
-};
 
 
 class CommandDeck {
@@ -125,9 +94,22 @@ class CommandDeck {
         // more on this: will define command maps for each system (CDTE1, 2, etc; CMOS1, 2...) then key into each map by the hex code for each system
 
         // construct from a map pairing system text names ("CDTE") with json command file paths
+
+        /**
+         * @deprecated the old way
+         * Construct a `CommandDeck` from a `std::map` of `System` text names and their command file paths.
+         * @param named_paths 
+         */
         CommandDeck(std::unordered_map<std::string, std::string> named_paths);
         // construct from a list of Systems and a map from System::hex to command file name
-        CommandDeck(std::vector<System> new_systems, std::unordered_map<uint8_t, std::string> command_paths);
+
+        /**
+         * @brief Construct a new `CommandDeck` object from a list of `System`s, and a `std::map` of their hex codes onto command file paths.
+         * 
+         * @param new_systems 
+         * @param command_paths 
+         */
+        CommandDeck(std::vector<System> new_systems, std::unordered_map<System, std::string> command_paths);
         CommandDeck() = default;
 
         // add systems definition to object from JSON file

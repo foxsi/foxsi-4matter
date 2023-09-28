@@ -31,14 +31,16 @@ void Ticker::tick(double& duration_millis) {
         case 0:     // send command
             // if using this calling scheme, would need to sort through commands inside subsystems' senders
             subsystems[subsystem]->send(commands);
-
+            break;
         case 1:     // send data request
-            
+            break;
         case 2:     // receive data/resend to ground
             subsystems[subsystem]->recv(downlink);
                 // internally, subsystems' implementation of recv (or async_recv) should forward to ground.
-
+            break;
         case 3:      // idle
+            
+            break;
 
         default:
             std::cerr << "state switch/case fell through\n";

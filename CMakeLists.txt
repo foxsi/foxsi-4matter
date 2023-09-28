@@ -17,21 +17,23 @@ set(GOOGLETEST_ROOT /usr/local/include)
 # Build library targets "lib..." to link to multiple executables
 add_library(
     libcom 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp  
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Commanding.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Systems.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/DirectMemoryAccess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/DataLinkLayer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
 )
 add_library(
     libsubsys 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Subsystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/TransportLayer.cpp
 )
 add_library(
     libutil 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/TCPInterface.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/UDPInterface.cpp
 )
 
 target_include_directories(
@@ -55,14 +57,6 @@ add_executable(formatter ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp)
 target_include_directories(
     formatter 
     PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-# Build the target "tcp_example" using source files
-add_executable(tcp_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/TCP/tcp_example.cpp)
-target_include_directories(
-    tcp_example
-    PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
@@ -98,6 +92,22 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "test_loop" using source files
+add_executable(test_loop ${CMAKE_CURRENT_SOURCE_DIR}/test/test_loop.cpp)
+target_include_directories(
+    test_loop
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "test_buffer" using source files
+add_executable(test_buffers ${CMAKE_CURRENT_SOURCE_DIR}/test/test_buffers.cpp)
+target_include_directories(
+    test_buffers
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp
 add_executable(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
 target_include_directories(
@@ -115,11 +125,12 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libsubsys PRIVATE Threads::Threads)
     target_link_libraries(libutil PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
-    target_link_libraries(tcp_example PRIVATE Threads::Threads)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     target_link_libraries(cli_example PRIVATE Threads::Threads)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
+    target_link_libraries(test_loop PRIVATE Threads::Threads)
+    target_link_libraries(test_buffers PRIVATE Threads::Threads)
     target_link_libraries(test PRIVATE Threads::Threads)
 
     target_include_directories(
@@ -177,11 +188,12 @@ if(Boost_FOUND)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
-    target_link_libraries(tcp_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
     target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_loop PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_buffers PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")

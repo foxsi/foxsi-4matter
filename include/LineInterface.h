@@ -2,9 +2,12 @@
 #define LINEINTERFACE_H
 
 #include "Commanding.h"
+#include "Systems.h"
+#include "Buffers.h"
 #include <boost/program_options.hpp>
 #include <boost/asio.hpp>
 #include <string>
+#include <queue>
 #include <map>
 
 /**
@@ -69,19 +72,19 @@ class EndpointData {
  * 
  * This class stores these fields for the inner loop.
  */
-class TimeData {
+class Timing {
     public:
         /**
-         * @brief Construct a new empty `TimeData` object.
+         * @brief Construct a new empty `Timing` object.
          * 
-         * The object's fields can then be populated with `TimeData::add_times_seconds(...).
+         * The object's fields can then be populated with `Timing::add_times_seconds(...).
          */
-        TimeData();
+        Timing();
         
         /**
-         * @brief Populate fields of `TimeData`.
+         * @brief Populate fields of `Timing`.
          * 
-         * @param total_allocation the total amount of time (in seconds) that comprises `TimeData::command_millis`, `TimeData::request_millis`, `TimeData::reply_millis`, and `TimeData::idle_millis`. 
+         * @param total_allocation the total amount of time (in seconds) that comprises `Timing::command_millis`, `Timing::request_millis`, `Timing::reply_millis`, and `Timing::idle_millis`. 
          * 
          * @param command_time the amount of time (in seconds) spent sending commands.
          * @param request_time the amount of time (in seconds) spent requesting data.
@@ -91,37 +94,57 @@ class TimeData {
         void add_times_seconds(double total_allocation, double command_time, double request_time, double reply_time, double idle_time);
 
         /**
-         * @brief Clean up fields of `TimeData` so that `TimeData::command_millis`, `TimeData::request_millis`, `TimeData::reply_millis`, and `TimeData::idle_millis` sum to `TimeData::period_millis`.
+         * @brief Clean up fields of `Timing` so that `Timing::command_millis`, `Timing::request_millis`, `Timing::reply_millis`, and `Timing::idle_millis` sum to `Timing::period_millis`.
          * 
          */
         void resolve_times();
 
-        unsigned int period_millis;
-        unsigned int command_millis;
-        unsigned int request_millis;
-        unsigned int reply_millis;
-        unsigned int idle_millis;
+        uint32_t period_millis;
+        uint32_t command_millis;
+        uint32_t request_millis;
+        uint32_t reply_millis;
+        uint32_t idle_millis;
+
+        uint32_t timeout_millis;
+        uint32_t intercommand_space_millis;
 };
 
 class LineInterface {
     public:
         std::string version;
-        std::unordered_map<std::string, bool> missings;
-        std::unordered_map<std::string, EndpointData> endpoints;
-        std::unordered_map<uint8_t, EndpointData*> lookup_endpoints;
-        std::unordered_map<uint8_t, TimeData*> lookup_times;
-        std::unordered_map<uint8_t, std::string> lookup_command_file;
+
+        /*
+        std::unordered_map<std::string, bool> missings;                 // remove
+        std::unordered_map<std::string, EndpointData> endpoints;        // remove
+        std::unordered_map<uint8_t, EndpointData*> lookup_endpoints;    // remove.
+        std::unordered_map<uint8_t, Timing*> lookup_times;              // retype key to `System`
+        std::unordered_map<uint8_t, std::string> lookup_command_file;   // retype key to `System`
+        
+        std::string local_address;                                      // preserve
+
+        std::vector<System> systems;                                    // preserve
+        std::vector<EndpointData> unique_endpoints;                     // replace inner type
+        std::vector<EndpointData> local_endpoints;                      // replace inner type
+        */
+
+        std::vector<System> systems;
+
+        std::unordered_map<System, Timing> lookup_timing;
+        std::unordered_map<System, std::string> lookup_command_file;
+        std::unordered_map<System, std::queue<UplinkBufferElement>> lookup_uplink_buffer;
+        std::unordered_map<System, PacketFramer> lookup_packet_framers;
+        std::unordered_map<System, FramePacketizer> lookup_frame_packetizers;
+
+        std::vector<Ethernet*> unique_endpoints;
+        std::vector<Ethernet*> local_endpoints;
         
         std::string local_address;
 
-        std::vector<System> systems;
-        std::vector<EndpointData> unique_endpoints;
-        std::vector<EndpointData> local_endpoints;
-
-        TimeData times;
+        Timing times;
 
     public:
         LineInterface(int argc, char* argv[], boost::asio::io_context& context);
+
         CommandDeck get_command_deck() const {return command_deck;};
     
     private:

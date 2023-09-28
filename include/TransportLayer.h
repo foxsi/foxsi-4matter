@@ -1,7 +1,6 @@
 #ifndef SUBSYSTEM_H
 #define SUBSYSTEM_H
 
-#include "UARTInterface.h"
 #include "RingBufferInterface.h"
 #include "Fragmenter.h"
 #include "Commanding.h"

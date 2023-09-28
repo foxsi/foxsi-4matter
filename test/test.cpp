@@ -34,10 +34,10 @@ int main(int argc, char** argv) {
     std::cout << lif.local_address << "\n";
     std::cout << "\n\n";
     for(auto& ept: lif.unique_endpoints) {
-        std::cout << ept.as_string() <<"\n";
+        std::cout << ept->to_string() <<"\n";
     }
     for(auto& ept: lif.local_endpoints) {
-        std::cout << ept.as_string() <<"\n";
+        std::cout << ept->to_string() <<"\n";
     }
     for(auto& sys: lif.systems) {
         std::cout << sys.name << ",\t\t";
