@@ -316,9 +316,9 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 std::string this_eth_write_str = this_entry.value()["write_value"];
                 std::string this_eth_reply_len_str = this_entry.value()["reply.length [B]"];
 
-                uint8_t this_eth_instr = string_to_byte(this_eth_instr_str);
-                uint8_t this_eth_addr = string_to_byte(this_eth_addr_str);
-                uint8_t this_eth_write = string_to_byte(this_eth_write_str);
+                uint8_t this_eth_instr = utilities::string_to_byte(this_eth_instr_str);
+                uint8_t this_eth_addr = utilities::string_to_byte(this_eth_addr_str);
+                uint8_t this_eth_write = utilities::string_to_byte(this_eth_write_str);
                 unsigned long this_reply_len = strtoul(this_eth_reply_len_str.c_str(), NULL, 16);
 
                 std::vector<uint8_t> this_eth_packet;
@@ -330,7 +330,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
             
             } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPI) {
-                error_print("SPI commands are unimplemented!\n");
+                utilities::error_print("SPI commands are unimplemented!\n");
                 // TODO: add more here for SPI
 
             } else {
@@ -489,9 +489,9 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
                     std::string this_eth_write_str = this_entry.value()["write_value"];
                     std::string this_eth_reply_len_str = this_entry.value()["reply.length [B]"];
 
-                    uint8_t this_eth_instr = string_to_byte(this_eth_instr_str);
-                    uint8_t this_eth_addr = string_to_byte(this_eth_addr_str);
-                    uint8_t this_eth_write = string_to_byte(this_eth_write_str);
+                    uint8_t this_eth_instr = utilities::string_to_byte(this_eth_instr_str);
+                    uint8_t this_eth_addr = utilities::string_to_byte(this_eth_addr_str);
+                    uint8_t this_eth_write = utilities::string_to_byte(this_eth_write_str);
                     unsigned long this_reply_len = strtoul(this_eth_reply_len_str.c_str(), NULL, 16);
 
                     std::vector<uint8_t> this_eth_packet;

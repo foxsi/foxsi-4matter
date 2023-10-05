@@ -21,7 +21,7 @@ DownlinkBufferElement::DownlinkBufferElement(System &from_system, System &to_sys
 
     if (!to_system.ethernet) {
         // todo: throw
-        error_print("DownlinkBufferElement must use non-null System::ethernet interface\n");
+        utilities::error_print("DownlinkBufferElement must use non-null System::ethernet interface\n");
     }
 
     // packet size is limited by the outgoing interface
@@ -103,8 +103,8 @@ bool DownlinkBufferElement::check_payload_fits(std::vector<uint8_t> new_payload)
 std::vector<uint8_t> DownlinkBufferElement::get_header() {
     std::vector<uint8_t> header;
     header.push_back(system.hex);
-    std::vector<uint8_t> bytes_packets_per_frame = splat_to_nbytes(2, get_packets_per_frame());
-    std::vector<uint8_t> bytes_packet_index = splat_to_nbytes(2, get_this_packet_index());
+    std::vector<uint8_t> bytes_packets_per_frame = utilities::splat_to_nbytes(2, get_packets_per_frame());
+    std::vector<uint8_t> bytes_packet_index = utilities::splat_to_nbytes(2, get_this_packet_index());
     std::vector<uint8_t> reserved_pad = {0x00, 0x00, 0x00};
     header.insert(header.end(), bytes_packets_per_frame.begin(), bytes_packets_per_frame.end());
     header.insert(header.end(), bytes_packet_index.begin(), bytes_packet_index.end());
@@ -218,7 +218,7 @@ PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type): s
         initial_strip_header_size = system_if->initial_header_size;
         subsequent_strip_header_size = system_if->subsequent_header_size;
     } else {
-        debug_print("Found nullptr to system interface in PacketFramer. Initializing fields as zero.\n");
+        utilities::debug_print("Found nullptr to system interface in PacketFramer. Initializing fields as zero.\n");
         static_strip_footer_size = 0;
         initial_strip_footer_size = 0;
         subsequent_strip_footer_size = 0;
@@ -354,7 +354,7 @@ FramePacketizer::FramePacketizer(System &new_system, size_t new_max_packet_size,
 FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS type): system(from_system) {
     if (!to_system.ethernet) {
         // todo: throw
-        error_print("FramePacketizer must use non-null System::ethernet interface\n");
+        utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
     }
 
     size_t frame_size = 0;

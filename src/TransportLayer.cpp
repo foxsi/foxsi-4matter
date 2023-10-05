@@ -257,6 +257,7 @@ void TransportLayerMachine::handle_cmd() {
     uint8_t uplink_buff_sys = uplink_buff[0];
     uint8_t uplink_buff_cmd = uplink_buff[1];
 
+    // update
     bool is_frame_read_cmd = check_frame_read_cmd(uplink_buff_sys, uplink_buff_cmd);
 
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";

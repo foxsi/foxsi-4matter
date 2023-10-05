@@ -93,7 +93,7 @@ bool System::operator==(const System &other) const {
 
 void System::print() {
     std::cout << "system " + name + " has code ";
-    hex_print(hex);
+    utilities::hex_print(hex);
     std::cout << "\n\tcommand type: ";
     switch (type) {
         case COMMAND_TYPE_OPTIONS::ETHERNET:
@@ -150,7 +150,7 @@ size_t System::get_frame_size() {
         default:
             return 0;
     }
-    error_print("System frame size lookup fell through!\n");
+    utilities::error_print("System frame size lookup fell through!\n");
     return 0;
 }
 
@@ -160,11 +160,11 @@ size_t System::get_frame_size(RING_BUFFER_TYPE_OPTIONS buffer_type) {
         try {
             result = ring_params[static_cast<uint8_t>(buffer_type)].frame_size_bytes;
         } catch (std::exception& e) {
-            error_print("System frame size lookup out of range!\n");
+            utilities::error_print("System frame size lookup out of range!\n");
             result = 0;
         }
     } else {
-        error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
+        utilities::error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
     }
     return result;
 }

@@ -157,7 +157,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 } else if (cmd == "uart") {
                     this_system_object.type = COMMAND_TYPE_OPTIONS::UART;
                 } else {
-                    error_print("failed to find System command type!\n");
+                    utilities::error_print("failed to find System command type!\n");
                 }
 
                 std::string this_cmd_file = this_system.value()["commands"];
@@ -239,10 +239,10 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     SpaceWire* spw = new SpaceWire(
                         spwif.at("target_path_address").get<std::vector<uint8_t>>(),
                         spwif.at("reply_path_address").get<std::vector<uint8_t>>(),
-                        string_to_byte(spwif.at("target_logical_address").get<std::string>()),
-                        string_to_byte(spwif.at("source_logical_address").get<std::string>()),
-                        string_to_byte(spwif.at("key").get<std::string>()),
-                        string_to_byte(spwif.at("crc_draft").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("key").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("crc_draft").get<std::string>()),
                         spwif.at("mean_speed_bps").get<uint32_t>(),
                         spwif.at("max_payload_bytes").get<size_t>(),
                         0, // todo: replace this with read into ring_buffer_interface dict
@@ -316,9 +316,9 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     SpaceWire* spw = new SpaceWire(
                         spwif.at("target_path_address").get<std::vector<uint8_t>>(),
                         spwif.at("reply_path_address").get<std::vector<uint8_t>>(),
-                        string_to_byte(spwif.at("target_logical_address").get<std::string>()),
-                        string_to_byte(spwif.at("source_logical_address").get<std::string>()),
-                        string_to_byte(spwif.at("key").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("key").get<std::string>()),
                         spwif.at("crc_draft").get<char>(),
                         0,
                         spwif.at("max_payload_bytes").get<size_t>(),
@@ -337,7 +337,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             }
 
         } catch(std::exception& e) {
-            debug_print("exception while adding spacewire interface\n");
+            utilities::debug_print("exception while adding spacewire interface\n");
             // std::cout << "couldn't find a SpaceWire interface.\n";
         }
 
