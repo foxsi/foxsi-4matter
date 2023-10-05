@@ -9,7 +9,7 @@ TCPSession::TCPSession(boost::asio::ip::tcp::socket socket):
 void TCPSession::read() {
     auto self(shared_from_this());
     local_socket.async_read_some(
-        boost::asio::buffer(data, RECV_BUFF_LEN), 
+        boost::asio::buffer(data, config::buffer::RECV_BUFF_LEN), 
         [this,self](boost::system::error_code ec, std::size_t length) {
             if(!ec) {
                 TCPSession::write(length);
@@ -23,7 +23,7 @@ void TCPSession::write(std::size_t length) {
     auto self(shared_from_this());
     boost::asio::async_write(
         local_socket, 
-        boost::asio::buffer(data, RECV_BUFF_LEN), 
+        boost::asio::buffer(data, config::buffer::RECV_BUFF_LEN), 
         [this,self](boost::system::error_code ec, std::size_t length) {
             if(!ec) {
                 TCPSession::read();
@@ -97,11 +97,11 @@ void TCPInterface::recv() {
     const std::string msg_str = "hello, it's the formatter\n";
     const uint8_t* msg = reinterpret_cast<const uint8_t*>(&msg_str[0]);
     std::size_t len = msg_str.length();
-    uint8_t recv_buff[RECV_BUFF_LEN];
+    uint8_t recv_buff[config::buffer::RECV_BUFF_LEN];
 
     // memset(recvbuf, 0, sizeof(recvbuf));
 
-    local_socket.receive(boost::asio::buffer(recv_buff, RECV_BUFF_LEN));
+    local_socket.receive(boost::asio::buffer(recv_buff, config::buffer::RECV_BUFF_LEN));
 
     std::cout << recv_buff << "\n";
     TCPInterface::send(msg, len);

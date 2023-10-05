@@ -132,7 +132,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         std::string this_name = this_system.value()["name"];
         std::string this_hex_str = this_system.value()["hex"];
         // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
-        uint8_t this_hex = string_to_byte(this_hex_str);
+        uint8_t this_hex = utilities::string_to_byte(this_hex_str);
 
         verbose_print("adding new System:");
         verbose_print("\tname:    " + this_name);
@@ -200,9 +200,9 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 // add the spacewire properties to the System
                 this_system_object.target_path_address = spwif.at("target_path_address").get<std::vector<uint8_t>>();
                 this_system_object.reply_path_address = spwif.at("reply_path_address").get<std::vector<uint8_t>>();
-                this_system_object.target_logical_address = string_to_byte(spwif.at("target_logical_address").get<std::string>());
-                this_system_object.source_logical_address = string_to_byte(spwif.at("source_logical_address").get<std::string>());
-                this_system_object.key = string_to_byte(spwif.at("key").get<std::string>());
+                this_system_object.target_logical_address = utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>());
+                this_system_object.source_logical_address = utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>());
+                this_system_object.key = utilities::string_to_byte(spwif.at("key").get<std::string>());
                 this_system_object.crc_version = spwif.at("crc_draft").get<std::string>();
                 this_system_object.hardware_name = spwif.at("hardware").get<std::string>();
 
@@ -254,19 +254,19 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         } catch(std::exception& e) {}
 
         // TODO:do sanity checks
-        debug_print("\tfound command type: \n");
+        utilities::debug_print("\tfound command type: \n");
         if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
-                debug_print("\t\tUART\n");
+                utilities::debug_print("\t\tUART\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
-                debug_print("\t\tSPW\n");
+                utilities::debug_print("\t\tSPW\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
-                debug_print("\t\tSPI\n");
+                utilities::debug_print("\t\tSPI\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-                debug_print("\t\tETHERNET\n");
+                utilities::debug_print("\t\tETHERNET\n");
             } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
-                debug_print("\t\tnone\n");
+                utilities::debug_print("\t\tnone\n");
             } else {
-                debug_print("\t\tDID NOT FIND TYPE\n");
+                utilities::debug_print("\t\tDID NOT FIND TYPE\n");
         }
 
         // now add more command-specific info to this_system_object
