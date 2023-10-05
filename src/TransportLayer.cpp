@@ -17,7 +17,7 @@ TransportLayerMachine::TransportLayerMachine(
 
     commands = CommandDeck();
     
-    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
 
@@ -25,14 +25,14 @@ TransportLayerMachine::TransportLayerMachine(
     command_pipe = tmp_cmd;
     ground_pipe.push('0');
 
-    boost::asio::ip::address local_addr = boost::asio::ip::make_address(LOCAL_IP);
-    boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(GSE_IP);
-    boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(SPMU_IP);
-    boost::asio::ip::udp::endpoint local_udp_endpoint(local_addr, LOCAL_PORT);
-    boost::asio::ip::tcp::endpoint local_tcp_endpoint(local_addr, LOCAL_PORT);
+    boost::asio::ip::address local_addr = boost::asio::ip::make_address(config::ethernet::LOCAL_IP);
+    boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(config::ethernet::GSE_IP);
+    boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(config::ethernet::SPMU_IP);
+    boost::asio::ip::udp::endpoint local_udp_endpoint(local_addr, config::ethernet::LOCAL_PORT);
+    boost::asio::ip::tcp::endpoint local_tcp_endpoint(local_addr, config::ethernet::LOCAL_PORT);
 
-    remote_udp_endpoint = boost::asio::ip::udp::endpoint(remote_udp_addr, GSE_PORT);
-    remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, SPMU_PORT);
+    remote_udp_endpoint = boost::asio::ip::udp::endpoint(remote_udp_addr, config::ethernet::GSE_PORT);
+    remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, config::ethernet::SPMU_PORT);
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
     local_udp_sock.bind(local_udp_endpoint);
@@ -60,7 +60,7 @@ TransportLayerMachine::TransportLayerMachine(
 
     commands = CommandDeck();
     
-    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
     
@@ -105,7 +105,7 @@ TransportLayerMachine::TransportLayerMachine(
     
     commands = CommandDeck();
     
-    std::vector<uint8_t> tmp_vec(RECV_BUFF_LEN, '\0');
+    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
     downlink_buff = tmp_vec;
     uplink_buff = tmp_vec;
     
@@ -164,7 +164,7 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
             return true;
         }
     } else {
-        debug_print("checking for frame read of an unimplemented system!\n");
+        utilities::debug_print("checking for frame read of an unimplemented system!\n");
     }
     return false;
 }
@@ -204,13 +204,13 @@ void TransportLayerMachine::send_udp(const boost::system::error_code& err, std::
     // std::vector<uint8_t> filtered;
     // std::copy_if(downlink_buff.begin(), downlink_buff.end(), std::back_inserter(filtered), [](uint8_t i){return i != 0x00;});
     std::cout << "received " << byte_count << " bytes:\n";
-    hex_print(filtered);
+    utilities::hex_print(filtered);
     std::cout << "\n";
 
-    debug_print("trying spw data isolation: ");
+    utilities::debug_print("trying spw data isolation: ");
     // todo: REPLACE HARDCODED 0x08 with lookup CdTe DE
     std::vector<uint8_t> reply_data = TransportLayerMachine::get_reply_data(downlink_buff, 0x08);
-    hex_print(reply_data);
+    utilities::hex_print(reply_data);
 
     // fragment the filtered buffer
     // prepend <sys> code to the buffer
@@ -268,7 +268,7 @@ void TransportLayerMachine::handle_cmd() {
     // command_pipe.push_back('\0');
 
     std::cout << "transmitting:\t";
-    hex_print(output_cmd);
+    utilities::hex_print(output_cmd);
     std::cout << "to " << local_tcp_sock.remote_endpoint().address().to_string() << ":" << std::to_string(local_tcp_sock.remote_endpoint().port()) << "\n";
 
     if(is_frame_read_cmd) {
@@ -283,7 +283,7 @@ void TransportLayerMachine::handle_cmd() {
         reply.resize(reply_len);
         
         std::cout << "got reply of length 0x" << reply.size() << " with reported size 0x" << reply_len << ":\t";
-        hex_print(reply);
+        utilities::hex_print(reply);
         std::cout << "\n";
 
         if(reply_len < 1) {
@@ -295,17 +295,17 @@ void TransportLayerMachine::handle_cmd() {
         
         std::vector<uint8_t> remote_wr_ptr = TransportLayerMachine::get_reply_data(reply, uplink_buff_sys);
         if(remote_wr_ptr.size() != 4) {
-            error_print("got bad write pointer length!\n");
+            utilities::error_print("got bad write pointer length!\n");
         }
 
         // todo: REPLACE HARDCODED:
         if(uplink_buff_sys == 0x0f || uplink_buff_sys == 0x0e) {
-            remote_wr_ptr = swap_endian4(remote_wr_ptr);
+            remote_wr_ptr = utilities::swap_endian4(remote_wr_ptr);
         }
 
         // todo: handle this in a sustainable way
         std::vector<uint32_t> spw_data;
-        spw_data.push_back(unsplat_from_4bytes(remote_wr_ptr));
+        spw_data.push_back(utilities::unsplat_from_4bytes(remote_wr_ptr));
         spw_data.push_back(ring_buffers[uplink_buff_sys].get_block_size());
         spw_data.push_back(0x00);
 
@@ -315,39 +315,39 @@ void TransportLayerMachine::handle_cmd() {
         size_t blocks = ring_buffers[uplink_buff_sys].get_read_count_blocks();
         size_t block_size = ring_buffers[uplink_buff_sys].get_block_size();
 
-        debug_print("\t\tgot " + std::to_string(blocks) + " blocks of size " + std::to_string(block_size) + "\n");
+        utilities::debug_print("\t\tgot " + std::to_string(blocks) + " blocks of size " + std::to_string(block_size) + "\n");
 
         // check if ring buffer wraps around (2nd piece of buffer is zero-length):
         if(spw_data[3] == 0) {
             // send only one command.
-            debug_print("\treading from non-wrapped ring buffer region.\n");
-            debug_print("\tspw_data[0]: " + std::to_string(spw_data[0]));
+            utilities::debug_print("\treading from non-wrapped ring buffer region.\n");
+            utilities::debug_print("\tspw_data[0]: " + std::to_string(spw_data[0]));
 
             for(size_t i = 0; i < blocks; ++i) {
-                debug_print("\t reading block " + std::to_string(i) + " of " + std::to_string(blocks - 1) + "\n");
+                utilities::debug_print("\t reading block " + std::to_string(i) + " of " + std::to_string(blocks - 1) + "\n");
 
                 // advance the read address
-                std::vector<uint8_t> ring_read_addr = splat_to_nbytes(4, spw_data[0] + i*block_size);
+                std::vector<uint8_t> ring_read_addr = utilities::splat_to_nbytes(4, spw_data[0] + i*block_size);
 
                 // build a new read command from template
                 size_t ring_len = spw_data[1];
                 std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_read_addr, ring_len);
 
-                debug_print("\treading from address " + std::to_string(spw_data[0] + i*block_size) + "\n");
+                utilities::debug_print("\treading from address " + std::to_string(spw_data[0] + i*block_size) + "\n");
 
                 // send the read command
-                debug_print("\tsending read command: \n");
-                hex_print(ring_read_cmd);
+                utilities::debug_print("\tsending read command: \n");
+                utilities::hex_print(ring_read_cmd);
                 local_tcp_sock.send(boost::asio::buffer(ring_read_cmd));
                 
-                debug_print("\twaiting for reply\n");
+                utilities::debug_print("\twaiting for reply\n");
                 // get the response
                 std::vector<uint8_t> last_reply_packet;
                 last_reply_packet.resize(4096);
                 size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply_packet));
-                debug_print("\tgot reply of length " + std::to_string(reply_len) + "\n");
-                debug_print("\treply:\n");
-                hex_print(last_reply_packet);
+                utilities::debug_print("\tgot reply of length " + std::to_string(reply_len) + "\n");
+                utilities::debug_print("\treply:\n");
+                utilities::hex_print(last_reply_packet);
 
                 // extract data field from reply
                 std::vector<uint8_t> last_reply_data;
@@ -358,13 +358,13 @@ void TransportLayerMachine::handle_cmd() {
                     last_reply_data = last_reply_packet;
                 }
 
-                debug_print("\tadding to reply stack\n");
+                utilities::debug_print("\tadding to reply stack\n");
                 // append new data to buffer
                 reply_stack.insert(reply_stack.begin(), last_reply_data.begin(), last_reply_data.end());
             }
 
-            debug_print("\nHERE IS THE RING BUFFER OUTPUT:\n");
-            hex_print(reply_stack);
+            utilities::debug_print("\nHERE IS THE RING BUFFER OUTPUT:\n");
+            utilities::hex_print(reply_stack);
 
             TransportLayerMachine::recv_udp_fwd_tcp_cmd();
 
@@ -372,33 +372,33 @@ void TransportLayerMachine::handle_cmd() {
             // this is copy-paste of the above case. todo: use your brain. write same stuff as a separate method. differentiate if its needed.
 
             // send two read commands.
-            debug_print("\treading from wrapped ring buffer region.\n");
-            error_print("\tI haven't really implemented this yet :{}\n");
-            debug_print("\tspw_data[0]: " + std::to_string(spw_data[0]));
+            utilities::debug_print("\treading from wrapped ring buffer region.\n");
+            utilities::error_print("\tI haven't really implemented this yet :{}\n");
+            utilities::debug_print("\tspw_data[0]: " + std::to_string(spw_data[0]));
 
             /********************** JUST PASTED FROM ABOVE **********************/
             for(size_t i = 0; i < blocks; ++i) {
-                debug_print("\treading block " + std::to_string(i) + " of " + std::to_string(blocks - 1) + "\n");
+                utilities::debug_print("\treading block " + std::to_string(i) + " of " + std::to_string(blocks - 1) + "\n");
 
                 // advance the read address
-                std::vector<uint8_t> ring_read_addr = splat_to_nbytes(4, spw_data[0] + i*block_size);
+                std::vector<uint8_t> ring_read_addr = utilities::splat_to_nbytes(4, spw_data[0] + i*block_size);
 
                 // build a new read command from template
                 size_t ring_len = spw_data[1];
                 std::vector<uint8_t> ring_read_cmd = commands.get_read_command_from_template(uplink_buff_sys, uplink_buff_cmd, ring_read_addr, ring_len);
 
-                debug_print("\treading from address " + std::to_string(spw_data[0] + i*block_size) + "\n");
+                utilities::debug_print("\treading from address " + std::to_string(spw_data[0] + i*block_size) + "\n");
 
                 // send the read command
-                debug_print("\tsending read command: \n");
-                hex_print(ring_read_cmd);
+                utilities::debug_print("\tsending read command: \n");
+                utilities::hex_print(ring_read_cmd);
                 local_tcp_sock.send(boost::asio::buffer(ring_read_cmd));
                 
-                debug_print("\twaiting for reply\n");
+                utilities::debug_print("\twaiting for reply\n");
                 // get the response
                 std::vector<uint8_t> last_reply_packet;
                 size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply_packet));
-                debug_print("\tgot reply of length " + std::to_string(reply_len) + "\n");
+                utilities::debug_print("\tgot reply of length " + std::to_string(reply_len) + "\n");
 
                 // extract data field from reply
                 std::vector<uint8_t> last_reply_data = TransportLayerMachine::get_reply_data(last_reply_packet, uplink_buff_sys);
@@ -407,8 +407,8 @@ void TransportLayerMachine::handle_cmd() {
                 reply_stack.insert(reply_stack.begin(), last_reply_data.begin(), last_reply_data.end());
             }
 
-            debug_print("\nHERE IS THE RING BUFFER OUTPUT:\n");
-            hex_print(reply_stack);
+            utilities::debug_print("\nHERE IS THE RING BUFFER OUTPUT:\n");
+            utilities::hex_print(reply_stack);
 
             TransportLayerMachine::recv_udp_fwd_tcp_cmd();
         }
@@ -463,7 +463,7 @@ std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> 
     size_t data_length_start_offset = 9;
     size_t data_length_length = 3;
 
-    debug_print("\tlast header access: " + std::to_string(ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length) + "\n");
+    utilities::debug_print("\tlast header access: " + std::to_string(ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length) + "\n");
 
     std::vector<uint8_t> data_length_vec(
         spw_reply.begin() 
@@ -484,15 +484,15 @@ std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> 
     zero_prefix[0] = 0x00;
     data_length_vec.insert(data_length_vec.begin(), zero_prefix.begin(), zero_prefix.end());
 
-    debug_print("\tvector data length field result: \n");
+    utilities::debug_print("\tvector data length field result: \n");
     for(auto& el: data_length_vec) {
-        debug_print("\t\t" + std::to_string(el) + "\n");
+        utilities::debug_print("\t\t" + std::to_string(el) + "\n");
     }
 
-    uint32_t data_length = unsplat_from_4bytes(data_length_vec);
+    uint32_t data_length = utilities::unsplat_from_4bytes(data_length_vec);
     
-    debug_print("\n\tconverted data length field result: ");
-    debug_print("\n\t\t" + std::to_string(data_length) + "\n");
+    utilities::debug_print("\n\tconverted data length field result: ");
+    utilities::debug_print("\n\t\t" + std::to_string(data_length) + "\n");
 
     // now read rest of spw_reply based on data_length
     std::vector<uint8_t> reply_data(

@@ -32,20 +32,20 @@ int main(int argc, char* argv[]) {
     cdtede_r_cmd = deck.get_command_bytes_for_sys_for_code_old(0x08, 0x9a);
 
     std::cout << "ASIC params hex:\t";
-    hex_print(cdtede_w_cmd);
+    utilities::hex_print(cdtede_w_cmd);
     std::cout << "\n";
 
     std::cout << "Read mode hex:\t\t";
-    hex_print(cdtede_r_cmd);
+    utilities::hex_print(cdtede_r_cmd);
     std::cout << "\n";
 
     std::vector<uint8_t> rmap_part = {cdtede_w_cmd.begin()+12, cdtede_w_cmd.end()};
     std::vector<uint8_t> ether_head = deck.get_spw_ether_header(rmap_part);
     std::cout << "ether head: ";
-    hex_print(ether_head);
+    utilities::hex_print(ether_head);
     std::cout << "\n";
     std::cout << "original: ";
-    hex_print(cdtede_w_cmd);
+    utilities::hex_print(cdtede_w_cmd);
     std::cout << "\n";
 
     return 0;

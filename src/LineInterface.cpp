@@ -125,7 +125,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         std::string this_name = this_system.value()["name"];
         std::string this_hex_str = this_system.value()["hex"];
         // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
-        uint8_t this_hex = string_to_byte(this_hex_str);
+        uint8_t this_hex = utilities::string_to_byte(this_hex_str);
 
         verbose_print("adding new System:");
         verbose_print("\tname:    " + this_name);
