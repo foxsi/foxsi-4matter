@@ -249,7 +249,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
 
         std::unordered_map<uint8_t, Command> inner_command_map;
 
-        utilities::debug_print("adding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
+        utilities::debug_print("\tadding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
 
         std::cout << "\n\nsystem type:";
         utilities::hex_print((uint8_t)this_system.type);
@@ -516,6 +516,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
     }
 }
 
+// todo: use std::vector::at (bounds checking), no loop, utilities::error_print.
 System& CommandDeck::get_sys_for_name(std::string name) {
     // search for System with name in systems
     for(int i=0; i < systems.size(); i++) {
@@ -530,6 +531,7 @@ System& CommandDeck::get_sys_for_name(std::string name) {
     return null_sys;
 }
 
+// todo: use std::vector::at (bounds checking), no loop, utilities::error_print.
 System& CommandDeck::get_sys_for_code(uint8_t code) {
     // search for System with name in systems
     for(int i=0; i < systems.size(); i++) {
@@ -1091,7 +1093,40 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ui
     return full_packet;
 }
 
-std::vector<uint8_t> CommandDeck::get_spw_ether_header(std::vector<uint8_t> rmap_packet) {
+// todo: write this. Base on get_read_command_from_template.
+std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len) {
+    // make sure the System has info on SpaceWire:
+    System sys_obj(get_sys_for_code(sys));
+    if(!sys_obj.spacewire) {
+        utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
+        return {};
+    }
+    
+    std::vector<uint8_t> read_len_bytes(utilities::splat_to_nbytes(3, read_len));
+
+    std::vector<uint8_t> packet;
+    std::vector<uint8_t> tailer;
+    
+    tailer.push_back(sys_obj.spacewire->target_logical_address);
+    tailer.push_back(0x01);                         // RMAP protocol ID
+    tailer.push_back(0x4d);                         // instruction
+    tailer.push_back(sys_obj.spacewire->key);       // key
+    tailer.insert(tailer.end(), sys_obj.spacewire->reply_path_address.begin(), sys_obj.spacewire->reply_path_address.end());
+    tailer.push_back(0x00);                         // transaction ID MSB
+    tailer.push_back(0x00);                         // transaction ID LSB
+    tailer.push_back(0x00);                         // extended address
+    tailer.insert(tailer.end(), read_addr.begin(), read_addr.end());
+    tailer.insert(tailer.end(), read_len_bytes.begin(), read_len_bytes.end());
+    tailer.push_back(sys_obj.spacewire->crc(tailer));
+    
+    packet.insert(packet.end(), sys_obj.spacewire->target_path_address.begin(), sys_obj.spacewire->target_path_address.end());
+    packet.insert(packet.end(), tailer.begin(), tailer.end());
+
+    return packet;
+}
+
+std::vector<uint8_t> CommandDeck::get_spw_ether_header(std::vector<uint8_t> rmap_packet)
+{
     // NOTE: this method does not support RMAP packets with sizes that require more than 8B to represent (~1.84e19 B)
     std::vector<uint8_t> ether_prefix;
     const unsigned long long rmap_packet_size = rmap_packet.size();

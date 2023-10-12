@@ -7,7 +7,7 @@ project(
     LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
@@ -31,9 +31,11 @@ add_library(
     libutil 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Utilities.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Timing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Circle.cpp
 )
 
 target_include_directories(
@@ -126,7 +128,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libutil PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
     target_link_libraries(forwarding_example PRIVATE Threads::Threads)
-    target_link_libraries(cli_example PRIVATE Threads::Threads)
+    # target_link_libraries(cli_example PRIVATE Threads::Threads)
     target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     target_link_libraries(test_loop PRIVATE Threads::Threads)

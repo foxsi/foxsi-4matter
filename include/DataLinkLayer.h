@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 enum class TransportLayerProtocol: uint8_t {
     NONE    = 0x00,

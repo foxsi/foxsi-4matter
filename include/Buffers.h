@@ -3,6 +3,7 @@
 #define BUFFERS_H
 
 #include "Systems.h"
+#include "Timing.h"
 #include "Commanding.h"
 #include "Parameters.h"
 
@@ -16,7 +17,7 @@
  */
 class DownlinkBufferElement {
     public:
-        DownlinkBufferElement(System& new_system, size_t new_max_packet_size);
+        DownlinkBufferElement(System* new_system, size_t new_max_packet_size);
 
         /**
          * @brief Construct a new `DownlinkBufferElement` object from two `System`s, specifying the type of ring buffer interface to use from the sending `System`.
@@ -27,7 +28,7 @@ class DownlinkBufferElement {
          * @param to_system The `System` object which is responsible for transmitting the data.
          * @param type An index into `from_system.ring_params` specifying the buffer parameters to use.
          */
-        DownlinkBufferElement(System& from_system, System& to_system, RING_BUFFER_TYPE_OPTIONS type);
+        DownlinkBufferElement(System* from_system, System* to_system, RING_BUFFER_TYPE_OPTIONS type);
 
         /**
          * @brief Copy-construct a new `DownlinkBufferElement` object.
@@ -36,6 +37,8 @@ class DownlinkBufferElement {
          */
         DownlinkBufferElement(const DownlinkBufferElement& other);
 
+        DownlinkBufferElement();
+
         /**
          * @brief Get byte string to send over physical interface to the ground.
          * This method prepends a header (`DownlinkBufferElement::get_header()`) to `DownlinkBufferElement::payload` and returns the total list of bytes to transmit.
@@ -43,8 +46,8 @@ class DownlinkBufferElement {
          */
         std::vector<uint8_t> get_packet();
 
-        const System get_system() const {return system;};
-        const uint8_t get_system_hex() const {return system.hex;};
+        const System get_system() const {return *system;};
+        const uint8_t get_system_hex() const {return system->hex;};
         const std::vector<uint8_t> get_payload() const {return payload;};
         const size_t get_max_packet_size() const {return max_packet_size;};
         const uint16_t get_packets_per_frame() const {return packets_per_frame;};
@@ -89,7 +92,7 @@ class DownlinkBufferElement {
         /**
          * @brief The onboard system which produced the data in the `payload`.
          */
-        System& system;
+        System* system;
         /**
          * @brief The total number of transmit packets in this data frame. 
          * This will be used on the ground to assemble one parse-able data frame.
@@ -119,7 +122,7 @@ class UplinkBufferElement {
          * @param command The specific `Command` uplinked.
          * @param varargs Optional list of bytes after the first two (`System::hex` and `Command::hex`).
          */
-        UplinkBufferElement(System& system, Command& command, std::vector<uint8_t> varargs);
+        UplinkBufferElement(System* system, Command* command, std::vector<uint8_t> varargs);
         /**
          * @brief Construct a new `UplinkBufferElement` object from an incoming (uplinked) byte stream.
          * 
@@ -128,11 +131,20 @@ class UplinkBufferElement {
          */
         UplinkBufferElement(std::vector<uint8_t> raw_data, CommandDeck& deck);
 
+        /**
+         * @brief Copy-construct a new `UplinkBufferElement` object
+         * 
+         * @param other 
+         */
+        UplinkBufferElement(const UplinkBufferElement& other);
+
+        UplinkBufferElement();
+
         void set_varargs(std::vector<uint8_t> new_varargs);
 
-        const System& get_system() const {return system;};
-        const Command& get_command() const {return command;};
-        const std::vector<uint8_t> get_varargs() const {return varargs;};
+        System* get_system() const {return system;};
+        Command* get_command() const {return command;};
+        std::vector<uint8_t> get_varargs() const {return varargs;};
 
         const std::string to_string();
 
@@ -140,11 +152,11 @@ class UplinkBufferElement {
         /**
          * @brief The `System` referenced in the first byte of the uplink packet.
          */
-        System& system;
+        System* system;
         /**
          * @brief The `Command` referenced in the second byte of the uplink packet.
          */
-        Command& command;
+        Command* command;
         /**
          * @brief Any contents of the uplink packet following the second byte.
          */
@@ -193,7 +205,7 @@ class PacketFramer{
          */
         void clear_frame();
         /**
-         * @brief Push a packet onto the `frame`.
+         * @brief Push a packet (removable headers and all) onto the `frame`.
          */
         void push_to_frame(std::vector<uint8_t> new_packet);
         /**
@@ -315,6 +327,13 @@ class FramePacketizer{
         FramePacketizer(PacketFramer& pf);
 
         /**
+         * @brief Copy-construct a new `FramePacketizer` object.
+         * 
+         * @param fp 
+         */
+        FramePacketizer(FramePacketizer& other);
+
+        /**
          * @brief Remove a packet from the `frame`.
          * 
          * @return std::vector<uint8_t> 
@@ -402,6 +421,37 @@ class FramePacketizer{
          * @brief The `System` that originated the data in `frame`.
          */
         System& system;
+};
+
+
+
+class SystemManager {
+    public:
+        SystemManager(
+            System& new_system,
+            std::queue<UplinkBufferElement>& new_uplink_buffer
+        );
+        // SystemManager(SystemManager& other);
+        // SystemManager(SystemManager&& other);
+
+        void add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer);
+        void add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketFramer* new_packet_framer);
+
+        void add_timing(Timing* new_timing);
+
+        FramePacketizer* get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS type);
+        PacketFramer* get_packet_framer(RING_BUFFER_TYPE_OPTIONS type);
+        
+        System& system;
+        std::queue<UplinkBufferElement>& uplink_buffer;
+        Timing* timing;
+
+        FLIGHT_STATE flight_state;
+        SYSTEM_STATE system_state;
+
+    private:
+        std::unordered_map<RING_BUFFER_TYPE_OPTIONS, FramePacketizer*> lookup_frame_packetizer;
+        std::unordered_map<RING_BUFFER_TYPE_OPTIONS, PacketFramer*> lookup_packet_framer;
 };
 
 #endif

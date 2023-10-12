@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <queue>
+#include "moodycamel/concurrentqueue.h"
 
 int main(int argc, char* argv[]) {
     boost::asio::io_context context;
@@ -20,7 +21,10 @@ int main(int argc, char* argv[]) {
     System cdte1 = deck.get_sys_for_name("cdte1");
     System gse = deck.get_sys_for_name("gse");
 
-    std::queue<DownlinkBufferElement> downlink_buffer; 
+    std::queue<DownlinkBufferElement> downlink_buffer;
+
+    moodycamel::ConcurrentQueue<DownlinkBufferElement> concurrent_downlink_buffer;
+
     PacketFramer pf(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp(cdte1, gse, RING_BUFFER_TYPE_OPTIONS::PC);
     
@@ -80,6 +84,7 @@ int main(int argc, char* argv[]) {
         DownlinkBufferElement this_db(fp.pop_buffer_element());
         // std::cout << this_db.to_string() << "\n";
         downlink_buffer.push(this_db);
+        concurrent_downlink_buffer.enqueue(this_db);
         std::vector<uint8_t> this_pack(this_db.get_packet());
         // hex_print(this_pack);
         // std::cout << "payload.size(): " << std::to_string(this_db.get_payload().size()) << "\n";
@@ -91,11 +96,17 @@ int main(int argc, char* argv[]) {
 
     // pop buffer to emulate downlink, and remove header "on ground". Reassemble frame.
     std::vector<uint8_t> false_downlink;
+    DownlinkBufferElement this_concurrent_element;
     while(downlink_buffer.size() > 0) {
+
+        // try using the std::queue
         DownlinkBufferElement this_downlink = downlink_buffer.front();
         downlink_buffer.pop();
-        std::vector<uint8_t> this_packet = this_downlink.get_packet();
-        // std::cout << this_downlink.to_string() << "\n";
+
+        // try using moodycamel::ConcurrentQueue
+        concurrent_downlink_buffer.try_dequeue(this_concurrent_element);
+        // std::vector<uint8_t> this_packet = this_downlink.get_packet();
+        std::vector<uint8_t> this_packet = this_concurrent_element.get_packet();
 
         std::vector<uint8_t> this_payload = {this_packet.begin() + 8, this_packet.end()};
         // std::cout << "this_payload.size(): " << std::to_string(this_payload.size()) << "\n";

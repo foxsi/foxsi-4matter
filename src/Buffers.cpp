@@ -7,7 +7,7 @@
 
 // ====================== DownlinkBufferElement ====================== //
 
-DownlinkBufferElement::DownlinkBufferElement(System& new_system, size_t new_max_packet_size) : system(new_system) {
+DownlinkBufferElement::DownlinkBufferElement(System* new_system, size_t new_max_packet_size) : system(new_system) {
     max_packet_size = new_max_packet_size;
 
     // set these these to default for now:
@@ -17,28 +17,28 @@ DownlinkBufferElement::DownlinkBufferElement(System& new_system, size_t new_max_
     DownlinkBufferElement::set_payload(temp_payload);
 }
 
-DownlinkBufferElement::DownlinkBufferElement(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS type): system(from_system) {
+DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_system, RING_BUFFER_TYPE_OPTIONS type): system(from_system) {
 
-    if (!to_system.ethernet) {
+    if (!to_system->ethernet) {
         // todo: throw
         utilities::error_print("DownlinkBufferElement must use non-null System::ethernet interface\n");
     }
 
     // packet size is limited by the outgoing interface
-    max_packet_size = to_system.ethernet->max_payload_size;
+    max_packet_size = to_system->ethernet->max_payload_size;
     
     // determine frame size by the remote memory access system used
     uint16_t source_frame_size = 0;
-    switch (from_system.type) {
+    switch (from_system->type) {
         case COMMAND_TYPE_OPTIONS::SPW:
-            if (from_system.ring_params.size() > 0) {
-                source_frame_size = from_system.get_frame_size(type);
+            if (from_system->ring_params.size() > 0) {
+                source_frame_size = from_system->get_frame_size(type);
             } else {
-                source_frame_size = from_system.get_frame_size();
+                source_frame_size = from_system->get_frame_size();
             }
             break;
         default:
-            source_frame_size = from_system.get_frame_size();
+            source_frame_size = from_system->get_frame_size();
             break;
     }
     size_t last_packet_size = source_frame_size % max_packet_size;
@@ -55,6 +55,15 @@ DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other)
     DownlinkBufferElement::set_packets_per_frame(other.get_packets_per_frame());
     DownlinkBufferElement::set_this_packet_index(other.get_this_packet_index());
     DownlinkBufferElement::set_payload(other.get_payload());
+}
+
+DownlinkBufferElement::DownlinkBufferElement() {
+    system = nullptr;
+    max_packet_size = 0;
+    DownlinkBufferElement::set_packets_per_frame(0);
+    DownlinkBufferElement::set_this_packet_index(0);
+    std::vector<uint8_t> temp_payload = {};
+    DownlinkBufferElement::set_payload(temp_payload);
 }
 
 void DownlinkBufferElement::set_payload(std::vector<uint8_t> new_payload) {
@@ -86,7 +95,7 @@ const std::string DownlinkBufferElement::to_string() {
     result.append("\n\tpackets_per_frame \t= " + std::to_string(packets_per_frame));
     result.append("\n\tthis_packet_index \t= " + std::to_string(this_packet_index));
     result.append("\n\tpayload.size() \t\t= " + std::to_string(payload.size()));
-    result.append("\n\tsystem.name, .hex \t= " + system.name + ", " + std::to_string(system.hex));
+    result.append("\n\tsystem.name, .hex \t= " + system->name + ", " + std::to_string(system->hex));
     result.append("\n");
 
     return result;
@@ -102,7 +111,7 @@ bool DownlinkBufferElement::check_payload_fits(std::vector<uint8_t> new_payload)
 
 std::vector<uint8_t> DownlinkBufferElement::get_header() {
     std::vector<uint8_t> header;
-    header.push_back(system.hex);
+    header.push_back(system->hex);
     std::vector<uint8_t> bytes_packets_per_frame = utilities::splat_to_nbytes(2, get_packets_per_frame());
     std::vector<uint8_t> bytes_packet_index = utilities::splat_to_nbytes(2, get_this_packet_index());
     std::vector<uint8_t> reserved_pad = {0x00, 0x00, 0x00};
@@ -130,17 +139,26 @@ std::vector<uint8_t> DownlinkBufferElement::get_packet() {
 
 // ====================== UplinkBufferElement ====================== //
 
-UplinkBufferElement::UplinkBufferElement(System &new_system, Command &new_command, std::vector<uint8_t> new_varargs): system(new_system), command(new_command) {
+UplinkBufferElement::UplinkBufferElement(System *new_system, Command *new_command, std::vector<uint8_t> new_varargs): system(new_system), command(new_command) {
     varargs = new_varargs;
 }
 
-UplinkBufferElement::UplinkBufferElement(std::vector<uint8_t> raw_data, CommandDeck &deck): system(deck.get_sys_for_code(raw_data[0])), command(deck.get_command_for_sys_for_code(raw_data[0], raw_data[1])) {
+UplinkBufferElement::UplinkBufferElement(std::vector<uint8_t> raw_data, CommandDeck &deck): system(&deck.get_sys_for_code(raw_data[0])), command(&deck.get_command_for_sys_for_code(raw_data[0], raw_data[1])) {
     // varargs is all the raw data except the first two bytes.
     varargs.resize(raw_data.size() - 2);
     for (int i = 2; i < raw_data.size(); ++i) {
         varargs.push_back(raw_data[i]);
     }
 }
+
+UplinkBufferElement::UplinkBufferElement(const UplinkBufferElement &other):
+    system(other.system),
+    command(other.command),
+    varargs(other.varargs) {
+}
+
+UplinkBufferElement::UplinkBufferElement(): 
+    system(nullptr), command(nullptr), varargs(0) { }
 
 void UplinkBufferElement::set_varargs(std::vector<uint8_t> new_varargs) {
     varargs = new_varargs;
@@ -149,8 +167,8 @@ void UplinkBufferElement::set_varargs(std::vector<uint8_t> new_varargs) {
 const std::string UplinkBufferElement::to_string() {
     std::string result;
     result.append("UplinkBufferElement::");
-    result.append("\n\tsystem.name, .hex \t= " + system.name + ", " + std::to_string(system.hex));
-    result.append("\n\tcommand.name, .hex \t= " + command.name + ", " + std::to_string(command.hex));
+    result.append("\n\tsystem.name, .hex \t= " + system->name + ", " + std::to_string(system->hex));
+    result.append("\n\tcommand.name, .hex \t= " + command->name + ", " + std::to_string(command->hex));
     result.append("\n\tvarargs.size() \t\t= " + std::to_string(varargs.size()));
     result.append("\n");
 
@@ -159,27 +177,38 @@ const std::string UplinkBufferElement::to_string() {
 
 // ========================== PacketFramer ========================= //
 
-PacketFramer::PacketFramer(PacketFramer &other): system(other.system) {
+PacketFramer::PacketFramer(PacketFramer &other): 
+    static_strip_footer_size(other.static_strip_footer_size),
+    initial_strip_footer_size(other.initial_strip_footer_size),
+    subsequent_strip_footer_size(other.subsequent_strip_footer_size),
+    static_strip_header_size(other.static_strip_header_size),
+    initial_strip_header_size(other.initial_strip_header_size),
+    subsequent_strip_header_size(other.subsequent_strip_header_size),
+    packets_per_frame(other.packets_per_frame),
+    packet_counter(other.packet_counter),
+    frame_size(other.frame_size),
+    frame(other.frame),
+    frame_done(other.frame_done),
+    system(other.system) 
+{
     // todo: do other setup
-    static_strip_footer_size = other.static_strip_footer_size;
-    initial_strip_footer_size = other.initial_strip_footer_size;
-    subsequent_strip_footer_size = other.subsequent_strip_footer_size;
+    // static_strip_footer_size = other.static_strip_footer_size;
+    // initial_strip_footer_size = other.initial_strip_footer_size;
+    // subsequent_strip_footer_size = other.subsequent_strip_footer_size;
 
-    static_strip_header_size = other.static_strip_header_size;
-    initial_strip_header_size = other.initial_strip_header_size;
-    subsequent_strip_header_size = other.subsequent_strip_header_size;
+    // static_strip_header_size = other.static_strip_header_size;
+    // initial_strip_header_size = other.initial_strip_header_size;
+    // subsequent_strip_header_size = other.subsequent_strip_header_size;
 
-    packets_per_frame = other.packets_per_frame;
-    frame_size = other.frame_size;
+    // packets_per_frame = other.packets_per_frame;
+    // frame_size = other.frame_size;
     
-    // don't copy frame from the other object.
-    packet_counter = 0;
-    frame.resize(0);
-    frame_done = false;
+    // packet_counter = other.packet_counter;
+    // frame = other.frame;
+    // frame_done = other.frame_done;
 
-    // set frame_size
-    frame.reserve(frame_size);
-    frame_done = false;
+    // // set frame_size
+    // frame.reserve(frame_size);
 }
 
 PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type): system(new_system) {
@@ -187,7 +216,6 @@ PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type): s
     DataLinkLayer* system_if;
     frame_size = new_system.get_frame_size();
     size_t packet_size = 0;
-
 
     switch (new_system.type) {
         case COMMAND_TYPE_OPTIONS::ETHERNET:
@@ -248,8 +276,6 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + subsequent_strip_header_size;
         
         if (frame.size() + new_packet.size() - heads_and_feet_size > frame_size) {
-            // todo: throw
-            // todo: THIS SHOULD NOT EXCEPT. The condition should be checked on a new_packet **post-header/footer removal**.
             std::cout << "future exception in PacketFramer::push_to_frame()\n";
             std::cout << "\tgot packet of size " << std::to_string(new_packet.size()) << " for frame of size " << std::to_string(frame_size) << " with real size " << std::to_string(frame.size()) << "\n";
         } else if (frame.size() + new_packet.size() - heads_and_feet_size == frame_size) {
@@ -398,6 +424,14 @@ FramePacketizer::FramePacketizer(PacketFramer &pf): system(pf.get_system()) {
     frame.resize(0);
 }
 
+FramePacketizer::FramePacketizer(FramePacketizer &other):
+    header_size(other.header_size),
+    frame(other.frame),
+    max_packet_size(other.max_packet_size),
+    packets_remaining_in_frame(other.packets_remaining_in_frame),
+    packets_per_frame(other.packets_per_frame),
+    system(other.system) {}
+
 std::vector<uint8_t> FramePacketizer::pop_packet() {
     
     std::vector<uint8_t> result;
@@ -426,7 +460,7 @@ std::vector<uint8_t> FramePacketizer::pop_payload() {
 }
 
 DownlinkBufferElement FramePacketizer::pop_buffer_element() {
-    DownlinkBufferElement dbel(system, max_packet_size);
+    DownlinkBufferElement dbel(&system, max_packet_size);
     std::vector<uint8_t> header = FramePacketizer::get_header();
     std::vector<uint8_t> payload = FramePacketizer::pop_payload();
 
@@ -488,4 +522,68 @@ std::vector<uint8_t> FramePacketizer::get_header() {
     header.push_back(0x00);
 
     return header;
+}
+
+// ========================== SystemManager ========================= //
+
+SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>& new_uplink_buffer): system(new_system), uplink_buffer(new_uplink_buffer) {
+    flight_state = FLIGHT_STATE::AWAIT;
+    system_state = SYSTEM_STATE::OFF;
+}
+
+// SystemManager::SystemManager(SystemManager& other):
+//     system(other.system),
+//     timing(other.timing),
+//     uplink_buffer(other.uplink_buffer),
+//     flight_state(other.flight_state),
+//     system_state(other.system_state),
+//     lookup_frame_packetizer(other.lookup_frame_packetizer),
+//     lookup_packet_framer(other.lookup_packet_framer) {
+// }
+
+// SystemManager::SystemManager(SystemManager&& other):
+//     lookup_frame_packetizer(std::move(other.lookup_frame_packetizer)),
+//     lookup_packet_framer(std::move(other.lookup_packet_framer)),
+//     uplink_buffer((other.uplink_buffer)),
+//     system((other.system)),
+//     timing(std::move(other.timing)),
+//     flight_state(std::move(other.flight_state)),
+//     system_state(std::move(other.system_state)) {
+// }
+
+void SystemManager::add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer) {
+    lookup_frame_packetizer[new_type] = new_frame_packetizer;
+    // auto it = lookup_frame_packetizer.find(new_type);
+    // if (it != lookup_frame_packetizer.end()) {
+    //     it->second = new_frame_packetizer;
+    // } else {
+    //     lookup_frame_packetizer.insert(std::make_pair(new_type, new_frame_packetizer));
+    // }
+}
+
+void SystemManager::add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketFramer* new_packet_framer) {
+    auto it = lookup_packet_framer.find(new_type);
+    if (it != lookup_packet_framer.end()) {
+        it->second = new_packet_framer;
+    } else {
+        lookup_packet_framer.insert(std::make_pair(new_type, new_packet_framer));
+    }
+}
+
+void SystemManager::add_timing(Timing *new_timing) {
+    timing = new_timing;
+}
+
+PacketFramer* SystemManager::get_packet_framer(RING_BUFFER_TYPE_OPTIONS type) {
+    auto it = lookup_packet_framer.find(type);
+    if (it != lookup_packet_framer.end()) {
+        return it->second;
+    } else {
+        utilities::error_print("could not find ring buffer type in PacketFramer map!\n");
+        throw std::runtime_error("no key in map");
+    }
+}
+
+FramePacketizer* SystemManager::get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS type) {
+    // TODO: insert return statement here
 }

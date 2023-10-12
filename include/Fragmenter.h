@@ -5,6 +5,10 @@
 #include <vector>
 #include "Parameters.h"
 
+/**
+ * @deprecated Superseded by `FramePacketizer`.
+ * 
+ */
 class Fragmenter {
 
     public:

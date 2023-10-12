@@ -38,31 +38,31 @@ std::string EndpointData::as_string() {
 //     } 
 // }
 
-Timing::Timing() {
-    period_millis = 0.0;
-    command_millis = 0.0;
-    request_millis = 0.0;
-    reply_millis = 0.0;
-    idle_millis = 0.0;
-}
+// Timing::Timing() {
+//     period_millis = 0.0;
+//     command_millis = 0.0;
+//     request_millis = 0.0;
+//     reply_millis = 0.0;
+//     idle_millis = 0.0;
+// }
 
-void Timing::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
-    period_millis = (uint32_t)(total_allocation_seconds*1000);
-    command_millis = (uint32_t)(command_time_seconds*1000);
-    request_millis = (uint32_t)(request_time_seconds*1000);
-    reply_millis = (uint32_t)(reply_time_seconds*1000);
-    idle_millis = (uint32_t)(idle_time_seconds*1000);
+// void Timing::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
+//     period_millis = (uint32_t)(total_allocation_seconds*1000);
+//     command_millis = (uint32_t)(command_time_seconds*1000);
+//     request_millis = (uint32_t)(request_time_seconds*1000);
+//     reply_millis = (uint32_t)(reply_time_seconds*1000);
+//     idle_millis = (uint32_t)(idle_time_seconds*1000);
 
-    Timing::resolve_times();
-}
+//     Timing::resolve_times();
+// }
 
-void Timing::resolve_times() {
-    double sum = command_millis + request_millis + reply_millis + idle_millis;
-    command_millis = command_millis*period_millis/sum;
-    request_millis = request_millis*period_millis/sum;
-    reply_millis = reply_millis*period_millis/sum;
-    idle_millis = idle_millis*period_millis/sum;
-}
+// void Timing::resolve_times() {
+//     double sum = command_millis + request_millis + reply_millis + idle_millis;
+//     command_millis = command_millis*period_millis/sum;
+//     request_millis = request_millis*period_millis/sum;
+//     reply_millis = reply_millis*period_millis/sum;
+//     idle_millis = idle_millis*period_millis/sum;
+// }
 
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
     options.add_options()
@@ -429,12 +429,15 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 auto& time_data = this_system.value()["timing"];
                 Timing* this_times = new Timing();
                 this_times->add_times_seconds(
-                    time_data.at("total_allocation").get<double>(),
-                    time_data.at("command").get<double>(),
-                    time_data.at("request").get<double>(),
-                    time_data.at("reply").get<double>(),
-                    time_data.at("idle").get<double>()
+                    time_data.at("total_allocation").get<double>()/1000.0,
+                    time_data.at("command").get<double>()/1000.0,
+                    time_data.at("request").get<double>()/1000.0,
+                    time_data.at("reply").get<double>()/1000.0,
+                    time_data.at("idle").get<double>()/1000.0
                 );
+
+                this_times->timeout_millis = time_data.at("receive_timeout_millis").get<double>();
+                this_times->intercommand_space_millis = time_data.at("intercommand_spacing_millis").get<double>();
 
                 lookup_timing.insert(std::make_pair(this_system_object, *this_times));
 

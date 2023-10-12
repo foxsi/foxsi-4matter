@@ -4,13 +4,19 @@
 #include <boost/bind.hpp>   // boost::bind (for async handler to class members)
 #include <algorithm>        // std::fill
 #include <iomanip>
+#include <stdexcept>
+#include <utility>
 
 // construct from Parameters.h macro constants
 TransportLayerMachine::TransportLayerMachine(
+    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
 ):  
     local_udp_sock(context), 
-    local_tcp_sock(context)
+    local_tcp_sock(context),
+    uplink_buffer(new_uplink_buffer),
+    downlink_buffer(new_downlink_buffer)
 {
     active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
     active_state = STATE_ORDER::IDLE;
@@ -50,10 +56,14 @@ TransportLayerMachine::TransportLayerMachine(
     unsigned short local_port,
     unsigned short remote_tcp_port,
     unsigned short remote_udp_port,
+    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
 ): 
     local_udp_sock(context),
-    local_tcp_sock(context)
+    local_tcp_sock(context),
+    uplink_buffer(new_uplink_buffer),
+    downlink_buffer(new_downlink_buffer)
 {
     active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
     active_state = STATE_ORDER::IDLE;
@@ -92,10 +102,14 @@ TransportLayerMachine::TransportLayerMachine(
     boost::asio::ip::tcp::endpoint local_tcp_end,
     boost::asio::ip::udp::endpoint remote_udp_end,
     boost::asio::ip::tcp::endpoint remote_tcp_end,
+    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
 ): 
     local_udp_sock(context),
-    local_tcp_sock(context)
+    local_tcp_sock(context),
+    uplink_buffer(new_uplink_buffer),
+    downlink_buffer(new_downlink_buffer)
 {
     remote_udp_endpoint = remote_udp_end;
     remote_tcp_endpoint = remote_tcp_end;
@@ -139,6 +153,7 @@ void TransportLayerMachine::add_fragmenter(size_t fragment_size, size_t header_s
 /* -- utility -------------------------------------------- */
 
 bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
+    // todo: update all these. Maybe even foxsi4-commands/dma/*/ring_buffer_interface.json should include an array of frame read commands for each applicable system.
     if(sys == 0x0e) {                       // cmos1
         if(cmd == static_cast<uint8_t>(RING_READ_CMD::CMOS_1) || cmd == 0x9f) {
             return true;
@@ -250,6 +265,7 @@ void TransportLayerMachine::recv_udp_fwd_tcp_cmd() {
     );
 }
 
+// todo: rewrite this with Buffer.h stuff
 void TransportLayerMachine::handle_cmd() {
     // todo: save pointers in these buffers (cmd and uplink) to manage multiple sequential reads/writes safely. Maybe with vector of vectors
     std::cout << "in handle_cmd()\n";
@@ -257,7 +273,6 @@ void TransportLayerMachine::handle_cmd() {
     uint8_t uplink_buff_sys = uplink_buff[0];
     uint8_t uplink_buff_cmd = uplink_buff[1];
 
-    // update
     bool is_frame_read_cmd = check_frame_read_cmd(uplink_buff_sys, uplink_buff_cmd);
 
     std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
@@ -428,18 +443,171 @@ void TransportLayerMachine::handle_cmd() {
     std::fill(command_pipe.begin(), command_pipe.end(), '\0');
 }
 
-void TransportLayerMachine::handle_remote_buffer_transaction() {
-    std::cout << "in handle_remote_buffer_transaction()\n";
-    uint8_t uplink_buff_sys = uplink_buff[0];
-    uint8_t uplink_buff_cmd = uplink_buff[1];
+void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type) {
+    std::cout << "in sync_remote_buffer_transaction()\n";
 
-    std::cout << "sys: \t" << std::hex << (int)uplink_buff_sys << "\n";
-    std::cout << "cmd: \t" << std::hex << (int)uplink_buff_cmd << "\n";
+    if(!sys_man.system.spacewire) {
+        utilities::error_print("require spacewire interface to read ring buffer.\n");
+        return;
+    }
 
-    std::vector<uint8_t> output_cmd = commands.get_command_bytes_for_sys_for_code(uplink_buff_sys, uplink_buff_cmd);
+    // checking if the ring buffer parameters contains the desired buffer_type
+    if(sys_man.system.ring_params.size() < std::to_underlying(buffer_type)) {
+        utilities::error_print("System::ring_params does not contain the requested buffer type.\n");
+        return;
+    }
 
-    // read the last write pointer
-    local_tcp_sock.send(boost::asio::buffer(output_cmd));
+    // select the ring buffer parameter object to use for this interaction
+    RingBufferParameters ring_params(sys_man.system.ring_params[std::to_underlying(buffer_type)]);
+
+    // get write address width
+    uint8_t write_pointer_width = ring_params.write_pointer_width_bytes;
+    // get write address as byte stream
+    std::vector<uint8_t> write_pointer_bytes(utilities::splat_to_nbytes(write_pointer_width, ring_params.write_pointer_address));
+
+    // packet to read write point:
+    std::vector<uint8_t> write_pointer_request_packet(commands.get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, write_pointer_width));
+    
+    // RMAP read request the write pointer:
+    local_tcp_sock.send(boost::asio::buffer(write_pointer_request_packet));
+
+    // RMAP read reply:
+    std::vector<uint8_t> last_reply;
+    last_reply.resize(4096);
+    size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
+
+    // wrap the reply vector to the correct length
+    last_reply.resize(reply_len);
+
+    // extract the data field from the reply
+    std::vector<uint8_t> last_write_pointer_bytes(TransportLayerMachine::get_reply_data(last_reply, sys_man.system.hex));
+    if(last_write_pointer_bytes.size() != 4) {
+        utilities::error_print("got bad write pointer length!\n");
+    }
+
+    // if CMOS, swap endianness of reply:
+    if(sys_man.system.hex == commands.get_sys_code_for_name("cmos1") || sys_man.system.hex == commands.get_sys_code_for_name("cmos2")) {
+        last_reply = utilities::swap_endian4(last_write_pointer_bytes);
+    }
+
+    // later, use EVTM? Or a union object?
+    FramePacketizer fp(*sys_man.get_frame_packetizer(buffer_type));
+    PacketFramer pf(*sys_man.get_packet_framer(buffer_type));
+
+    size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
+    size_t packet_counter = 0;
+    while (!pf.check_frame_done()) {
+        
+        // update the address to read from:
+        size_t this_start_address = last_write_pointer + packet_counter*sys_man.system.spacewire->max_payload_size;
+        write_pointer_bytes = utilities::splat_to_nbytes(write_pointer_width, this_start_address);
+        // make a new RMAP read command for that address:
+        std::vector<uint8_t> buffer_read_command(commands.get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, write_pointer_width));
+        
+        // send the read command:
+        local_tcp_sock.send(boost::asio::buffer(buffer_read_command));
+        // receive the command response:
+        reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
+        last_reply.resize(reply_len);
+        // push that response onto the frame:
+        pf.push_to_frame(last_reply);
+
+        ++packet_counter;
+    }
+
+    // hand the complete frame to the packetizer
+    fp.set_frame(pf.get_frame());
+    
+    // push the frame onto the downlink queue
+    while (!fp.frame_emptied()) {
+        // fp.pop_buffer_element()
+        DownlinkBufferElement this_dbe(fp.pop_buffer_element());
+        downlink_buffer->enqueue(this_dbe);
+    }
+    utilities::debug_print("pushed ring buffer data to downlink buffer\n");
+}
+
+void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManager &sys_man) {
+    Command command;
+    System system;
+    std::vector<uint8_t> varargs;
+
+    // // try to find the buffer in the System-wise buffer map
+    // try{
+    //     // if the buffer is there, and nonempty, remove an element and send.
+        // if ((uplink_buffer->at(sys_man.system)).size() > 0) {
+    //         UplinkBufferElement element((uplink_buffer->at(sys_man.system)).front());
+    //         command = *element.get_command();
+    //         system = *element.get_system();
+    //         varargs = element.get_varargs();
+            
+    //         // remove the element from the buffer
+    //         uplink_buffer->at(sys_man.system).pop();
+    //     }
+    // } catch (std::out_of_range& e) {
+    //     // todo: log the error.
+    //     utilities::debug_print("no commands in queue\n");
+    // }
+
+    bool uplink_available;
+    UplinkBufferElement element;
+
+    try {
+        uplink_available = (uplink_buffer->at(sys_man.system)).try_dequeue(element);
+    } catch (std::out_of_range& e) {
+        utilities::error_print("uplink buffer does not contain system\n");
+    }
+
+    if (!uplink_available) {
+        utilities::debug_print("no commands in queue\n");
+        return;
+    }
+    command = *element.get_command();
+    system = *element.get_system();
+    varargs = element.get_varargs();
+
+
+    if (sys_man.system != system) {
+        utilities::error_print("got wrong buffer for system!\n");
+    }
+
+    if (check_frame_read_cmd(system.hex, command.hex)) {
+        utilities::debug_print("got frame read command. Not implemented yet\n");
+        // todo: call sync_remote_buffer_transaction().
+    } else {
+        // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
+        std::vector<uint8_t> send_packet(commands.get_command_bytes_for_sys_for_code(command.hex, system.hex));
+        utilities::debug_print("got command for system. Sending...\n");
+        local_tcp_sock.send(boost::asio::buffer(send_packet));
+    }
+}
+
+// todo: see if this works.
+void TransportLayerMachine::async_udp_receive_to_uplink_buffer() {
+    std::vector<uint8_t> local_buffer(config::buffer::RECV_BUFF_LEN);
+    local_udp_sock.async_receive_from(
+        boost::asio::buffer(local_buffer),
+        remote_udp_endpoint,
+        boost::bind(&TransportLayerMachine::async_udp_receive_to_uplink_buffer, this)
+    );
+
+    utilities::debug_print("handling UDP uplink command:\t");
+    utilities::hex_print(local_buffer);
+    uint8_t sys_code = local_buffer[0];
+    if (commands.get_sys_name_for_code(sys_code) == "formatter") {
+        // don't queue command, act on it immediately.
+        
+    } else {
+        // try to find queue for command
+        try{
+            UplinkBufferElement new_uplink(local_buffer, commands);
+            uplink_buffer->at(commands.get_sys_for_code(sys_code)).enqueue(new_uplink);
+        } catch (std::out_of_range& e) {
+            // todo: log the error.
+            utilities::error_print("could not add uplink command to queue!\n");
+        }
+    }
+    utilities::debug_print("\n");
 }
 
 std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> spw_reply, System& sys) {

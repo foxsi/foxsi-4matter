@@ -137,8 +137,6 @@ class CommandDeck {
          * @deprecated retained for debugging use and comparison.
         */
         std::vector<uint8_t> get_command_bytes_for_sys_for_code_old(uint8_t sys, uint8_t code);
-        
-        // TODO: IMPLEMENT
 
         /**
          * @brief uses provided `sys`, `cmd` to create a template command, into which the specified memory address `addr` and read length `read_len` are inserted.
@@ -149,6 +147,16 @@ class CommandDeck {
          * read command as template command.
         */
         std::vector<uint8_t> get_read_command_from_template(uint8_t sys, uint8_t cmd, std::vector<uint8_t> addr, size_t read_len);
+
+        /**
+         * @brief uses provided `sys` to header a read command accessing `read_len` of data at the specified `read_addr`.
+         * 
+         * @param sys the `System::hex` used to header the command.
+         * @param addr the address to read at.
+         * @param read_len the amount of data to read from the address.
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> get_read_command_for_sys_at_address(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len);
 
         std::vector<uint8_t> get_spw_ether_header(std::vector<uint8_t> rmap_packet);
 

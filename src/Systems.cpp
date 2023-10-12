@@ -60,15 +60,25 @@ System::System(std::string new_name, uint8_t new_hex, Ethernet* new_ethernet):
     type = COMMAND_TYPE_OPTIONS::ETHERNET;
 }
 
-System::System(const System &other): 
-    name(other.name),
-    hex(other.hex),
-    type(other.type),
-    ethernet(other.ethernet),
-    spacewire(other.spacewire),
-    uart(other.uart),
-    ring_params(other.ring_params) {
-}
+// System::System(const System &other): 
+//     name(other.name),
+//     hex(other.hex),
+//     type(other.type),
+//     ethernet(other.ethernet),
+//     spacewire(other.spacewire),
+//     uart(other.uart),
+//     ring_params(other.ring_params) {
+// }
+
+// System::System(System &&other):
+//     name(std::move(other.name)),
+//     hex(std::move(other.hex)),
+//     type(std::move(other.type)),
+//     uart(std::move(other.uart)),
+//     spacewire(std::move(other.spacewire)),
+//     ethernet(std::move(other.ethernet)),
+//     ring_params(std::move(other.ring_params)) {
+// }
 
 System &System::operator=(const System &other) {
     // TODO: insert return statement here

@@ -45,7 +45,8 @@ class System {
             uint8_t new_hex, 
             Ethernet* new_ethernet
         );
-        System(const System& other);
+        // System(const System& other);
+        // System(System&& other);
         System& operator=(const System& other);
         bool operator==(const System& other) const;
         void print();
@@ -59,6 +60,7 @@ class System {
         UART* uart;
         SpaceWire* spacewire;
         Ethernet* ethernet;
+        // todo: add `Timing* timing;` as a field?
 
         std::vector<RingBufferParameters> ring_params;
     
@@ -69,8 +71,11 @@ template<>
 struct std::hash<System> {
     std::size_t operator()(const System& sys) const {
         // http://stackoverflow.com/a/1646913/126995
-        std::size_t res = 17;
-        res = 31*res + std::hash<uint8_t>()(sys.hex);
+        // std::size_t res = 17;
+        // res = 31*res + std::hash<uint8_t>()(sys.hex);
+
+        // don't actually need to hash. `System::hex` should always be unique.
+        std::size_t res = sys.hex;
         return res;
     }
 };

@@ -4,11 +4,14 @@
 #include "RingBufferInterface.h"
 #include "Fragmenter.h"
 #include "Commanding.h"
+#include "Systems.h"
+#include "Buffers.h"
 #include "Parameters.h"
 #include <boost/asio.hpp>
 #include <vector>
 #include <map>
 #include <queue>
+#include "moodycamel/concurrentqueue.h"
 
 /**
  * @brief Manager for network operations.
@@ -45,6 +48,21 @@ class TransportLayerMachine {
          * @todo replace with a buffer of structured messages, include target system info and length.
          */
         std::vector<uint8_t> uplink_buff;
+        // todo: deprecate^^
+
+        /**
+         * @brief a map associating each system with a buffer for its uplink commands.
+         * 
+         * Will deprecate `uplink_buff` above.
+         */
+        std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> uplink_buffer;
+        std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> downlink_buffer;
+
+
+        // std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>* uplink_buffer;
+        
+        // moodycamel::ConcurrentQueue<DownlinkBufferElement>* downlink_buffer;
+
         /**
          * @brief a rudimentary buffer for uplinked command data (to send to TCP endpoint).
          * @todo replace with a buffer of structured messages, include target system info and length. Clean up handoff between uplink_buff and command_pipe.
@@ -88,7 +106,11 @@ class TransportLayerMachine {
          * 
          * @param context A reference to a `boost::asio::io_context` used to run asynchronous work.
          */
-        TransportLayerMachine(boost::asio::io_context& context);
+        TransportLayerMachine(
+            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+            boost::asio::io_context& context
+        );
         /**
          * @brief Construct a new Transport Layer Machine from `std::string` IP address and `unsigned short` port number pairs.
          * 
@@ -107,6 +129,8 @@ class TransportLayerMachine {
             unsigned short local_port,
             unsigned short remote_tcp_port,
             unsigned short remote_udp_port,
+            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
         );
 
@@ -124,6 +148,8 @@ class TransportLayerMachine {
             boost::asio::ip::tcp::endpoint local_tcp_end,
             boost::asio::ip::udp::endpoint remote_udp_end,
             boost::asio::ip::tcp::endpoint remote_tcp_end,
+            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
         );
 
@@ -210,7 +236,14 @@ class TransportLayerMachine {
          * @brief the target functionality of this method is currently implemented inside `TransportLayerMachine::handle_cmd`. 
          * @todo consider factoring that functionality out of `TransportLayerMachine::handle_cmd`.
          */
-        void handle_remote_buffer_transaction();
+
+        // todo: write this using innards of `handle_cmd`.
+        void sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type);
+
+        // implemented.
+        void sync_tcp_send_buffer_commands_to_system(SystemManager& sys_man);
+        // implemented.
+        void async_udp_receive_to_uplink_buffer();
 
         /**
          * @brief Extract the data field from a SpaceWire reply sent by `sys`.

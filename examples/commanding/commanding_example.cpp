@@ -4,10 +4,15 @@
 #include "RingBufferInterface.h"
 #include "Metronome.h"
 #include "Commanding.h"
+#include "Systems.h"
+#include "Buffers.h"
 #include "Parameters.h"
 #include <boost/asio.hpp>
 #include <unordered_map>
 #include <iostream>
+#include <queue>
+#include <memory>
+#include "moodycamel/concurrentqueue.h"
 
 int main(int argc, char* argv[]) {
 
@@ -88,11 +93,16 @@ int main(int argc, char* argv[]) {
 
     std::cout << "added ring buffer interface to map\n";
 
+    auto temp_map = std::make_shared<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>>();
+    auto temp_dbuf = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
+
     TransportLayerMachine frmtr(
         local_udp_endpoint,
         local_tcp_endpoint,
         remote_udp_endpoint,
         remote_tcp_endpoint,
+        temp_map,
+        temp_dbuf,
         context
     );
 
