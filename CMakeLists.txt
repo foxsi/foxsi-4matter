@@ -7,7 +7,7 @@ project(
     LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
@@ -34,7 +34,6 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Timing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/RingBufferInterface.cpp 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Metronome.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Circle.cpp
 )
 
@@ -62,29 +61,36 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Build the target "forwarding_example" using source files
-add_executable(forwarding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
+add_executable(shutdown ${CMAKE_CURRENT_SOURCE_DIR}/apps/shutdown_systems.cpp)
 target_include_directories(
-    forwarding_example
+    shutdown
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Build the target "cli_example" using source files
-add_executable(cli_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
-target_include_directories(
-    cli_example
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# # Build the target "forwarding_example" using source files
+# add_executable(forwarding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
+# target_include_directories(
+#     forwarding_example
+#     PRIVATE
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
 
-# Build the target "commanding_example" using source files
-add_executable(commanding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/commanding/commanding_example.cpp)
-target_include_directories(
-    commanding_example
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# # Build the target "cli_example" using source files
+# add_executable(cli_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
+# target_include_directories(
+#     cli_example
+#     PRIVATE
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
+
+# # Build the target "commanding_example" using source files
+# add_executable(commanding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/commanding/commanding_example.cpp)
+# target_include_directories(
+#     commanding_example
+#     PRIVATE
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
 
 # Build the target "test_spw_crc" using source files
 add_executable(test_spw_crc ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
@@ -127,9 +133,10 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libsubsys PRIVATE Threads::Threads)
     target_link_libraries(libutil PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
-    target_link_libraries(forwarding_example PRIVATE Threads::Threads)
+    target_link_libraries(shutdown PRIVATE Threads::Threads)
+    # target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     # target_link_libraries(cli_example PRIVATE Threads::Threads)
-    target_link_libraries(commanding_example PRIVATE Threads::Threads)
+    # target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     target_link_libraries(test_loop PRIVATE Threads::Threads)
     target_link_libraries(test_buffers PRIVATE Threads::Threads)
@@ -190,9 +197,10 @@ if(Boost_FOUND)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
-    target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
-    target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
-    target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(shutdown PUBLIC Boost::filesystem libcom libsubsys libutil)
+    # target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
+    # target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
+    # target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_loop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_buffers PUBLIC Boost::filesystem libcom libsubsys libutil)

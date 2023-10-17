@@ -70,7 +70,7 @@ void Fragmenter::make_max_message_size() {
     }
     
     max_message_size = result;
-    std::cout << "max_message_size: " << max_message_size << "\n";
+    // std::cout << "max_message_size: " << max_message_size << "\n";
 }
 
 std::vector<std::vector<uint8_t>> Fragmenter::fragment(std::vector<uint8_t> message_to_fragment) {

@@ -324,7 +324,15 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 std::vector<uint8_t> this_eth_packet;
                 this_eth_packet.push_back(this_eth_instr);
                 this_eth_packet.push_back(this_eth_addr);
-                this_eth_packet.push_back(this_eth_write);
+
+                if (this_eth_instr == 0x03) {
+                    // only power switch subsystem is guaranteed to take 3-byte commands.
+                    this_eth_packet.push_back(this_eth_write);
+                } else if (this_eth_instr == 0x07) {
+                    // some introspection subsystem commands (set flight state, etc) get 2 B or 1 B extra args.
+                    // todo: splat_to_nbytes from raw value, per instruction address field.
+                    utilities::debug_print("found housekeeping introspection command, but not handled!\n");
+                }
 
                 this_command.set_eth_options(this_eth_packet,this_reply_len);
                 commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
@@ -526,7 +534,7 @@ System& CommandDeck::get_sys_for_name(std::string name) {
     }
 
     // return some default error System
-    std::cout << "found no system with name " << name << "\n";
+    utilities::error_print("found no system with name " + name + "\n");
     static System null_sys = System("null", 0xFF);
     return null_sys;
 }
@@ -541,7 +549,7 @@ System& CommandDeck::get_sys_for_code(uint8_t code) {
     }
     
     // return some default error System
-    std::cout << "found no system with code " << std::to_string(code) << "\n";
+    utilities::error_print("found no system with code " + std::to_string(code) + "\n");
     static System null_sys = System("null", 0xFF);
     return null_sys;
 }
@@ -557,15 +565,16 @@ std::string CommandDeck::get_sys_name_for_code(uint8_t code) {
 Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     // check for key `sys` in outer map
     if(commands.contains(sys)) {
-        utilities::debug_print("\tcontains sys\n");
+        // utilities::debug_print("\tcontains sys\n");
         // check for key `code` in inner map
         if(commands[sys].contains(code)) {
-            utilities::debug_print("\tcontains code\n");
-            utilities::debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
+            // utilities::debug_print("\tcontains code\n");
+            // utilities::debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
             return (commands[sys][code]);
         }
         // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
-        std::cout << "couldn't find " + std::to_string(code) + " in CommandDeck.commands\n";
+        utilities::error_print("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        // std::cout << "couldn't find " + std::to_string(code) + " in CommandDeck.commands\n";
         static Command null_command = Command();
         return null_command;
     }
@@ -689,10 +698,25 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
     return full_packet;
 }
 
+std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys, Command cmd) {
+    if (sys != get_sys_for_name("housekeeping")) {
+        utilities::error_print("Ethernet commanding only implemented for housekeeping system!");
+        return {0x00};
+    }
+
+    std::vector<uint8_t> response = cmd.get_eth_packet();
+    utilities::debug_print("got ethernet packet: ");
+    utilities::hex_print(response);
+    utilities::debug_print("\n");
+
+    return response;
+}
+
 std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t code) {
     Command command = CommandDeck::get_command_for_sys_for_code(sys, code);
     System system = CommandDeck::get_sys_for_code(sys);
     
+    // todo: eliminate switch case and protocol-specific functions. can detect command interface from System::type
     switch(command.type) {
         case COMMAND_TYPE_OPTIONS::SPW:
             return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
@@ -702,8 +726,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::ETHERNET:
-            std::cout << "ETHERNET COMMAND TYPE NOT IMPLEMENTED\n";
-            return {0x00};
+            return CommandDeck::make_eth_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::UART:
             std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
@@ -1096,9 +1119,10 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ui
 // todo: write this. Base on get_read_command_from_template.
 std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len) {
     // make sure the System has info on SpaceWire:
-    System sys_obj(get_sys_for_code(sys));
+    System& sys_obj = get_sys_for_code(sys);
     if(!sys_obj.spacewire) {
         utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
+        utilities::debug_print("for system " + sys_obj.name + " with code key " + std::to_string(sys) + "\n");
         return {};
     }
     
@@ -1112,6 +1136,7 @@ std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sy
     tailer.push_back(0x4d);                         // instruction
     tailer.push_back(sys_obj.spacewire->key);       // key
     tailer.insert(tailer.end(), sys_obj.spacewire->reply_path_address.begin(), sys_obj.spacewire->reply_path_address.end());
+    tailer.push_back(sys_obj.spacewire->source_logical_address);
     tailer.push_back(0x00);                         // transaction ID MSB
     tailer.push_back(0x00);                         // transaction ID LSB
     tailer.push_back(0x00);                         // extended address
@@ -1121,6 +1146,9 @@ std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sy
     
     packet.insert(packet.end(), sys_obj.spacewire->target_path_address.begin(), sys_obj.spacewire->target_path_address.end());
     packet.insert(packet.end(), tailer.begin(), tailer.end());
+
+    std::vector<uint8_t> ether_header = get_spw_ether_header(packet);
+    packet.insert(packet.begin(), ether_header.begin(), ether_header.end());
 
     return packet;
 }

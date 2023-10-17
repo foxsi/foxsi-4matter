@@ -34,7 +34,7 @@ class Command {
 
         void set_uart_options(std::vector<uint8_t> new_uart_instruction);
 
-        void set_eth_options(std::vector<uint8_t> new_eth_packet, unsigned long new_eth_reply_len);
+        void set_eth_options(std::vector<uint8_t> new_eth_packet, size_t new_eth_reply_len);
         
         void set_spi_options(
             std::vector<uint8_t> new_spi_address,
@@ -127,6 +127,7 @@ class CommandDeck {
 
         // for the dirty work
         std::vector<uint8_t> make_spw_packet_for_sys_for_command(System sys, Command cmd);
+        std::vector<uint8_t> make_eth_packet_for_sys_for_command(System sys, Command cmd);
 
         /**
          * @brief use to obtain full byte list to transmit (TCP) to SPMU-001 to send a SpaceWire command.

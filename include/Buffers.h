@@ -30,6 +30,8 @@ class DownlinkBufferElement {
          */
         DownlinkBufferElement(System* from_system, System* to_system, RING_BUFFER_TYPE_OPTIONS type);
 
+        DownlinkBufferElement& operator=(const DownlinkBufferElement& other);
+
         /**
          * @brief Copy-construct a new `DownlinkBufferElement` object.
          * 

@@ -23,7 +23,7 @@ class Circle {
         Circle(
             double new_period_s,
             std::vector<std::shared_ptr<SystemManager>> new_system_order,
-            CommandDeck new_deck,
+            std::shared_ptr<CommandDeck> new_deck,
             std::shared_ptr<TransportLayerMachine> new_transport,
             boost::asio::io_context& new_context
         );
@@ -32,12 +32,19 @@ class Circle {
         void pause();
 
         void update_state();
-        void manage_system();
+        
+        void init_systems();
+        void init_housekeeping();
+        void init_cdte();
+        void init_cmos();
+        void init_timepix();
+        
+        void manage_systems();
 
         void normalize_times_to_period();
 
         std::vector<std::shared_ptr<SystemManager>> system_order;
-        CommandDeck deck;
+        std::shared_ptr<CommandDeck> deck;
         std::shared_ptr<TransportLayerMachine> transport;
         
         double period_s;

@@ -95,6 +95,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     }
     if(vm.count("verbose")) {
         do_verbose = true;
+        DEBUG = true;
         verbose_print("verbose printing on");
     }
     
@@ -192,7 +193,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                         ethif.at("protocol").get<std::string>(),
                         ethif.at("mean_speed_bps").get<uint32_t>(),
                         ethif.at("max_payload_bytes").get<size_t>(),
-                        ethif.at("ring_frame_size_bytes").get<size_t>(),
+                        ethif.at("frame_size_bytes").get<size_t>(),
                         ethif.at("static_header_size").get<size_t>(),
                         ethif.at("static_footer_size").get<size_t>()
                     );
@@ -242,7 +243,8 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                         utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>()),
                         utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>()),
                         utilities::string_to_byte(spwif.at("key").get<std::string>()),
-                        utilities::string_to_byte(spwif.at("crc_draft").get<std::string>()),
+                        // utilities::string_to_byte(spwif.at("crc_draft").get<std::string>()),
+                        static_cast<char>((spwif.at("crc_draft").get<std::string>())[0]),
                         spwif.at("mean_speed_bps").get<uint32_t>(),
                         spwif.at("max_payload_bytes").get<size_t>(),
                         0, // todo: replace this with read into ring_buffer_interface dict

@@ -30,6 +30,10 @@ class TransportLayerMachine {
          */
         boost::asio::ip::tcp::socket local_tcp_sock;
         /**
+         * @brief the local machine's TCP socket object for housekeeping system.
+         */
+        boost::asio::ip::tcp::socket local_tcp_housekeeping_sock;
+        /**
          * @brief a remote machine's UDP endpoint.
          */
         boost::asio::ip::udp::endpoint remote_udp_endpoint;
@@ -37,6 +41,11 @@ class TransportLayerMachine {
          * @brief a remote machine's TCP endpoint.
          */
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
+        /**
+         * @brief a remote machine's TCP endpoint.
+         */
+        boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
+        
 
         /**
          * @brief a rudimentary buffer for data to downlink (send to UDP endpoint).
@@ -76,7 +85,7 @@ class TransportLayerMachine {
         /**
          * @brief instance of `CommandDeck`, storing command and system data used to decode and forward uplinked commands.
          */
-        CommandDeck commands;
+        std::shared_ptr<CommandDeck> commands;
         
         /**
          * @brief map from `System::hex` codes for each onboard system to `RingBufferInterface` objects for each system.
@@ -125,9 +134,11 @@ class TransportLayerMachine {
         TransportLayerMachine(
             std::string local_ip,
             std::string remote_tcp_ip,
+            std::string remote_tcp_housekeeping_ip,
             std::string remote_udp_ip,
             unsigned short local_port,
             unsigned short remote_tcp_port,
+            unsigned short remote_tcp_housekeeping_port,
             unsigned short remote_udp_port,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
@@ -146,8 +157,10 @@ class TransportLayerMachine {
         TransportLayerMachine(
             boost::asio::ip::udp::endpoint local_udp_end,
             boost::asio::ip::tcp::endpoint local_tcp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
             boost::asio::ip::udp::endpoint remote_udp_end,
             boost::asio::ip::tcp::endpoint remote_tcp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
@@ -168,7 +181,7 @@ class TransportLayerMachine {
          * @todo give a more descriptive name like `set_commands`
          * @param new_commands new `CommandDeck` to use when parsing uplinked command messages.
          */
-        void add_commands(CommandDeck& new_commands);
+        void add_commands(std::shared_ptr<CommandDeck> new_commands);
         /**
          * @brief replaces `TransportLayerMachine::ring_buffers` with a new interface map.
          * @todo give a more descriptive name like `set_ring_buffer_interface`
@@ -242,8 +255,23 @@ class TransportLayerMachine {
 
         // implemented.
         void sync_tcp_send_buffer_commands_to_system(SystemManager& sys_man);
-        // implemented.
+
+        std::vector<uint8_t> sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
+        void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);
+
+        // implemented. todo: try splitting into a "receiving" and "enqueuing" part that bind to each other.
         void async_udp_receive_to_uplink_buffer();
+        
+        void async_udp_send_downlink_buffer();
+        bool sync_udp_send_all_downlink_buffer();
+
+        // implemented. todo: change arg to `SystemManager`
+        std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+        std::vector<uint8_t> sync_tcp_command_transaction(std::vector<uint8_t> data_to_send);
+
+        void async_udp_receive_push_to_uplink_buffer(const boost::system::error_code& err, std::size_t byte_count);
+
+        void await_loop_begin();
 
         /**
          * @brief Extract the data field from a SpaceWire reply sent by `sys`.
@@ -271,6 +299,9 @@ class TransportLayerMachine {
          * @return false if the command is generic.
          */
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
+
+    private:
+        std::vector<uint8_t> uplink_swap;
 
 };
 

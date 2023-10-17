@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     bool tcpb = 0;
     bool udpb = 0;
 
-    CommandDeck deck = lif.get_command_deck();
+    auto deck = std::make_shared<CommandDeck>(lif.get_command_deck());
 
     uint8_t gse_hex = 0x00;
     uint8_t spmu_hex = 0x08;
@@ -37,22 +37,22 @@ int main(int argc, char* argv[]) {
 
     local_udp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
     // local_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
-    local_udp_endpoint.port(deck.get_sys_for_code(gse_hex).ethernet->port);
+    local_udp_endpoint.port(deck->get_sys_for_code(gse_hex).ethernet->port);
     local_tcp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
     // local_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
-    local_tcp_endpoint.port(deck.get_sys_for_code(spmu_hex).ethernet->port);
+    local_tcp_endpoint.port(deck->get_sys_for_code(spmu_hex).ethernet->port);
     // remote_udp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[gse_hex]->address));
-    remote_udp_endpoint.address(boost::asio::ip::make_address(deck.get_sys_for_code(gse_hex).ethernet->address));
+    remote_udp_endpoint.address(boost::asio::ip::make_address(deck->get_sys_for_code(gse_hex).ethernet->address));
     // remote_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
-    remote_udp_endpoint.port(deck.get_sys_for_code(gse_hex).ethernet->port);
+    remote_udp_endpoint.port(deck->get_sys_for_code(gse_hex).ethernet->port);
     // remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[spmu_hex]->address));
-    remote_udp_endpoint.address(boost::asio::ip::make_address(deck.get_sys_for_code(spmu_hex).ethernet->address));
+    remote_udp_endpoint.address(boost::asio::ip::make_address(deck->get_sys_for_code(spmu_hex).ethernet->address));
     // remote_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
-    remote_udp_endpoint.port(deck.get_sys_for_code(spmu_hex).ethernet->port);
+    remote_udp_endpoint.port(deck->get_sys_for_code(spmu_hex).ethernet->port);
 
     
 
-    deck.print();
+    deck->print();
 
     // todo: add these to foxsi4-commands/systems.json for the GSE Ethernet interfaces (take minimum of all options):
     size_t frag_header_size = 6;

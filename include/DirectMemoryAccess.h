@@ -2,6 +2,7 @@
 #define DIRECTMEMORYACCESS_H
 
 #include <cstdlib>
+#include <stdint.h>
 
 class RingBufferParameters {
     public:

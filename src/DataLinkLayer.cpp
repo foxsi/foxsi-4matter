@@ -1,4 +1,5 @@
 #include "DataLinkLayer.h"
+#include "Utilities.h"
 #include <algorithm>
 #include <iostream>
 
@@ -308,6 +309,7 @@ uint8_t SpaceWire::crc(std::vector<uint8_t> data)
         }
         return result;
     } else {
+        utilities::error_print("got bad SpaceWire CRC version!: " + std::to_string(crc_version) + "\n");
         // todo: throw
     }
 }

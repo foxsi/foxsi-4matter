@@ -81,7 +81,6 @@ System::System(std::string new_name, uint8_t new_hex, Ethernet* new_ethernet):
 // }
 
 System &System::operator=(const System &other) {
-    // TODO: insert return statement here
     name = other.name;
     hex = other.hex;
     type = other.type;

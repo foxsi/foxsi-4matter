@@ -158,7 +158,9 @@ namespace utilities{
     }
 
     void hex_print(uint8_t data) {
-        std::cout << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int)(data & 0xff);
+        if(DEBUG) {
+            std::cout << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int)(data & 0xff);
+        }
     }
 
     std::vector<uint8_t> string_to_chars(std::string hex_str) {
@@ -207,6 +209,10 @@ namespace utilities{
 
     uint32_t unsplat_from_4bytes(std::vector<uint8_t> data) {
         uint32_t result = 0;
+        if (data.size() < 4) {
+            error_print("data too short to unsplat 4 bytes!\n");
+            return 0;
+        }
         for(int i=0; i < 4; ++i) {
             result |= (data[i] << (3-i)*8);
         }

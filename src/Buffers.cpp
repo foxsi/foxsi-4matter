@@ -49,6 +49,16 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     payload.resize(0);
 }
 
+DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElement &other) {
+    max_packet_size = other.max_packet_size;
+    payload = other.payload;
+    system = other.system;
+    packets_per_frame = other.packets_per_frame;
+    this_packet_index = other.this_packet_index;
+
+    return *this;
+}
+
 DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other) : system(other.system)
 {
     max_packet_size = other.max_packet_size;
@@ -70,7 +80,10 @@ void DownlinkBufferElement::set_payload(std::vector<uint8_t> new_payload) {
     if(check_payload_fits(new_payload)) {
         payload = new_payload;
     } else {
-        std::cout << "DownlinkBufferElement payload doesn't fit!\n";
+        utilities::error_print("DownlinkBufferElement payload "); 
+        utilities::hex_print(new_payload);
+        utilities::error_print(" doesn't fit in " + std::to_string(get_max_packet_size()) + "-sized packet!\n");
+        // std::cout << "DownlinkBufferElement payload doesn't fit!\n";
         // todo: raise except
     }
     
@@ -83,7 +96,9 @@ void DownlinkBufferElement::set_packets_per_frame(uint16_t new_packets_per_frame
 void DownlinkBufferElement::set_this_packet_index(uint16_t new_this_packet_index) {
     if(new_this_packet_index > packets_per_frame) {
         // todo: raise except
-        std::cout << "future exception in DownlinkBufferElement::set_this_packet_index\n";
+        utilities::error_print("future exception in DownlinkBufferElement::set_this_packet_index for desired index " + std::to_string(new_this_packet_index) + ". State: ");
+        utilities::error_print(to_string() + "\n");
+
     }
     this_packet_index = new_this_packet_index;
 }
@@ -461,11 +476,13 @@ std::vector<uint8_t> FramePacketizer::pop_payload() {
 
 DownlinkBufferElement FramePacketizer::pop_buffer_element() {
     DownlinkBufferElement dbel(&system, max_packet_size);
-    std::vector<uint8_t> header = FramePacketizer::get_header();
-    std::vector<uint8_t> payload = FramePacketizer::pop_payload();
+    std::vector<uint8_t> header = get_header();
+    std::vector<uint8_t> payload = pop_payload();
 
     dbel.set_packets_per_frame(packets_per_frame);
     dbel.set_this_packet_index(packets_per_frame - packets_remaining_in_frame);
+
+    utilities::debug_print("\t\tFramePacketizer::packets_remaining_in_frame: " + std::to_string(packets_remaining_in_frame) + "\n");
     dbel.set_payload(payload);
     return dbel;
 }
@@ -473,6 +490,7 @@ DownlinkBufferElement FramePacketizer::pop_buffer_element() {
 void FramePacketizer::set_frame(std::vector<uint8_t> new_frame) {
     frame.resize(new_frame.size());
     frame = new_frame;
+    packets_remaining_in_frame = packets_per_frame;
 }
 
 void FramePacketizer::clear_frame() {
@@ -585,5 +603,11 @@ PacketFramer* SystemManager::get_packet_framer(RING_BUFFER_TYPE_OPTIONS type) {
 }
 
 FramePacketizer* SystemManager::get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS type) {
-    // TODO: insert return statement here
+    auto it = lookup_frame_packetizer.find(type);
+    if (it != lookup_frame_packetizer.end()) {
+        return it->second;
+    } else {
+        utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
+        throw std::runtime_error("no key in map");
+    }
 }
