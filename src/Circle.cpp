@@ -76,6 +76,7 @@ void Circle::init_housekeeping() {
     // sleep to give LTC2983s time to set up:
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
+    // start conversion
     transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x04));
     transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x05));
 }
@@ -84,36 +85,38 @@ void Circle::init_cdte() {
     System& cdtede = deck->get_sys_for_name("cdtede");
     System& cdte1 = deck->get_sys_for_name("cdte1");
 
+    auto delay = std::chrono::milliseconds(1000);
+
     // DE init                          0x08 0x09
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x09));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // DE standby                       0x08 0x0a
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x0a));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
     
     // DE observe                       0x08 0x0b
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x0b));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // Canister 1 start                 0x09 0x11
     transport->sync_tcp_send_command_for_sys(cdte1, deck->get_command_for_sys_for_code(cdte1.hex, 0x11));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // Apply HV 0V for all canister     0x0 0x13
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // Start observe for all canister   0x08 0x11
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x11));
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // Check canister ping status       0x08 0x8a
     std::vector<uint8_t> can_status = transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x8a));
     can_status = transport->get_reply_data(can_status, cdtede.hex);
     utilities::debug_print("canisters status: ");
     utilities::hex_print(can_status);
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(delay);
 
     // later, will need to end observe and lower bias for all.
 }
@@ -144,15 +147,18 @@ void Circle::manage_systems() {
 
         transport->sync_tcp_send_buffer_commands_to_system(*system_order[2]);
 
+        transport->sync_tcp_housekeeping_send({0x01, 0xf0});
+        transport->sync_tcp_housekeeping_send({0x02, 0xf0});
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
         // todo: no more magic numbers.
 
         std::vector<uint8_t> reply1 = transport->sync_tcp_housekeeping_transaction({0x01, 0xf2});
         std::vector<uint8_t> reply1_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
-        transport->sync_tcp_housekeeping_send({0x01, 0xf0});
+        
         
         std::vector<uint8_t> reply2 = transport->sync_tcp_housekeeping_transaction({0x02, 0xf2});
         std::vector<uint8_t> reply2_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
-        transport->sync_tcp_housekeeping_send({0x02, 0xf0});
 
         std::vector<uint8_t> head1 = {0x01, 0x00};
         std::vector<uint8_t> head2 = {0x02, 0x00};

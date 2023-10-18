@@ -156,14 +156,14 @@ int main(int argc, char** argv) {
 
     std::cout << "loop: \n";
     Circle loop(
-        4.0,
+        2.0,
         order,
         deck,
         machine,
         context
     );
 
-    loop.slowmo_gain = 5;
+    loop.slowmo_gain = 1;
 
     std::cout << "async udp listen: \n";
 
