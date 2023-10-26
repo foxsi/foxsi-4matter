@@ -24,3 +24,5 @@ doc/*
 # examples/CLI/config.ini
 
 /doc/*
+
+/log/*
