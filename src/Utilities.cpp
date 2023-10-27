@@ -2,6 +2,12 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <chrono>
+#include <ctime>
+// #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/fmt/bin_to_hex.h>
+// #include <spdlog/async.h>
 
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order) {
     // order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_ORDER::SUBSYSTEM_COUNT);
@@ -69,7 +75,8 @@ namespace config::spw{
             0xa8, 0x39, 0x4b, 0xda, 0xaf, 0x3e, 0x4c, 0xdd,
             0xa6, 0x37, 0x45, 0xd4, 0xa1, 0x30, 0x42, 0xd3,
             0xb4, 0x25, 0x57, 0xc6, 0xb3, 0x22, 0x50, 0xc1,
-            0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf};
+            0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf
+        };
 
         char crc = 0x00;
         size_t length=data.size();
@@ -115,7 +122,8 @@ namespace config::spw{
             0xa8, 0x39, 0x4b, 0xda, 0xaf, 0x3e, 0x4c, 0xdd,
             0xa6, 0x37, 0x45, 0xd4, 0xa1, 0x30, 0x42, 0xd3,
             0xb4, 0x25, 0x57, 0xc6, 0xb3, 0x22, 0x50, 0xc1,
-            0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf};
+            0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf
+        };
 
         uint8_t crc = 0x00;
         size_t length=data.size();
@@ -127,9 +135,39 @@ namespace config::spw{
 }
 
 namespace utilities{
-    int inc_mod(int i, int n) {
-        return i = (i + 1 == n ? 0: i + 1);
+
+    // add spdlog setup files function here (filename with "log-today-time.log")
+    // add spdlog write function (error, debug, info) here
+    
+    std::shared_ptr<spdlog::logger> logger;
+
+    void setup_logs_nowtime(std::string prefix) {
+        char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        auto start_time = std::time({});
+
+        std::strftime(std::data(time_fmt), std::size(time_fmt), "auto_%F_%T", std::gmtime(&start_time));
+        std::string file_name = prefix + std::string(time_fmt);
+        std::string extension = ".log";
+        debug_print("log file: " + file_name + extension + "\n");
+        
+        auto logger_temp = spdlog::basic_logger_mt<spdlog::async_factory>(file_name, file_name + extension);
+        logger = spdlog::get(file_name);
     }
+
+    void debug_log(std::string msg) {
+        // maybe prepend timestamp?
+        utilities::logger->info(msg);
+    }
+    void error_log(std::string msg) {
+        utilities::logger->error(msg);
+    }
+    void debug_log(std::vector<uint8_t> data) {
+        utilities::logger->info("test {:spn}", spdlog::to_hex(data));
+    }
+    void error_log(std::vector<uint8_t> data) {
+        utilities::logger->error("test {:spn}", spdlog::to_hex(data));
+    }
+
 
     void debug_print(std::string msg) {
         if(DEBUG) {
@@ -161,6 +199,10 @@ namespace utilities{
         if(DEBUG) {
             std::cout << "0x" << std::setw(2) << std::setfill('0') << std::hex << (int)(data & 0xff);
         }
+    }
+
+    int inc_mod(int i, int n) {
+        return i = (i + 1 == n ? 0: i + 1);
     }
 
     std::vector<uint8_t> string_to_chars(std::string hex_str) {

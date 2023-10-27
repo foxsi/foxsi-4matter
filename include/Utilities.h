@@ -1,8 +1,14 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#pragma once
+
 #include "Parameters.h"
 #include <vector>
+#include <memory>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/async.h>
 
 // deprecate these later if they are not used
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order);
@@ -17,14 +23,26 @@ namespace config::spw{
 }
 
 namespace utilities{
-    // increment i mod n (loop through enum?)
-    int inc_mod(int i, int n);
+
+    // std::shared_ptr<spdlog::logger> debug_logger;
+    // possibly group here
+    void setup_logs_nowtime(std::string prefix);
+
+    void debug_log(std::string msg);
+    void error_log(std::string msg);
+    void debug_log(std::vector<uint8_t> data);
+    void error_log(std::vector<uint8_t> data);
 
     void debug_print(std::string msg);
     void error_print(std::string msg);
     void hex_print(std::vector<uint8_t>& data);
     void hex_print(std::vector<char>& data);
     void hex_print(uint8_t data);
+    // through here in a new namespace `log`
+
+
+    // increment i mod n (loop through enum?)
+    int inc_mod(int i, int n);
 
     std::vector<uint8_t> string_to_chars(std::string hex_str);
     uint8_t string_to_byte(std::string hex_str);

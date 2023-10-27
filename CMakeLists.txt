@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
+set(spdlog_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/spdlog)
 
 # enable_testing()
 
@@ -194,6 +195,7 @@ if(Boost_FOUND)
     target_link_libraries(libcom PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libsubsys PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libutil PUBLIC Boost::filesystem Boost::program_options)
+    # target_link_libraries(libutil PRIVATE spdlog::spdlog_header_only)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
@@ -208,4 +210,10 @@ if(Boost_FOUND)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
+
+message(STATUS "adding log folder...")
+execute_process(
+    COMMAND bash -c "mkdir ../log"
+    OUTPUT_VARIABLE outvar
+)
 
