@@ -18,8 +18,6 @@ int main(int argc, char** argv) {
 
     utilities::debug_log("main check debug log");
     utilities::error_log("main check error log");
-    utilities::debug_log(std::vector<uint8_t>({0x01, 0x03, 0x01, 0xfe, 0xbc}));
-    utilities::error_log(std::vector<uint8_t>({0xef}));
 
     boost::asio::io_context context;
     LineInterface lif(argc, argv, context);

@@ -211,7 +211,7 @@ elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
 
-message(STATUS "adding log folder...")
+message(STATUS "Adding log/ folder")
 execute_process(
     COMMAND bash -c "mkdir ../log"
     OUTPUT_VARIABLE outvar

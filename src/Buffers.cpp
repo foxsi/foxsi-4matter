@@ -283,6 +283,10 @@ void PacketFramer::clear_frame() {
 }
 
 void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
+    if (frame_done || frame.size() == frame_size) {
+        utilities::error_print("adding packet to full FramePacketizer::frame! refusing.\n");
+        return;
+    }
 
     if (frame.size() > 0) { // frame already has data in it
         size_t heads_and_feet_size = static_strip_footer_size 
@@ -291,8 +295,20 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + subsequent_strip_header_size;
         
         if (frame.size() + new_packet.size() - heads_and_feet_size > frame_size) {
-            std::cout << "future exception in PacketFramer::push_to_frame()\n";
-            std::cout << "\tgot packet of size " << std::to_string(new_packet.size()) << " for frame of size " << std::to_string(frame_size) << " with real size " << std::to_string(frame.size()) << "\n";
+            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
+            // std::cout << "\tgot packet of size " << std::to_string(new_packet.size()) << " for frame of size " << std::to_string(frame_size) << " with real size " << std::to_string(frame.size()) << "\n";
+
+            utilities::error_print("\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ". shrinking. \n");
+
+            new_packet.erase(new_packet.begin(), new_packet.begin() + static_strip_header_size);
+            new_packet.erase(new_packet.begin(), new_packet.begin() + subsequent_strip_header_size);
+
+            new_packet.erase(new_packet.end() - static_strip_footer_size, new_packet.end());
+            new_packet.erase(new_packet.end() - subsequent_strip_footer_size, new_packet.end());
+
+            new_packet.resize(frame_size - frame.size());
+            
+            frame_done = true;
         } else if (frame.size() + new_packet.size() - heads_and_feet_size == frame_size) {
             // erase static and subsequent headers and footers
             new_packet.erase(new_packet.begin(), new_packet.begin() + static_strip_header_size);

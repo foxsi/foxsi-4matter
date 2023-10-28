@@ -15,7 +15,7 @@
 */
 int main(int argc, char** argv) {
 
-    auto delay = std::chrono::milliseconds(500);
+    auto delay = std::chrono::milliseconds(2000);
 
     boost::asio::io_context context;
 
@@ -81,6 +81,10 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(delay);
 
     std::cout << "closing sockets...\n";
+    machine.local_tcp_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+    machine.local_udp_sock.shutdown(boost::asio::ip::udp::socket::shutdown_both);
+    machine.local_tcp_housekeeping_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+    
     machine.local_tcp_sock.close();
     machine.local_udp_sock.close();
     machine.local_tcp_housekeeping_sock.close();
