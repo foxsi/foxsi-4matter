@@ -1,6 +1,7 @@
 #include "DataLinkLayer.h"
 #include "Utilities.h"
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
 
 DataLinkLayer::DataLinkLayer() {
@@ -310,7 +311,85 @@ uint8_t SpaceWire::crc(std::vector<uint8_t> data)
         return result;
     } else {
         utilities::error_print("got bad SpaceWire CRC version!: " + std::to_string(crc_version) + "\n");
+        return 0x00;
         // todo: throw
+    }
+}
+
+namespace utilities {
+    void spw_print(std::vector<uint8_t> data, SpaceWire* spw) {
+        // assumes a 12-B Ethernet header (SPMU-001) is prepended
+        if (data[0] != 0x00) {
+            error_print("got malformed SpaceWire Ethernet header!\n");
+            hex_print(data);
+            return;
+        }
+        
+        size_t payload_size;
+        size_t target_path_size = 0;
+        size_t reply_path_size = 0;
+        size_t less_target_path_size = data.size() - target_path_size;
+        if (less_target_path_size < 26) {
+            error_print("SpaceWire message is impossibly short!\n");
+            hex_print(data);
+            return;
+        }
+
+        std::vector<size_t> block_sizes;
+        std::vector<char> block_cols;
+        
+        bool reply =  false;
+        if (!spw) {
+            reply = true;
+            payload_size = data.size() - 12 - 12 - 1;
+            block_sizes = {12, 1,1,1,1, 1,2,1,3,1, payload_size, 1};
+            block_cols = {'n', 'r','y','n','n', 'r','n','n','n','n', 'b', 'n'};
+        } else {
+            target_path_size = spw->target_path_address.size();
+            reply_path_size = spw->reply_path_address.size();
+            less_target_path_size = data.size() - target_path_size;
+
+            size_t instr_index = 11 + target_path_size + 3;
+            if ((data[instr_index] & 0x20) != 0) {
+                // write
+                payload_size = data.size() - 12 - target_path_size - 4 - reply_path_size - 12 - 1;
+                block_sizes = {12, target_path_size, 1,1,1,1, reply_path_size, 1,2,1,4,3,1, payload_size, 1};
+                block_cols = {'n', 'b', 'r','y','n','n', 'b', 'r','n','n','n','n','n', 'b', 'n'};
+            } else {
+                // read
+                payload_size = 0;
+                block_sizes = {12, target_path_size, 1,1,1,1, reply_path_size, 1,2,1,4,3,1};
+                block_cols = {'n', 'b', 'r','y','n','n', 'b', 'r','n','n','n','n','n'};
+            }
+        }
+
+        size_t k = 0;
+        for (size_t i = 0; i < block_sizes.size(); ++i) {
+            for (size_t j = 0; j < block_sizes[i]; ++j) {
+
+                switch (block_cols[i]) {
+                    case 'n':
+                        std::cout << "\033[0m";
+                        break;
+                    case 'y':
+                        std::cout << "\033[37;43m";
+                        break;
+                    case 'r':
+                        std::cout << "\033[37;41m";
+                        break;
+                    case 'b':
+                        std::cout << "\033[37;44m";
+                        break;
+                    default:
+                        error_print("spw_print() got unknown color code!\n");
+                        return;
+                }
+                std::cout << std::setw(2) << std::setfill('0') << std::hex << (int)(data[k] & 0xff) << "\033[0m";
+                ++k;
+            }
+            std::cout << " ";
+        }
+        std::cout << "\033[0m\n";
     }
 }
 
