@@ -162,10 +162,10 @@ namespace utilities{
         utilities::logger->error(msg);
     }
     void debug_log(std::vector<uint8_t> data) {
-        utilities::logger->info("test {:spn}", spdlog::to_hex(data));
+        utilities::logger->info("{:spn}", spdlog::to_hex(data));
     }
     void error_log(std::vector<uint8_t> data) {
-        utilities::logger->error("test {:spn}", spdlog::to_hex(data));
+        utilities::logger->error("{:spn}", spdlog::to_hex(data));
     }
 
 
