@@ -4,7 +4,7 @@ housekeeping_filename = "util/log/housekeeping.log";
 housekeeping_file = open(housekeeping_filename, "wb+");
 
 cdte_filename = "util/log/cdte.log";
-cdte_file = open(cdte_filename, "wb+");
+cdte_file = open(cdte_filename, "wb");
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -33,7 +33,9 @@ def reframe(data, queue, queued):
 		# queue.extend(data[8:])
 		this_index = (ipacket - 1)*payload_len
 		distance = len(data[8:])
+		print("packet end: " + str(data[-1]) + " distance: " + str(distance) + " index: " + str(this_index))
 		queue[this_index:(this_index + distance)] = data[8:]
+		# print("queue end of packet: " + str(queue[this_index+distance - 1]))
 		queued[ipacket - 1] = 1
 
 		if all(item == 1 for item in queued):
