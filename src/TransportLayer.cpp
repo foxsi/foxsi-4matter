@@ -543,6 +543,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         utilities::error_print("write pointer outside ring buffer for system!\n");
     }
 
+    auto frame_start_time = std::chrono::high_resolution_clock::now();
     size_t packet_counter = 0;
     while (!pf->check_frame_done()) {
         
@@ -553,36 +554,33 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         // make a new RMAP read command for that address:
         std::vector<uint8_t> buffer_read_command(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, sys_man.system.ethernet->max_payload_size));
         
+        // start RTT timer
+        auto rtt_start_time = std::chrono::high_resolution_clock::now();
         // send the read command:
         local_tcp_sock.send(boost::asio::buffer(buffer_read_command));
-        // utilities::debug_print("\t\tsent ring packet request: ");
-        // utilities::spw_print(buffer_read_command, sys_man.system.spacewire);
 
         // receive the command response:
         // want 1825 bytes back for CdTe 1
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
         // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
-        
-        // reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_buffer_reply));
 
         reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
 
-        // utilities::debug_print("\t\tgot ring packet reply: ");
         last_buffer_reply.resize(reply_len);
-        // utilities::spw_print(last_buffer_reply, nullptr);
-// debug
-        // std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        // log RTT timer
+        utilities::debug_log("rtt read time (ms): ");
+        utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - rtt_start_time).count()));
 
         // push that response onto the frame:
         pf->push_to_frame(last_buffer_reply);
         utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
 
         ++packet_counter;
-
-// debug
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    utilities::debug_log("frame read time (ms): ");
+    utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
+
 
     // hand the complete frame to the packetizer
     fp->set_frame(pf->get_frame());

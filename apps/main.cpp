@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
     std::vector<std::shared_ptr<SystemManager>> order;
     order.emplace_back(std::move(cdte1_manager));
     order.emplace_back(std::move(cdtede_manager));
+    order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(housekeeping_manager));
     // order.emplace_back(std::move(cmos1_manager));
 
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte2")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte3")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
-    (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
+    (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 

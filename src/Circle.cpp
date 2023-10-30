@@ -65,7 +65,7 @@ void Circle::init_systems() {
 
     init_cdte();
 
-    // init_cmos();
+    init_cmos();
 }
 
 void Circle::init_housekeeping() {
@@ -127,6 +127,37 @@ void Circle::init_cdte() {
 }
 void Circle::init_cmos() {
     utilities::debug_print("initializing cmos system\n");
+    System& cmos2 = deck->get_sys_for_name("cmos2");
+
+    auto delay = std::chrono::milliseconds(500);
+
+    // send start_cmos_init         0x0f 0x18
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x18));
+    std::this_thread::sleep_for(delay);
+	
+    // send start_cmos_training     0x0f 0x1f
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x1f));
+    std::this_thread::sleep_for(delay);
+	
+    // send set_cmos_params         0x0f 0x10
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x10));
+    std::this_thread::sleep_for(delay);
+	
+    // send start_cmos_exposure     0x0f 0x12
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x12));
+    std::this_thread::sleep_for(delay);
+
+    // Check cmos status       0x0f 0xa8
+    
+    // utilities::debug_print("checking cmos status...\n");
+    // std::vector<uint8_t> cmos_status = transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0xa8));
+    // cmos_status = transport->get_reply_data(cmos_status, cmos2.hex);
+    // utilities::debug_print("canisters status: ");
+    // utilities::hex_print(cmos_status);
+    // std::this_thread::sleep_for(delay);
+
+    // then can read ring buffer
+
 }
 void Circle::init_timepix() {
     utilities::debug_print("initializing timepix system\n");

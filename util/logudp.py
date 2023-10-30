@@ -16,11 +16,12 @@ sock.bind((local_addr, local_port))
 queue_len = 32780
 payload_len = 1992
 cdte_queue = bytearray(queue_len)
+cdte_queued = [0]*17
+cdte_queued_full = [1]*17
 
 done = False
 
-
-def reframe(data, queue):
+def reframe(data, queue, queued):
 	# [sys] [npackets MSB, packindex LSB] [packindex MSB, packindex LSB] [0x00 x 3] [payload]
 	
 	npackets = int.from_bytes(data[1:3], byteorder='big')
@@ -33,8 +34,9 @@ def reframe(data, queue):
 		this_index = (ipacket - 1)*payload_len
 		distance = len(data[8:])
 		queue[this_index:(this_index + distance)] = data[8:]
+		queued[ipacket - 1] = 1
 
-		if ipacket == 17:
+		if all(item == 1 for item in queued):
 			print("finished packet")
 			return True
 	else:
@@ -60,9 +62,10 @@ while True:
 			housekeeping_file.write(data[8:])
 		elif data[0] == 0x09:
 			# cdte1 system
-			done = reframe(data, cdte_queue)
+			done = reframe(data, cdte_queue, cdte_queued)
 			if try_write_cdte(cdte_queue, done):
 				cdte_queue = bytearray(32780)
+				cdte_queued = [0]*17
 				done = False
 			# cdte_file.write(data)
 			# cdte_file.write(b"\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a")
