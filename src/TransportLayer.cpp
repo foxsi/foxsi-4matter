@@ -568,6 +568,19 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
 
         last_buffer_reply.resize(reply_len);
+        if (reply_len != expected_size) {
+            utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+        }
+        
+// debug
+        // log raw data to prelogger
+        size_t remaining_size = std::min(32780 - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
+        
+        std::vector<uint8_t> trace_vec(last_buffer_reply.begin() + sys_man.system.spacewire->static_header_size, last_buffer_reply.end() - sys_man.system.spacewire->static_footer_size);
+        trace_vec.resize(remaining_size);
+        utilities::trace_prelog(trace_vec);
+// end debug
+
         // log RTT timer
         utilities::debug_log("rtt read time (ms): ");
         utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - rtt_start_time).count()));
@@ -581,14 +594,13 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     utilities::debug_log("frame read time (ms): ");
     utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
 
-
     // hand the complete frame to the packetizer
     fp->set_frame(pf->get_frame());
     utilities::debug_print("\tset frame packetizer frame\n");
     utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
     
     utilities::debug_log("PacketFramer::frame: ");
-    utilities::debug_log(pf->get_frame());
+    utilities::trace_log(pf->get_frame());
 
     // push the frame onto the downlink queue
     while (!fp->frame_emptied()) {

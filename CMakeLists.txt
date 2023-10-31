@@ -12,6 +12,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(NLOHMANNJSON_ROOT /usr/local/include)
 set(GOOGLETEST_ROOT /usr/local/include)
 set(spdlog_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/spdlog)
+add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 # enable_testing()
 

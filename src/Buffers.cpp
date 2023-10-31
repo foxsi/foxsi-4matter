@@ -280,6 +280,7 @@ PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type): s
 void PacketFramer::clear_frame() {
     frame.resize(0);
     frame_done = false;
+    packet_counter = 0;
 }
 
 void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
@@ -367,6 +368,7 @@ std::vector<uint8_t> PacketFramer::pop_from_frame(size_t block_size) {
         // todo: verify this is not off-by-one
         result[i] = frame[i + start_size - block_size - 1];
         frame.pop_back();
+        --packet_counter;
     }
 
     if (frame.size() == 0) {

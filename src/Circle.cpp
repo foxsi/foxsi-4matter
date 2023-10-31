@@ -118,6 +118,10 @@ void Circle::init_cdte() {
     // Apply HV 60V for all canister    0x08 0x14
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x14));
     std::this_thread::sleep_for(delay);
+
+    // Set full readout for all canister    0x08 0x19
+    transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x19));
+    std::this_thread::sleep_for(delay);
     
     // Start observe for all canister   0x08 0x11
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x11));
@@ -148,7 +152,7 @@ void Circle::init_cmos() {
     std::this_thread::sleep_for(delay);
 
     // Check cmos status       0x0f 0xa8
-    
+
     // utilities::debug_print("checking cmos status...\n");
     // std::vector<uint8_t> cmos_status = transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0xa8));
     // cmos_status = transport->get_reply_data(cmos_status, cmos2.hex);
@@ -175,6 +179,10 @@ void Circle::manage_systems() {
         transport->sync_tcp_send_buffer_commands_to_system(*(system_order[1]));
         transport->sync_remote_buffer_transaction(*system_order[0], RING_BUFFER_TYPE_OPTIONS::PC);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
+        // delay before reading again to avoid duplicate 
+        std::this_thread::sleep_for(std::chrono::milliseconds(8000));
+
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");

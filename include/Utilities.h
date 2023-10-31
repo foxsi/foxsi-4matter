@@ -29,8 +29,14 @@ namespace utilities{
     void setup_logs_nowtime(std::string prefix);
 
     void debug_log(std::string msg);
+    void info_log(std::string msg);
+    void trace_log(std::string msg);
+    void trace_prelog(std::string msg);
     void error_log(std::string msg);
     void debug_log(std::vector<uint8_t> data);
+    void info_log(std::vector<uint8_t> data);
+    void trace_log(std::vector<uint8_t> data);
+    void trace_prelog(std::vector<uint8_t> data);
     void error_log(std::vector<uint8_t> data);
 
     void debug_print(std::string msg);
