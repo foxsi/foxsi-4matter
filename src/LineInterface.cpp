@@ -30,7 +30,7 @@ std::string EndpointData::as_string() {
     return "("+protocol+")"+address+":"+std::to_string(port);
 }
 
-// TimeData::TimeData(double period_s) {
+// Timing::Timing(double period_s) {
 //     if(period_s > 0) {
 //         period_millis = period_s;
 //     } else {
@@ -38,31 +38,31 @@ std::string EndpointData::as_string() {
 //     } 
 // }
 
-TimeData::TimeData() {
-    period_millis = 0.0;
-    command_millis = 0.0;
-    request_millis = 0.0;
-    reply_millis = 0.0;
-    idle_millis = 0.0;
-}
+// Timing::Timing() {
+//     period_millis = 0.0;
+//     command_millis = 0.0;
+//     request_millis = 0.0;
+//     reply_millis = 0.0;
+//     idle_millis = 0.0;
+// }
 
-void TimeData::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
-    period_millis = (unsigned int)(total_allocation_seconds*1000);
-    command_millis = (unsigned int)(command_time_seconds*1000);
-    request_millis = (unsigned int)(request_time_seconds*1000);
-    reply_millis = (unsigned int)(reply_time_seconds*1000);
-    idle_millis = (unsigned int)(idle_time_seconds*1000);
+// void Timing::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
+//     period_millis = (uint32_t)(total_allocation_seconds*1000);
+//     command_millis = (uint32_t)(command_time_seconds*1000);
+//     request_millis = (uint32_t)(request_time_seconds*1000);
+//     reply_millis = (uint32_t)(reply_time_seconds*1000);
+//     idle_millis = (uint32_t)(idle_time_seconds*1000);
 
-    TimeData::resolve_times();
-}
+//     Timing::resolve_times();
+// }
 
-void TimeData::resolve_times() {
-    double sum = command_millis + request_millis + reply_millis + idle_millis;
-    command_millis = command_millis*period_millis/sum;
-    request_millis = request_millis*period_millis/sum;
-    reply_millis = reply_millis*period_millis/sum;
-    idle_millis = idle_millis*period_millis/sum;
-}
+// void Timing::resolve_times() {
+//     double sum = command_millis + request_millis + reply_millis + idle_millis;
+//     command_millis = command_millis*period_millis/sum;
+//     request_millis = request_millis*period_millis/sum;
+//     reply_millis = reply_millis*period_millis/sum;
+//     idle_millis = idle_millis*period_millis/sum;
+// }
 
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
     options.add_options()
@@ -95,6 +95,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     }
     if(vm.count("verbose")) {
         do_verbose = true;
+        DEBUG = true;
         verbose_print("verbose printing on");
     }
     
@@ -103,9 +104,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
     // convenience maps for lookups:
     std::unordered_map<uint8_t, System> lookup_system;
-    // std::unordered_map<uint8_t, EndpointData*> lookup_endpoint_data;
-    // std::unordered_map<uint8_t, TimeData*> lookup_timing;
-    // std::unordered_map<uint8_t, std::string> lookup_command_file;
 
     std::string config_filename;
     std::ifstream config_file;
@@ -121,18 +119,14 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         }
     }
     nlohmann::json system_configuration = nlohmann::json::parse(config_file);
-    /* Things to pull out:
-        - Systems: first-order in config_file
-        - CommandDeck
-        - Ethernet interfaces 
-    */
+
     verbose_print("finding systems...");
 
     for(auto& this_system: system_configuration.items()) {
         std::string this_name = this_system.value()["name"];
         std::string this_hex_str = this_system.value()["hex"];
         // convert hex code string to uint8_t type. Note: this strtol method accepts both 0x- prefixed and raw hex strings.
-        uint8_t this_hex = string_to_byte(this_hex_str);
+        uint8_t this_hex = utilities::string_to_byte(this_hex_str);
 
         verbose_print("adding new System:");
         verbose_print("\tname:    " + this_name);
@@ -140,7 +134,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
         System this_system_object = System(this_name, this_hex);
 
-        this_system_object.set_type(COMMAND_TYPE_OPTIONS::NONE);
+        this_system_object.type = COMMAND_TYPE_OPTIONS::NONE;
 
         bool has_ethernet = false;  // log if this system has ethernet interface
         bool has_spw = false;       // log if this system has spacewire interface
@@ -149,6 +143,31 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         bool is_local = false;      // log if this system defines the local Ethernet endpoint
         bool is_command = false;    // log if this system can be commanded (NOR local)
         std::string command_file_path;
+
+        // check if the system is commanded, and if so, the command type:
+        try {
+            auto& cmd = this_system.value()["command_type"];
+            if(!cmd.is_null()) {
+                is_command = true;
+
+                // auto& this_cmd_type = this_system.at("command_type").get<std::string>();
+                if (cmd == "ethernet") {
+                    this_system_object.type = COMMAND_TYPE_OPTIONS::ETHERNET;
+                } else if (cmd == "spacewire") {
+                    this_system_object.type = COMMAND_TYPE_OPTIONS::SPW;
+                } else if (cmd == "uart") {
+                    this_system_object.type = COMMAND_TYPE_OPTIONS::UART;
+                } else {
+                    utilities::error_print("failed to find System command type!\n");
+                }
+
+                std::string this_cmd_file = this_system.value()["commands"];
+                lookup_command_file.insert(std::make_pair(this_system_object, this_cmd_file));
+            
+            } else {
+                this_system_object.type = COMMAND_TYPE_OPTIONS::NONE;
+            }
+        } catch(std::exception& e) {}
 
         // check for Ethernet, UART, SPI interfaces:
         try {
@@ -159,65 +178,170 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
             std::string this_addr;
             unsigned short this_port;
+            unsigned short this_max_payload;
             std::string this_prot;
 
-            // all ethernet_interface s should have an address
+            // check this_system_object.type (to try to access command-related ethernet fields)
+
+            // all ethernet_interfaces should have an address
             this_addr = ethif.at("address").get<std::string>();
-            try {
-                // if the interface only has an address (no port/protocol), it is the local address
-                this_prot = ethif.at("protocol").get<std::string>();
-                this_port = ethif.at("port").get<unsigned short>();
-                EndpointData* ept = new EndpointData(this_addr, this_prot, this_port);
-                // store this endpoint data in the lookup table for systems
-                lookup_endpoints.insert(std::make_pair(this_hex, ept));
-                verbose_print("\tadded an endpoint: " + ept->as_string());
-            } catch(std::exception& e) {
-                is_local = true;
-                // store the local address in the object
-                local_address = this_addr;
+            if (this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+                try {
+                    Ethernet* eth = new Ethernet(
+                        this_addr,
+                        ethif.at("port").get<unsigned short>(),
+                        ethif.at("protocol").get<std::string>(),
+                        ethif.at("mean_speed_bps").get<uint32_t>(),
+                        ethif.at("max_payload_bytes").get<size_t>(),
+                        ethif.at("frame_size_bytes").get<size_t>(),
+                        ethif.at("static_header_size").get<size_t>(),
+                        ethif.at("static_footer_size").get<size_t>()
+                    );
+
+                    this_system_object.ethernet = eth;
+                    verbose_print("\tadded an endpoint: " + eth->to_string());
+
+                } catch(std::exception& e) {
+                    
+                }
+            } else {
+                try {
+                    Ethernet* eth =  new Ethernet(
+                        this_addr,
+                        ethif.at("port").get<unsigned short>(),
+                        ethif.at("protocol").get<std::string>(),
+                        0,
+                        ethif.at("max_payload_bytes").get<size_t>(),
+                        0,
+                        0,
+                        0
+                    );
+
+                    this_system_object.ethernet = eth;
+                    verbose_print("\tadded an endpoint: " + eth->to_string());
+                } catch(std::exception& e) {
+                    is_local = true;        // assume local address if only address provided
+                    // store the local address in the object
+                    local_address = this_addr;
+                    verbose_print("local endpoint: " + local_address);
+                }
             }
-            
-            // check if we can command it
-            try {
-                command_file_path = ethif.at("command_path").get<std::string>();
-                is_command = true;
+        } catch(std::exception& e) {
 
-                // an Ethernet-commandable system
-                lookup_command_file.insert(std::make_pair(this_hex, command_file_path));
-                
-                this_system_object.set_type(COMMAND_TYPE_OPTIONS::ETHERNET);
-                
-            } catch(std::exception& e) {}
+        }
 
-            // check for spacewire
-            try {
-                auto& spwif = this_system.value()["ethernet_interface"]["spacewire_interface"];
-                if(!spwif.is_null()) {
-                    has_spw = true;
-                    this_system_object.set_type(COMMAND_TYPE_OPTIONS::SPW);
+        // check for spacewire
+        try {
+            auto& spwif = this_system.value()["spacewire_interface"];
+            if(!spwif.is_null()) {
+                has_spw = true;
+                bool has_rbf = false;
+
+                if (this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
+                    SpaceWire* spw = new SpaceWire(
+                        spwif.at("target_path_address").get<std::vector<uint8_t>>(),
+                        spwif.at("reply_path_address").get<std::vector<uint8_t>>(),
+                        utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("key").get<std::string>()),
+                        // utilities::string_to_byte(spwif.at("crc_draft").get<std::string>()),
+                        static_cast<char>((spwif.at("crc_draft").get<std::string>())[0]),
+                        spwif.at("mean_speed_bps").get<uint32_t>(),
+                        spwif.at("max_payload_bytes").get<size_t>(),
+                        0, // todo: replace this with read into ring_buffer_interface dict
+                        spwif.at("static_header_size").get<size_t>(),
+                        spwif.at("static_footer_size").get<size_t>()
+                    );
+
+                    this_system_object.spacewire = spw;
+
+                    // try to get ring_buffer_interface.
+                    try{
+                        auto& rbif = spwif.at("ring_buffer_interface");
+                        try{
+                            auto& this_dma = rbif.at("pc");
+
+                            std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
+                            std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
+                            std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
+                            std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
+                            std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
+
+                            size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+                            uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+                            size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+                            uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+                            size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+
+                            RingBufferParameters* this_rbp = new RingBufferParameters(
+                                this_frame_size_bytes,
+                                this_start_address,
+                                this_frames_per_ring,
+                                this_write_pointer_address,
+                                this_write_pointer_width_bytes
+                            );
+
+                            this_system_object.ring_params.push_back(*this_rbp);
+
+                        } catch(std::exception& e) {}
+
+                        try{
+                            auto& this_dma = rbif.at("ql");
+
+                            std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
+                            std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
+                            std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
+                            std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
+                            std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
+
+                            size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+                            uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+                            size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+                            uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+                            size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+
+                            RingBufferParameters* this_rbp = new RingBufferParameters(
+                                this_frame_size_bytes,
+                                this_start_address,
+                                this_frames_per_ring,
+                                this_write_pointer_address,
+                                this_write_pointer_width_bytes
+                            );
+
+                            this_system_object.ring_params.push_back(*this_rbp);
+
+
+                        } catch(std::exception& e) {}
+                        
+                    } catch (std::exception& e) {}
+                    
+                } else {
+                    SpaceWire* spw = new SpaceWire(
+                        spwif.at("target_path_address").get<std::vector<uint8_t>>(),
+                        spwif.at("reply_path_address").get<std::vector<uint8_t>>(),
+                        utilities::string_to_byte(spwif.at("target_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("source_logical_address").get<std::string>()),
+                        utilities::string_to_byte(spwif.at("key").get<std::string>()),
+                        spwif.at("crc_draft").get<char>(),
+                        0,
+                        spwif.at("max_payload_bytes").get<size_t>(),
+                        0, // todo: replace this with read into ring_buffer_interface dict
+                        0,
+                        0
+                    );
+
+                    this_system_object.spacewire = spw;
                 }
 
-                // add the spacewire properties to the System
-                this_system_object.target_path_address = spwif.at("target_path_address").get<std::vector<uint8_t>>();
-                this_system_object.reply_path_address = spwif.at("reply_path_address").get<std::vector<uint8_t>>();
-                this_system_object.target_logical_address = string_to_byte(spwif.at("target_logical_address").get<std::string>());
-                this_system_object.source_logical_address = string_to_byte(spwif.at("source_logical_address").get<std::string>());
-                this_system_object.key = string_to_byte(spwif.at("key").get<std::string>());
-                this_system_object.crc_version = spwif.at("crc_draft").get<std::string>();
-                this_system_object.hardware_name = spwif.at("hardware").get<std::string>();
 
-                // add an entry for this System's commands file in the lookup table (to create Commands later)
-                lookup_command_file.insert(std::make_pair(this_hex, spwif.at("command_path").get<std::string>()));
-                is_command = true;
+                // System command file should be identified and mapped a ways up ^^^
+                // lookup_command_file.insert(std::make_pair(this_system_object, spwif.at("commands").get<std::string>()));
 
-            } catch(std::exception& e) {
-                // std::cout << "couldn't find a SpaceWire interface.\n";
             }
 
-            
-
         } catch(std::exception& e) {
-            // no ethif
+            utilities::debug_print("exception while adding spacewire interface\n");
+            // std::cout << "couldn't find a SpaceWire interface.\n";
         }
 
         // check for SPI interface:
@@ -228,12 +352,10 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             if(!spiif.is_null()) {
                 std::cout << "Warning: SPI interface NOT IMPLEMENTED" << "\n";
                 has_spi = true;
-                this_system_object.set_type(COMMAND_TYPE_OPTIONS::SPI);
             }
 
             // else, do stuff with SPI interface
-            lookup_command_file.insert(std::make_pair(this_hex, spiif.at("command_path").get<std::string>()));
-            is_command = true;
+            lookup_command_file.insert(std::make_pair(this_system_object, spiif.at("commands").get<std::string>()));
 
         } catch(std::exception& e) {}
 
@@ -242,51 +364,89 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             auto& uartif = this_system.value()["uart_interface"];
             if(!uartif.is_null()) {
                 has_uart = true;
-                this_system_object.set_type(COMMAND_TYPE_OPTIONS::UART);
-            }
-            this_system_object.baud_rate = uartif.at("baud_rate").get<unsigned long>();
-            this_system_object.parity_bits = uartif.at("parity_bits").get<unsigned short>();
-            this_system_object.data_bits = uartif.at("data_bits").get<unsigned short>();
-            this_system_object.stop_bits = uartif.at("stop_bits").get<unsigned short>();
 
-            lookup_command_file.insert(std::make_pair(this_hex, uartif.at("command_path").get<std::string>()));
+                if (this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
+                    UART* uart = new UART(
+                        uartif.at("baud_rate").get<uint32_t>(),
+                        uartif.at("parity_bits").get<uint8_t>(),
+                        uartif.at("stop_bits").get<uint8_t>(),
+                        uartif.at("data_bits").get<uint8_t>(),
+                        uartif.at("mean_speed_bps").get<uint32_t>(),
+                        uartif.at("max_payload_bytes").get<size_t>(),
+                        uartif.at("frame_size").get<size_t>(),
+                        uartif.at("static_header_size").get<size_t>(),
+                        uartif.at("static_footer_size").get<size_t>()
+                    );
+
+                    this_system_object.uart = uart;
+                } else {
+                    UART* uart = new UART(
+                        uartif.at("baud_rate").get<uint32_t>(),
+                        uartif.at("parity_bits").get<uint8_t>(),
+                        uartif.at("stop_bits").get<uint8_t>(),
+                        uartif.at("data_bits").get<uint8_t>(),
+                        0,
+                        uartif.at("max_payload_bytes").get<size_t>(),
+                        0,
+                        0,
+                        0
+                    );
+                }
+            }
 
         } catch(std::exception& e) {}
+            
+        // check if we can command it
+        // try {
+        //     command_file_path = ethif.at("command_path").get<std::string>();
+        //     is_command = true;
+
+        //     // an Ethernet-commandable system
+        //     lookup_command_file.insert(std::make_pair(this_system_object, command_file_path));
+            
+        //     this_system_object.type = COMMAND_TYPE_OPTIONS::ETHERNET;
+            
+        // } catch(std::exception& e) {}
+
+        
 
         // TODO:do sanity checks
-        debug_print("\tfound command type: \n");
-        if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
-                debug_print("\t\tUART\n");
-            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
-                debug_print("\t\tSPW\n");
-            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
-                debug_print("\t\tSPI\n");
-            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-                debug_print("\t\tETHERNET\n");
-            } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
-                debug_print("\t\tnone\n");
-            } else {
-                debug_print("\t\tDID NOT FIND TYPE\n");
-        }
+        // debug_print("\tfound command type: \n");
+        // if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
+        //         debug_print("\t\tUART\n");
+        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
+        //         debug_print("\t\tSPW\n");
+        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
+        //         debug_print("\t\tSPI\n");
+        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+        //         debug_print("\t\tETHERNET\n");
+        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
+        //         debug_print("\t\tnone\n");
+        //     } else {
+        //         debug_print("\t\tDID NOT FIND TYPE\n");
+        // }
 
         // now add more command-specific info to this_system_object
         if(is_command) {
             try {
-                auto& time_data = this_system.value()["time"];
-                TimeData* this_times = new TimeData();
+                auto& time_data = this_system.value()["timing"];
+                Timing* this_times = new Timing();
                 this_times->add_times_seconds(
-                    time_data.at("total_allocation").get<double>(),
-                    time_data.at("command").get<double>(),
-                    time_data.at("request").get<double>(),
-                    time_data.at("reply").get<double>(),
-                    time_data.at("idle").get<double>()
+                    time_data.at("total_allocation").get<double>()/1000.0,
+                    time_data.at("command").get<double>()/1000.0,
+                    time_data.at("request").get<double>()/1000.0,
+                    time_data.at("reply").get<double>()/1000.0,
+                    time_data.at("idle").get<double>()/1000.0
                 );
 
-                lookup_times.insert(std::make_pair(this_hex, this_times));
+                this_times->timeout_millis = time_data.at("receive_timeout_millis").get<double>();
+                this_times->intercommand_space_millis = time_data.at("intercommand_spacing_millis").get<double>();
+
+                lookup_timing.insert(std::make_pair(this_system_object, *this_times));
 
                 // do stuff with the time info
             } catch(std::exception& e) {
-                std::cout << "\texpect timing info to be provided for a commanded system. Discarding system named " << this_name << "\n";
+                std::cout << "\tno timing info provided for commanded system " << this_name << "\n";
 
                 // TODO: ACTUALLY REMOVE IT? OR JUST ADD EVERYTHING DOWN BELOW
             }
@@ -294,7 +454,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
         systems.push_back(this_system_object);
         lookup_system.insert(std::make_pair(this_hex, this_system_object));
-
     }
 
     // lookup_endpoints = lookup_endpoint_data;
@@ -305,143 +464,34 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     config_file.close();
 
     // build CommandDeck
-    command_deck = CommandDeck(systems,lookup_command_file);
-
-    // =============== OLD ============================================
-
-    // initialize missings map:
-    missings = {
-        {"gse", false},
-        {"evtm", false},
-        {"spmu", false},
-    };
-
-    EndpointData gse;
-    EndpointData evtm;
-    EndpointData spmu;
-
-    // define gse:
-    if(vm.count("gse.ip") && vm.count("gse.port") && vm.count("gse.protocol")) {
-        verbose_print("gse: connect over " + vm["gse.protocol"].as<std::string>()+ " to " + vm["gse.ip"].as<std::string>() + ":" + std::to_string(vm["gse.port"].as<unsigned short>()));
-
-        EndpointData thisendpoint(
-            vm["gse.ip"].as<std::string>(),
-            vm["gse.protocol"].as<std::string>(),
-            vm["gse.port"].as<unsigned short>()
-        );
-        gse = thisendpoint;
-        endpoints.insert({"gse", thisendpoint});
-    } else {
-        missings["gse"] = true;
-        verbose_print("didn't find gse in config");
-    }
-    // define evtm:
-    if(vm.count("evtm.ip") && vm.count("evtm.port") && vm.count("evtm.protocol")) {
-        verbose_print("evtm: connect over " + vm["evtm.protocol"].as<std::string>()+ " to " + vm["evtm.ip"].as<std::string>() + ":" + std::to_string(vm["evtm.port"].as<unsigned short>()));
-
-        EndpointData thisendpoint(
-            vm["evtm.ip"].as<std::string>(),
-            vm["evtm.protocol"].as<std::string>(),
-            vm["evtm.port"].as<unsigned short>()
-        );
-        evtm = thisendpoint;
-        endpoints.insert({"evtm", thisendpoint});
-    } else {
-        missings["evtm"] = true;
-        verbose_print("didn't find evtm in config");
-    }
-    // define spmu:
-    if(vm.count("spmu.ip") && vm.count("spmu.port") && vm.count("spmu.protocol")) {
-        verbose_print("spmu: connect over " + vm["spmu.protocol"].as<std::string>()+ " to " + vm["spmu.ip"].as<std::string>() + ":" + std::to_string(vm["spmu.port"].as<unsigned short>()));
-
-        EndpointData thisendpoint(
-            vm["spmu.ip"].as<std::string>(),
-            vm["spmu.protocol"].as<std::string>(),
-            vm["spmu.port"].as<unsigned short>()
-        );
-        spmu = thisendpoint;
-        endpoints.insert({"spmu", thisendpoint});
-    } else {
-        missings["spmu"] = true;
-        verbose_print("didn't find spmu in config");
-    }
-
-    if(vm.count("local.ip")) {
-        verbose_print("local ip: " + vm["local.ip"].as<std::string>());
-        local_address = vm["local.ip"].as<std::string>();
-    } else {
-        verbose_print("didn't find local ip");
-    }
-
-    TimeData times;
-
-    // get timing info
-    if(vm.count("period")) {
-        verbose_print("loop period: " + std::to_string(vm["period"].as<double>()));
-        // TimeData temp(vm["period"].as<double>());
-        TimeData temp;
-        times = temp;
-    }
-
-    // get system info (to use for commands)
-    bool found_systems = false;
-    std::unordered_map<std::string, bool> found_files;
-    std::unordered_map<std::string, std::string> named_paths;
-
-    if(vm.count("systems.codepath")) {
-        verbose_print("systems path: " + vm["systems.codepath"].as<std::string>());
-        found_systems = true;
-        named_paths.insert(std::make_pair("SYSTEMS", vm["systems.codepath"].as<std::string>()));
-    }
-    // get command info
-    found_files.insert(std::make_pair("cdte1.codepath", vm.count("cdte1.codepath")));
-    found_files.insert(std::make_pair("cdte2.codepath", vm.count("cdte2.codepath")));
-    found_files.insert(std::make_pair("cdte3.codepath", vm.count("cdte3.codepath")));
-    found_files.insert(std::make_pair("cdte4.codepath", vm.count("cdte4.codepath")));
-    found_files.insert(std::make_pair("cdtede.codepath", vm.count("cdtede.codepath")));
-    found_files.insert(std::make_pair("cmos1.codepath", vm.count("cmos1.codepath")));
-    found_files.insert(std::make_pair("cmos2.codepath", vm.count("cmos2.codepath")));
-    found_files.insert(std::make_pair("timepix.codepath", vm.count("timepix.codepath")));
-    found_files.insert(std::make_pair("housekeeping.codepath", vm.count("housekeeping.codepath")));
-
-    for(auto& [field_name, exists]: found_files) {
-        if(exists) {
-            // pull the all-caps system name out of CLI string
-            std::string reduced_name = field_name;
-            std::transform(reduced_name.begin(), reduced_name.end(), reduced_name.begin(), ::toupper);
-            size_t pos = reduced_name.find(".");
-            reduced_name.erase(pos,reduced_name.size());
-
-            // for each found system, try to make command deck with its file
-            named_paths.insert(std::pair(reduced_name, vm[field_name].as<std::string>()));
-        }
-    }
-    // command_deck = CommandDeck(named_paths);
+    command_deck = CommandDeck(systems, lookup_command_file);
 }
 
 void LineInterface::collapse_endpoints() {
-    for(auto& ept_map: lookup_endpoints) {
-        EndpointData* ept = ept_map.second;
-        if(unique_endpoints.size() > 0) {
-            bool is_uniq = true;
-            for(auto& uniq: unique_endpoints) {
-                if(*ept == uniq) {
-                    is_uniq = false;
+    for (auto& sys: systems) {
+        if (sys.ethernet) { // not all systems have an ethernet interface
+            if (unique_endpoints.size() > 0) {
+                bool is_uniq = true;
+                for(auto& uniq: unique_endpoints) {
+                    if(sys.ethernet->is_same_endpoint(*uniq)) {
+                        is_uniq = false;
+                    }
                 }
+                if(is_uniq) {
+                    unique_endpoints.push_back(sys.ethernet);
+                }
+            } else {
+                unique_endpoints.push_back(sys.ethernet);
             }
-            if(is_uniq) {
-                unique_endpoints.push_back(*ept);
-            }
-        } else {
-            unique_endpoints.push_back(*ept);
         }
     }
 }
 
 void LineInterface::build_local_endpoints() {
     for(auto& ept: unique_endpoints) {
-        EndpointData* local_ept = new EndpointData(local_address, ept.protocol, ept.port);
-        local_endpoints.push_back(*local_ept);
+        Ethernet* local_eth = new Ethernet(*ept);
+        local_eth->address = local_address;
+        local_endpoints.push_back(local_eth);
     }
 }
 

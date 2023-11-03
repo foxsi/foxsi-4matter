@@ -13,41 +13,55 @@ static const unsigned short         PATCH_VERSION   = 2;
 // Debugging
 static bool DEBUG = true;
 
-// Timing
-// DON'T CHANGE THIS WITHOUT EXTENSIVE TESTING
-static const unsigned short         PERIOD          = 1;
+namespace config{
+    namespace timing{
+        // Timing
+        // DON'T CHANGE THIS WITHOUT EXTENSIVE TESTING
+        static const unsigned short         PERIOD          = 1;
+    }
 
-// SpaceWire
-static const unsigned short         SPACEWIRE_ADDRESS_LENGTH  = 4;
+    namespace spw{
+        // SpaceWire
+        static const unsigned short         SPACEWIRE_ADDRESS_LENGTH  = 4;
+    }
 
-// UART
-static const unsigned short         UART_ADDRESS_LENGTH = 4;
+    namespace uart{
+        // UART
+        static const unsigned short         UART_ADDRESS_LENGTH = 4;
+    }
 
-// SPI (forwarding to HK board)
-static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
-static const unsigned short         SPI_INSTRUCTION_LENGTH = 4;
+    namespace spi{
+        // SPI (forwarding to HK board)
+        static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
+        static const unsigned short         SPI_INSTRUCTION_LENGTH = 4;
+    }
 
-// IP addresses
-static std::string                  LOOPBACK_IP     = "127.0.0.1";
+    namespace ethernet{
+        // IP addresses
+        static std::string                  LOOPBACK_IP     = "127.0.0.1";
 
-static std::string                  LOCAL_IP        = "192.168.1.8";
-static const unsigned short         LOCAL_PORT      = 9999;
+        static std::string                  LOCAL_IP        = "192.168.1.8";
+        static const unsigned short         LOCAL_PORT      = 9999;
 
-static std::string                  GSE_IP          = "192.168.1.100";
-static const unsigned short         GSE_PORT        = 9999;
+        static std::string                  GSE_IP          = "192.168.1.100";
+        static const unsigned short         GSE_PORT        = 9999;
 
-static const std::string            TLM_IP          = "127.0.0.1";
-static const unsigned short         TLM_PORT        = 0;
+        static const std::string            TLM_IP          = "127.0.0.1";
+        static const unsigned short         TLM_PORT        = 0;
 
-static const std::string            SPMU_IP         = "127.0.0.1";
-static const unsigned short         SPMU_PORT       = 0;
+        static const std::string            SPMU_IP         = "127.0.0.1";
+        static const unsigned short         SPMU_PORT       = 0;
 
-static const std::string            PLENUM_IP       = "127.0.0.1";
-static const unsigned short         PLENUM_PORT     = 0;
+        static const std::string            PLENUM_IP       = "127.0.0.1";
+        static const unsigned short         PLENUM_PORT     = 0;
+    }
 
-// I/O
-static const unsigned long          RECV_BUFF_LEN   = 4096;
-static const unsigned long          SEND_BUFF_LEN   = 4096;
+    namespace buffer{
+        // I/O
+        static const unsigned long          RECV_BUFF_LEN   = 1024;
+        static const unsigned long          SEND_BUFF_LEN   = 1024;
+    }
+}
 
 enum class RING_READ_CMD: uint8_t {
     CDTE_1              = 0x8e,
@@ -72,14 +86,20 @@ enum class SUBSYSTEM_ORDER: unsigned short {
 };
 
 // loop order for states:
+// enum class STATE_ORDER: unsigned short {
+//     CMD_SEND            = 0x00,
+//     DATA_REQ            = 0x01,
+//     DATA_RECV           = 0x02,
+//     DATA_CHECK          = 0x03,
+//     DATA_STORE          = 0x04,
+//     IDLE                = 0x05,
+//     STATE_COUNT         = 0x06
+// };
 enum class STATE_ORDER: unsigned short {
     CMD_SEND            = 0x00,
-    DATA_REQ            = 0x01,
-    DATA_RECV           = 0x02,
-    DATA_CHECK          = 0x03,
-    DATA_STORE          = 0x04,
-    IDLE                = 0x05,
-    STATE_COUNT         = 0x06
+    DATA_RECV           = 0x01,
+    IDLE                = 0x02,
+    STATE_COUNT         = 0x03
 };
 
 enum class COMMAND_TYPE_OPTIONS: uint8_t {
@@ -90,10 +110,35 @@ enum class COMMAND_TYPE_OPTIONS: uint8_t {
     ETHERNET            = 0x05
 };
 
+enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
+    PC                  = 0x00,
+    QL                  = 0x01,
+    NONE                = 0xff
+};
+
 enum class SPACEWIRE_END_OPTIONS: uint8_t {
     EOP                 = 0x00,
     EEP                 = 0x01,
     JUMBO               = 0x02
+};
+
+enum class FLIGHT_STATE: uint8_t {
+    AWAIT               = 0x00,
+    PRELAUNCH           = 0x01,
+    LAUNCH              = 0x02,
+    SHUTTER             = 0x03,
+    END                 = 0x04,
+    INVALID             = 0xff
+};
+
+enum class SYSTEM_STATE: uint8_t {
+    OFF                 = 0x00,
+    AWAIT               = 0x01,
+    STARTUP             = 0x02,
+    INIT                = 0x03,
+    LOOP                = 0x04,
+    END                 = 0x05,
+    INVALID             = 0xff
 };
 
 #endif

@@ -1,5 +1,7 @@
-#include "Subsystem.h"
+#include "TransportLayer.h"
 #include "Ticker.h"
+#include "Systems.h"
+#include "Buffers.h"
 #include <iostream>
 #include <queue>
 #include <vector>
@@ -21,18 +23,20 @@ int main() {
     boost::asio::io_context context;
 
     // durations of each state (currently UNUSED)
-    std::map<STATE_ORDER, double> durations{
-        {STATE_ORDER::CMD_SEND, 1.0},
-        {STATE_ORDER::DATA_REQ, 1.0},
-        {STATE_ORDER::DATA_RECV, 1.0},
-        {STATE_ORDER::IDLE, 1.0}
-    };
+    // std::map<STATE_ORDER, double> durations{
+    //     {STATE_ORDER::CMD_SEND, 1.0},
+    //     {STATE_ORDER::DATA_REQ, 1.0},
+    //     {STATE_ORDER::DATA_RECV, 1.0},
+    //     {STATE_ORDER::IDLE, 1.0}
+    // };
 
     // currently UNUSED (not even sure what I wanted to do with this...)
     std::map<std::string, std::string> flags{
         {"flag0", "no"}
     };
 
+    auto temp_map = std::make_shared<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>>();
+    auto temp_dbuf = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
     TransportLayerMachine frmtr(
         local_ip,               // IP address of this computer
         ground_ip,              // IP of the remote TCP computer (to listen to)
@@ -40,6 +44,8 @@ int main() {
         local_ground_port,      // port number on this computer to listen for TCP on
         remote_ground_port,     // port number on the remote TCP computer
         remote_subsys_port,     // port number on the remote UDP computer (to send to)
+        temp_map,
+        temp_dbuf,
         context
     );
 

@@ -70,7 +70,7 @@ void Fragmenter::make_max_message_size() {
     }
     
     max_message_size = result;
-    std::cout << "max_message_size: " << max_message_size << "\n";
+    // std::cout << "max_message_size: " << max_message_size << "\n";
 }
 
 std::vector<std::vector<uint8_t>> Fragmenter::fragment(std::vector<uint8_t> message_to_fragment) {
@@ -87,7 +87,7 @@ std::vector<std::vector<uint8_t>> Fragmenter::fragment(std::vector<uint8_t> mess
         ++n_fragments;
     }
 
-    std::vector<uint8_t> head_packet_count = splat_to_nbytes(header_size/3, n_fragments);
+    std::vector<uint8_t> head_packet_count = utilities::splat_to_nbytes(header_size/3, n_fragments);
 
     // build list of fragments
     // prepend header to each fragment
@@ -99,8 +99,8 @@ std::vector<std::vector<uint8_t>> Fragmenter::fragment(std::vector<uint8_t> mess
         auto last = std::min(message_to_fragment.size(), i + fragment_size);
         
         std::vector<uint8_t> this_packet;
-        std::vector<uint8_t> head_idx = splat_to_nbytes(header_size/3, packet_count);
-        std::vector<uint8_t> head_byte_count = splat_to_nbytes(header_size/3, last - i);
+        std::vector<uint8_t> head_idx = utilities::splat_to_nbytes(header_size/3, packet_count);
+        std::vector<uint8_t> head_byte_count = utilities::splat_to_nbytes(header_size/3, last - i);
         this_packet.insert(this_packet.end(), head_byte_count.begin(), head_byte_count.end());
         this_packet.insert(this_packet.end(), head_packet_count.begin(), head_packet_count.end());
         this_packet.insert(this_packet.end(), head_idx.begin(), head_idx.end());

@@ -1,13 +1,18 @@
 #include "LineInterface.h"
-#include "Subsystem.h"
+#include "TransportLayer.h"
 #include "Fragmenter.h"
 #include "RingBufferInterface.h"
 #include "Metronome.h"
 #include "Commanding.h"
+#include "Systems.h"
+#include "Buffers.h"
 #include "Parameters.h"
 #include <boost/asio.hpp>
 #include <unordered_map>
 #include <iostream>
+#include <queue>
+#include <memory>
+#include "moodycamel/concurrentqueue.h"
 
 int main(int argc, char* argv[]) {
 
@@ -22,6 +27,8 @@ int main(int argc, char* argv[]) {
     bool tcpb = 0;
     bool udpb = 0;
 
+    auto deck = std::make_shared<CommandDeck>(lif.get_command_deck());
+
     uint8_t gse_hex = 0x00;
     uint8_t spmu_hex = 0x08;
 
@@ -29,17 +36,23 @@ int main(int argc, char* argv[]) {
     std::cout << "found " << lif.local_endpoints.size() << " local endpoints\n";
 
     local_udp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
-    local_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
+    // local_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
+    local_udp_endpoint.port(deck->get_sys_for_code(gse_hex).ethernet->port);
     local_tcp_endpoint.address(boost::asio::ip::make_address(lif.local_address));
-    local_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
-    remote_udp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[gse_hex]->address));
-    remote_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
-    remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[spmu_hex]->address));
-    remote_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
+    // local_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
+    local_tcp_endpoint.port(deck->get_sys_for_code(spmu_hex).ethernet->port);
+    // remote_udp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[gse_hex]->address));
+    remote_udp_endpoint.address(boost::asio::ip::make_address(deck->get_sys_for_code(gse_hex).ethernet->address));
+    // remote_udp_endpoint.port(lif.lookup_endpoints[gse_hex]->port);
+    remote_udp_endpoint.port(deck->get_sys_for_code(gse_hex).ethernet->port);
+    // remote_tcp_endpoint.address(boost::asio::ip::make_address(lif.lookup_endpoints[spmu_hex]->address));
+    remote_udp_endpoint.address(boost::asio::ip::make_address(deck->get_sys_for_code(spmu_hex).ethernet->address));
+    // remote_tcp_endpoint.port(lif.lookup_endpoints[spmu_hex]->port);
+    remote_udp_endpoint.port(deck->get_sys_for_code(spmu_hex).ethernet->port);
 
-    CommandDeck deck = lif.get_command_deck();
+    
 
-    deck.print();
+    deck->print();
 
     // todo: add these to foxsi4-commands/systems.json for the GSE Ethernet interfaces (take minimum of all options):
     size_t frag_header_size = 6;
@@ -80,11 +93,16 @@ int main(int argc, char* argv[]) {
 
     std::cout << "added ring buffer interface to map\n";
 
+    auto temp_map = std::make_shared<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>>();
+    auto temp_dbuf = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
+
     TransportLayerMachine frmtr(
         local_udp_endpoint,
         local_tcp_endpoint,
         remote_udp_endpoint,
         remote_tcp_endpoint,
+        temp_map,
+        temp_dbuf,
         context
     );
 
