@@ -25,14 +25,14 @@ int print_bl(int, uint8_t*);
 class UARTPort {
 	public:
         // open the default UART0/1 port
-		UARTPort(const char* port_file="/dev/ttyS0");
+		UARTPort(const char* port_file="/dev/ttyS0", uint32_t baud_rate=B9600, int vtime=10, int vmin=0, std::string parity="clear", int stop_bits=1, int bits_in_byte=CS8);
 
         //unsigned int baud_rate, unsigned short parity_bits, unsigned short data_bits, unsigned short stop_bits …
         struct termios tty; // create TERMIOS structure
         int fd;	// the thing you get back when you open() a port
         int serial2tty(); // send serial port attrs to the tty object
         int attrs2tty(); // set the changed attrs to the tty object
-        int setup(uint32_t baud_rate=B9600, int vtime=10, int vmin=0, std::string parity="clear", int stop_bits=1, int bits_in_byte=CS8);
+        int setup(uint32_t baud_rate, int vtime, int vmin, std::string parity, int stop_bits, int bits_in_byte);
 
         // methods to set port settings with select options
         int set_parity(std::string parity);

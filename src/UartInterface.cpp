@@ -41,11 +41,13 @@ int print_bl(int num_bytes, uint8_t* read_buf) {
 
 
 
-UARTPort::UARTPort(const char* port_file) {
+UARTPort::UARTPort(const char* port_file, uint32_t baud_rate, int vtime, int vmin, std::string parity, int stop_bits, int bits_in_byte){
     // open the UART port
     // UARTPort::fd = open("/dev/ttyS0", O_RDWR);
     // UARTPort::fd = open("/dev/ttyAMA1", O_RDWR);
     UARTPort::fd = open(port_file, O_RDWR);
+    // setp up the port settings
+    UARTPort::setup(baud_rate, vtime, vmin, parity, stop_bits, bits_in_byte);
 };
 
 int UARTPort::serial2tty(){

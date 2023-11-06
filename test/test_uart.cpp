@@ -12,9 +12,6 @@ int test0() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -40,9 +37,6 @@ int test1() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -71,9 +65,6 @@ int test2() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -102,9 +93,6 @@ int test3() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -133,9 +121,6 @@ int test4() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -169,9 +154,6 @@ int test5() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // define a vector to be used as a buffer 
     std::vector<uint8_t> buffer(BUFFER_MAX_SIZE);
@@ -205,9 +187,6 @@ int test6() {
 
     // create UART port object and message to send
     UARTPort uart;
-    
-    // set up the UART port
-    uart.setup();
 
     // define a vector to be used as a buffer 
     std::vector<uint8_t> buffer(BUFFER_MAX_SIZE);
@@ -248,8 +227,7 @@ int test7() {
     // create UART port object and message to send
     UARTPort uart;
     
-    // set up the UART port
-    uart.setup();
+    // change Baud rate after set-up
     uart.baudsettings(B57600);
 
     // send the frame information
@@ -297,9 +275,6 @@ int test8() {
 
     // create UART port object and message to send
     UARTPort uart("/dev/ttyAMA1");
-    
-    // set up the UART port
-    uart.setup();
 
     // send the frame information
     uart.send(FRAME0);
@@ -326,12 +301,6 @@ int test9() {
     // create UART port object and message to send
     UARTPort uart01;
     UARTPort uart3("/dev/ttyAMA1");
-    
-    // set up the UART port
-    uart01.setup();
-    // uart01.vsettings(5, FRAME0.size());
-    uart3.setup();
-    // uart3.vsettings(5, FRAME0.size());
 
     // send the frame information
     uart01.send(FRAME0);
