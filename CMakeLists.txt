@@ -24,6 +24,7 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DirectMemoryAccess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DataLinkLayer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LineInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/UartInterface.cpp
 )
 add_library(
     libsubsys 
@@ -118,6 +119,14 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "test_uart" using source files
+add_executable(test_uart ${CMAKE_CURRENT_SOURCE_DIR}/test/test_uart.cpp)
+target_include_directories(
+    test_uart
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # add_test(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp
 add_executable(test ${CMAKE_CURRENT_SOURCE_DIR}/test/test.cpp)
 target_include_directories(
@@ -143,6 +152,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(test_loop PRIVATE Threads::Threads)
     target_link_libraries(test_buffers PRIVATE Threads::Threads)
     target_link_libraries(test PRIVATE Threads::Threads)
+    target_link_libraries(test_uart PRIVATE Threads::Threads)
 
     target_include_directories(
         libcom
@@ -208,6 +218,7 @@ if(Boost_FOUND)
     target_link_libraries(test_loop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_buffers PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_uart PUBLIC Boost::filesystem libcom libsubsys libutil)
 elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()

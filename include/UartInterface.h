@@ -14,6 +14,14 @@
 #include <termios.h>
 #include <unistd.h> 
 
+// maximum buffer byte size for received message
+const int BUFFER_MAX_SIZE = 1000000; 
+
+// function to help print the bytes being sent/received
+int print_bl(int, std::vector<uint8_t>);
+int print_bl(int, uint8_t*);
+
+// UART class
 class UARTPort {
 	public:
         // open the default UART0/1 port
