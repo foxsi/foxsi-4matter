@@ -1,5 +1,8 @@
 #include <iostream>
 #include <memory>
+#include <thread>
+#include <chrono>
+
 #include "UartInterface.h"
 
 // some example messages
@@ -334,10 +337,91 @@ int test_collection_port(){
     return 0;
 }
 
+// for multithreading tests
+UARTPort send_msg(){
+    // create UART port object and message to send
+    UARTPort uart("/dev/ttyAMA1");
+
+    // send the frame information
+    uart.send(FRAME0);
+    return uart;
+};
+// for multithreading tests
+int receive_msg(UARTPort uart_port, std::vector<uint8_t> buffer){
+    printf("Pausing thread for 5 seconds.\n");
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000)); //make the thread wait for 5 seconds
+    printf("Continuing thread.\n");
+    // send buffer to the reading port method
+    uart_port.recv(buffer);
+
+    // make sure to close the port
+    uart_port.close_fd();
+    return 0;
+};
+// for multithreading tests
+int loop_loop_loop(){
+    for (int i = 0; i <= 12; i++) {
+        printf("Main thread process.\n");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); //make the thread wait for 0.5 seconds
+    };
+    return 0;
+}; 
+int test10() {
+    // send-receive 
+
+    // define a vector to be used as a buffer 
+    std::vector<uint8_t> buffer(BUFFER_MAX_SIZE);
+
+    // send the message
+    UARTPort uart = send_msg();
+    // spawn a thread to wait for the message to come in 
+    std::thread thread_obj(&receive_msg, uart, buffer);
+    thread_obj.join();
+    print_bl(BUFFER_MAX_SIZE, buffer);
+
+    // print new line
+    printf("Test10. Send a mesage and then spawn a thread to wait for the message and populate a buffer.\n");
+    printf("\n");
+
+    return 0;
+};
+
+int test11() {
+    // send-receive 
+    // define a vector to be used as a buffer 
+    std::vector<uint8_t> buffer(BUFFER_MAX_SIZE);
+
+    // send the message
+    UARTPort uart = send_msg();
+    // spawn a thread to wait for the message to come in 
+    std::thread thread_obj(&receive_msg, uart, buffer);
+    loop_loop_loop(); // make sure this executes while the thread is paused 
+    print_bl(BUFFER_MAX_SIZE, buffer);
+
+    // print new line
+    printf("Test11. Send a mesage and then spawn a thread to wait for the message and populate a buffer. Make sure non-blocking.\n");
+    printf("\n");
+
+    return 0;
+};
+
+int test_multithreading(){
+    // test a thread can be opened that is waiting to receive a message
+    test10();
+    // test a thread can be opened that is waiting to receive a message but making sure it isn't blocking the main thread
+    test11();
+
+    return 0;
+}
+
 
 int main() {
     // initial, simple tests to check default message sending
     test_collection_initial();
     // port tests
     test_collection_port();
+    // multithreading tests
+    test_multithreading();
+
+    return 0;
 };
