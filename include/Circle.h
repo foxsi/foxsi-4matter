@@ -28,8 +28,8 @@ class Circle {
             boost::asio::io_context& new_context
         );
 
-        void init();
         void pause();
+        void init();
 
         void update_state();
         

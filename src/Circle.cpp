@@ -103,7 +103,7 @@ void Circle::init_cdte() {
     transport->sync_tcp_send_command_for_sys(cdte1, deck->get_command_for_sys_for_code(cdte1.hex, 0x11));
     std::this_thread::sleep_for(delay);
 
-    // Apply HV 0V for all canister     0x0 0x13
+    // Apply HV 0V for all canister     0x08 0x13
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
     std::this_thread::sleep_for(delay);
 
