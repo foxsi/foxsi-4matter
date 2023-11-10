@@ -223,6 +223,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     is_local = true;        // assume local address if only address provided
                     // store the local address in the object
                     local_address = this_addr;
+                    verbose_print("local endpoint: " + local_address);
                 }
             }
         } catch(std::exception& e) {

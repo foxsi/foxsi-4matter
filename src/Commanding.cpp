@@ -42,26 +42,26 @@ void Command::set_spw_options(
     unsigned long new_spw_reply_length
 ) {
     if(type != COMMAND_TYPE_OPTIONS::SPW) {
-        std::cout << "\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command::type later\n";
+        utilities::debug_print("\tthis Command was not initialized as a SpaceWire command, but is being provided SpaceWire field data. May need to change Command::type later\n");
     }
     spw_instruction = new_spw_instruction;
 
     if(new_spw_address.size() > 0) {
         spw_address = new_spw_address;
     } else {
-        std::cerr << "input SpaceWire address field must have nonzero length\n";
+        utilities::debug_print("input SpaceWire address field must have nonzero length\n");
     }
 
     if(read) {
         if(new_spw_write_data.size() > 0) {
-            std::cerr << "this Command was initialized as a read-command, but has been given data to write\n";
+            utilities::debug_print("\tthis Command was initialized as a read-command, but has been given data to write\n");
         }
         if(new_spw_reply_length == 0) {
-           std::cerr << "this Command was initialized as a read-command, but expects a zero-length reply\n";
+           utilities::debug_print("\tthis Command was initialized as a read-command, but expects a zero-length reply\n");
         }
     } else {
         if(new_spw_write_data.size() == 0) {
-            std::cerr << "this Command was initialized as a write-command, but has been given no data to write\n";
+            utilities::debug_print("\tthis Command was initialized as a write-command, but has been given no data to write\n");
         }
     }
 
@@ -71,7 +71,7 @@ void Command::set_spw_options(
 
 void Command::set_eth_options(std::vector<uint8_t> new_eth_packet, size_t new_eth_reply_len) {
     if (type != COMMAND_TYPE_OPTIONS::ETHERNET) {
-        std::cout << "\tthis Command was not initialized as an Ethernet command, but is being provided Ethernet field data. May need to change Command::type later\n";
+        utilities::debug_print("\tthis Command was not initialized as an Ethernet command, but is being provided Ethernet field data. May need to change Command::type later\n");
     }
 
     eth_packet = new_eth_packet;
@@ -251,9 +251,9 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
 
         utilities::debug_print("\tadding commands for " + this_system.name + ", " + std::to_string(this_system.hex) + "...\n");
 
-        std::cout << "\n\nsystem type:";
-        utilities::hex_print((uint8_t)this_system.type);
-        std::cout << "\n";
+        // std::cout << "\n\nsystem type:";
+        // utilities::hex_print((uint8_t)this_system.type);
+        // std::cout << "\n";
         for(auto& this_entry: data.items()) {
             // set primary command properties
 
@@ -608,8 +608,8 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
 
     uint8_t instruction = cmd.get_spw_instruction();
     // std::cout << "instruction: ";
-    utilities::hex_print(instruction);
-    std::cout << "\n";
+    // utilities::hex_print(instruction);
+    // std::cout << "\n";
     
     size_t raw_data_length;
 
@@ -643,14 +643,6 @@ std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     
     uint8_t tailer_crc = sys.spacewire->crc(tailer);
 
-    // refactor System 20230922
-    // if(sys.crc_version.compare("f") == 0) {
-    //     tailer_crc = spw_calculate_crc_uint_F(tailer);
-    // } else {
-    //     std::cerr << "CRC version not supported!\n";
-    //     exit(0);
-    // }
-    
     tailer.push_back(tailer_crc);
     header.insert(header.end(), tailer.begin(), tailer.end());
     return header;
@@ -674,16 +666,9 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
         data.insert(data.end(), write_data.begin(), write_data.end());
 
         uint8_t data_crc = sys.spacewire->crc(data);
-        // refactor System 20230922
-        // if(sys.crc_version.compare("f") == 0) {
-        //     data_crc = config::spw::spw_calculate_crc_uint_F(data);
-        // } else {
-        //     std::cerr << "CRC version not supported!\n";
-        //     exit(0);
-        // }
         data.push_back(data_crc);
 
-        std::cout << "rmap write data lookup:\t";
+        std::cout << "rmap write data lookup:\t"; 
         utilities::hex_print(data);
         std::cout << "\n";
 

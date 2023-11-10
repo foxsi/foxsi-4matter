@@ -1,10 +1,11 @@
 #include "LineInterface.h"
 #include "Buffers.h"
-// #include "Metronome.h"
 #include "Circle.h"
 #include "Parameters.h"
+#include "Utilities.h"
 
 #include "moodycamel/concurrentqueue.h"
+
 #include <unordered_map>
 #include <iostream>
 #include <memory>
@@ -13,6 +14,10 @@
 
 
 int main(int argc, char** argv) {
+    utilities::setup_logs_nowtime("log/");
+
+    utilities::debug_log("main check debug log");
+    utilities::error_log("main check error log");
 
     boost::asio::io_context context;
     LineInterface lif(argc, argv, context);
@@ -97,6 +102,7 @@ int main(int argc, char** argv) {
     std::vector<std::shared_ptr<SystemManager>> order;
     order.emplace_back(std::move(cdte1_manager));
     order.emplace_back(std::move(cdtede_manager));
+    order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(housekeeping_manager));
     // order.emplace_back(std::move(cmos1_manager));
 
@@ -125,6 +131,8 @@ int main(int argc, char** argv) {
         boost::asio::ip::make_address(deck->get_sys_for_name("housekeeping").ethernet->address),
         deck->get_sys_for_name("housekeeping").ethernet->port
     );
+    // std::cout << "\t local address: ";
+    // std::cout << lif.local_address << "\n";
     
     std::cout << "uplink: \n";
     auto new_uplink_buffer = std::make_shared<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>>();
@@ -135,7 +143,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte2")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte3")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
-    (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
+    (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 
@@ -165,16 +173,16 @@ int main(int argc, char** argv) {
 
     loop.slowmo_gain = 1;
 
-    std::cout << "async udp listen: \n";
+    // std::cout << "async udp listen: \n";
 
-    machine->async_udp_receive_to_uplink_buffer();
+    // machine->async_udp_receive_to_uplink_buffer();
     // machine->async_udp_send_downlink_buffer();
     
     // debug:
     // machine->recv_udp_fwd_tcp_cmd();
     // machine->recv_tcp_fwd_udp();
 
-    std::cout <<"done\n";
+    std::cout <<"setup done\n";
     context.run();
     std::cout <<"doner\n";
 

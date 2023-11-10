@@ -1,6 +1,8 @@
 #ifndef DATALINKLAYER_H
 #define DATALINKLAYER_H
 
+#pragma once
+
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -232,6 +234,18 @@ class UART: public DataLinkLayer {
         uint8_t parity;
         uint8_t stop_bits;
         uint8_t data_bits;
+};
+
+namespace utilities {
+    /**
+     * @brief Pretty-print SpaceWire RMAP packets for SPMU-001.
+     * 
+     * Provide a pointer to the `SpaceWire` interface object supports the packet. If a `nullptr` is provided, the packet will scanned as a SpaceWire RMAP reply packet. Otherwise the instruction field will be inspected to determine read/write command.
+     * 
+     * @param data The byte vector to print.
+     * @param spw A pointer to a `SpaceWire` interface that generated the packet.
+    */
+    void spw_print(std::vector<uint8_t> data, SpaceWire* spw);
 };
 
 #endif

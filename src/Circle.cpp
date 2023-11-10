@@ -65,7 +65,7 @@ void Circle::init_systems() {
 
     init_cdte();
 
-    // init_cmos();
+    init_cmos();
 }
 
 void Circle::init_housekeeping() {
@@ -85,7 +85,15 @@ void Circle::init_cdte() {
     System& cdtede = deck->get_sys_for_name("cdtede");
     System& cdte1 = deck->get_sys_for_name("cdte1");
 
-    auto delay = std::chrono::milliseconds(1000);
+    auto delay = std::chrono::milliseconds(2000);
+
+    // Check canister ping status       0x08 0x8a
+    utilities::debug_print("checking canister status...\n");
+    std::vector<uint8_t> can_status = transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x8a));
+    can_status = transport->get_reply_data(can_status, cdtede.hex);
+    utilities::debug_print("canisters status: ");
+    utilities::hex_print(can_status);
+    std::this_thread::sleep_for(delay);
 
     // DE init                          0x08 0x09
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x09));
@@ -94,34 +102,66 @@ void Circle::init_cdte() {
     // DE standby                       0x08 0x0a
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x0a));
     std::this_thread::sleep_for(delay);
-    
+
     // DE observe                       0x08 0x0b
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x0b));
     std::this_thread::sleep_for(delay);
 
     // Canister 1 start                 0x09 0x11
-    transport->sync_tcp_send_command_for_sys(cdte1, deck->get_command_for_sys_for_code(cdte1.hex, 0x11));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_tcp_send_command_for_sys(cdte1, deck->get_command_for_sys_for_code(cdte1.hex, 0x11));
+    // std::this_thread::sleep_for(delay);
 
     // Apply HV 0V for all canister     0x08 0x13
-    transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
+    // transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
+    // std::this_thread::sleep_for(delay);
+
+    // Apply HV 60V for all canister    0x08 0x14
+    transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x14));
     std::this_thread::sleep_for(delay);
 
+    // Set full readout for all canister    0x08 0x19
+    transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x19));
+    std::this_thread::sleep_for(delay);
+    
     // Start observe for all canister   0x08 0x11
     transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x11));
-    std::this_thread::sleep_for(delay);
-
-    // Check canister ping status       0x08 0x8a
-    std::vector<uint8_t> can_status = transport->sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x8a));
-    can_status = transport->get_reply_data(can_status, cdtede.hex);
-    utilities::debug_print("canisters status: ");
-    utilities::hex_print(can_status);
     std::this_thread::sleep_for(delay);
 
     // later, will need to end observe and lower bias for all.
 }
 void Circle::init_cmos() {
     utilities::debug_print("initializing cmos system\n");
+    System& cmos2 = deck->get_sys_for_name("cmos2");
+
+    auto delay = std::chrono::milliseconds(500);
+
+    // send start_cmos_init         0x0f 0x18
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x18));
+    std::this_thread::sleep_for(delay);
+	
+    // send start_cmos_training     0x0f 0x1f
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x1f));
+    std::this_thread::sleep_for(delay);
+	
+    // send set_cmos_params         0x0f 0x10
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x10));
+    std::this_thread::sleep_for(delay);
+	
+    // send start_cmos_exposure     0x0f 0x12
+    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x12));
+    std::this_thread::sleep_for(delay);
+
+    // Check cmos status       0x0f 0xa8
+
+    // utilities::debug_print("checking cmos status...\n");
+    // std::vector<uint8_t> cmos_status = transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0xa8));
+    // cmos_status = transport->get_reply_data(cmos_status, cmos2.hex);
+    // utilities::debug_print("canisters status: ");
+    // utilities::hex_print(cmos_status);
+    // std::this_thread::sleep_for(delay);
+
+    // then can read ring buffer
+
 }
 void Circle::init_timepix() {
     utilities::debug_print("initializing timepix system\n");
@@ -139,6 +179,10 @@ void Circle::manage_systems() {
         transport->sync_tcp_send_buffer_commands_to_system(*(system_order[1]));
         transport->sync_remote_buffer_transaction(*system_order[0], RING_BUFFER_TYPE_OPTIONS::PC);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
+        // delay before reading again to avoid duplicate 
+        std::this_thread::sleep_for(std::chrono::milliseconds(8000));
+
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");

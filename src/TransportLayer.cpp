@@ -1,5 +1,6 @@
 #include "TransportLayer.h"
 #include "Utilities.h"
+// #include "DataLinkLayer.h"
 
 #include <boost/bind.hpp>   // boost::bind (for async handler to class members)
 #include <algorithm>        // std::fill
@@ -488,31 +489,31 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     uint8_t write_pointer_width = ring_params.write_pointer_width_bytes;
     // get write address as byte stream
     std::vector<uint8_t> write_pointer_bytes(utilities::splat_to_nbytes(write_pointer_width, ring_params.write_pointer_address));
-    utilities::debug_print("write pointer width: " + std::to_string(write_pointer_width) + "\n");
+    utilities::debug_print("\twrite pointer width: " + std::to_string(write_pointer_width) + "\n");
 
     // packet to read write point:
     std::vector<uint8_t> write_pointer_request_packet(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, write_pointer_width));
-    utilities::debug_print("sending read command: ");
-    utilities::hex_print(write_pointer_request_packet);
+    utilities::debug_print("\tsending read command: ");
+    utilities::spw_print(write_pointer_request_packet, sys_man.system.spacewire);
     
     // RMAP read request the write pointer:
     local_tcp_sock.send(boost::asio::buffer(write_pointer_request_packet));
-    utilities::debug_print("requested remote write pointer\n");
+    utilities::debug_print("\trequested remote write pointer\n");
 
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
+    std::fill(last_reply.begin(), last_reply.end(), 0x00);
     size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
-    utilities::debug_print("got remote write pointer, reply length " + std::to_string(reply_len) + "\n");
+    utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
     
     // wrap the reply vector to the correct length
     last_reply.resize(reply_len);
-    utilities::hex_print(last_reply);
+    utilities::spw_print(last_reply, nullptr);
 
     if (reply_len < 26) {
         utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
-        utilities::hex_print(last_reply);
-        utilities::error_print("\n");
+        utilities::spw_print(last_reply, nullptr);
         return;
     }
 
@@ -521,59 +522,98 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     if(last_write_pointer_bytes.size() != 4) {
         utilities::error_print("got bad write pointer length!\n");
     }
-    utilities::debug_print("extracted write pointer from reply: ");
+    utilities::debug_print("\textracted write pointer from reply: ");
     utilities::hex_print(last_write_pointer_bytes);
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
         last_reply = utilities::swap_endian4(last_write_pointer_bytes);
-        utilities::debug_print("found cmos, swapped endianness\n");
+        utilities::debug_print("\tfound cmos, swapped endianness\n");
     }
-
     // later, use EVTM? Or a union object?
     FramePacketizer* fp(sys_man.get_frame_packetizer(buffer_type));
-    utilities::debug_print("got pointer to fp\n");
+    utilities::debug_print("\tgot pointer to fp: " + fp->to_string());
     PacketFramer* pf(sys_man.get_packet_framer(buffer_type));
-    utilities::debug_print("got pointer to pf\n");
+    utilities::debug_print("\tgot pointer to pf: " + pf->to_string());
 
     size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
+
+    // confirm write pointer in ring buffer
+    if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
+        utilities::error_print("write pointer outside ring buffer for system!\n");
+    }
+
+    auto frame_start_time = std::chrono::high_resolution_clock::now();
     size_t packet_counter = 0;
     while (!pf->check_frame_done()) {
         
         // update the address to read from:
         size_t this_start_address = last_write_pointer + packet_counter*sys_man.system.spacewire->max_payload_size;
+        
         write_pointer_bytes = utilities::splat_to_nbytes(write_pointer_width, this_start_address);
         // make a new RMAP read command for that address:
-        std::vector<uint8_t> buffer_read_command(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, write_pointer_width));
+        std::vector<uint8_t> buffer_read_command(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, sys_man.system.ethernet->max_payload_size));
         
+        // start RTT timer
+        auto rtt_start_time = std::chrono::high_resolution_clock::now();
         // send the read command:
         local_tcp_sock.send(boost::asio::buffer(buffer_read_command));
-        utilities::debug_print("\tsent ring packet request\n");
+
         // receive the command response:
-        reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
-        utilities::debug_print("\tgot ring packet reply\n");
-        last_reply.resize(reply_len);
+        // want 1825 bytes back for CdTe 1
+        size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
+        // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
+        std::vector<uint8_t> last_buffer_reply(expected_size);
+
+        reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
+
+        last_buffer_reply.resize(reply_len);
+        if (reply_len != expected_size) {
+            utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+        }
+        
+// debug
+        // log raw data to prelogger
+        size_t remaining_size = std::min(32780 - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
+        
+        std::vector<uint8_t> trace_vec(last_buffer_reply.begin() + sys_man.system.spacewire->static_header_size, last_buffer_reply.end() - sys_man.system.spacewire->static_footer_size);
+        trace_vec.resize(remaining_size);
+        utilities::trace_prelog(trace_vec);
+// end debug
+
+        // log RTT timer
+        utilities::debug_log("rtt read time (ms): ");
+        utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - rtt_start_time).count()));
+
         // push that response onto the frame:
-        pf->push_to_frame(last_reply);
-        utilities::debug_print("\tappended to frame\n");
+        pf->push_to_frame(last_buffer_reply);
+        utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
 
         ++packet_counter;
     }
+    utilities::debug_log("frame read time (ms): ");
+    utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
 
     // hand the complete frame to the packetizer
     fp->set_frame(pf->get_frame());
-    utilities::debug_print("set frame packetizer frame\n");
-    utilities::debug_print("packet framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
-
+    utilities::debug_print("\tset frame packetizer frame\n");
+    utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
     
+    utilities::debug_log("PacketFramer::frame: ");
+    utilities::trace_log(pf->get_frame());
+
     // push the frame onto the downlink queue
     while (!fp->frame_emptied()) {
         // fp.pop_buffer_element()
         DownlinkBufferElement this_dbe(fp->pop_buffer_element());
         downlink_buffer->enqueue(this_dbe);
-        utilities::debug_print("queued packet\n");
+        utilities::debug_print("\t\tqueued packet\n");
     }
-    utilities::debug_print("pushed ring buffer data to downlink buffer\n");
+    
+    // clear the old frame to use the PacketFramer again.
+    pf->clear_frame();
+
+    utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
 }
 
 void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManager &sys_man) {
@@ -637,7 +677,8 @@ void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManage
         // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
         std::vector<uint8_t> send_packet(commands->get_command_bytes_for_sys_for_code(system.hex, command.hex));
         utilities::debug_print("got command for system. Sending...\n");
-        utilities::hex_print(send_packet);
+        // utilities::hex_print(send_packet);
+        utilities::spw_print(send_packet, sys_man.system.spacewire);
         local_tcp_sock.send(boost::asio::buffer(send_packet));
     }
 }
@@ -745,8 +786,9 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
     bool has_data = downlink_buffer->try_dequeue(dbe);
 
     while (has_data && dbe.get_system().hex != 0x05) {
-        utilities::debug_print("sending to gse\n");
         std::vector<uint8_t> packet = dbe.get_packet();
+        utilities::debug_print("sending to gse: ");
+        // utilities::hex_print(packet);
         local_udp_sock.send_to(
             boost::asio::buffer(packet), 
             remote_udp_endpoint
@@ -771,12 +813,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
     std::vector<uint8_t> reply(4096);
 
     utilities::debug_print("in sync_tcp_send_command_for_sys(), sending ");
-    utilities::hex_print(packet);
+    if (sys.type == COMMAND_TYPE_OPTIONS::SPW) {
+        utilities::spw_print(packet, sys.spacewire);
+    } else {
+        utilities::hex_print(packet);
+    }
 
     local_tcp_sock.send(boost::asio::buffer(packet));
+    utilities::debug_print("in sync_tcp_send_command_for_sys(), sent request\n");
 
     if (cmd.read) {
-        utilities::debug_print("waiting for response ");
+        utilities::debug_print("waiting for response\n");
         size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
         reply.resize(reply_len);
     } else {
@@ -816,7 +863,7 @@ void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost:
     }
     utilities::debug_print("\n");
 
-    async_udp_receive_to_uplink_buffer();
+    // async_udp_receive_to_uplink_buffer();
 }
 
 void TransportLayerMachine::await_loop_begin() {
