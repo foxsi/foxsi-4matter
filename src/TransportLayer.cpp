@@ -52,64 +52,6 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock.connect(remote_tcp_endpoint);
 }
 
-// construct from IP address:port pairs
-TransportLayerMachine::TransportLayerMachine(
-    std::string local_ip,
-    std::string remote_tcp_ip,
-    std::string remote_tcp_housekeeping_ip,
-    std::string remote_udp_ip,
-    unsigned short local_port,
-    unsigned short remote_tcp_port,
-    unsigned short remote_tcp_housekeeping_port,
-    unsigned short remote_udp_port,
-    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
-    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
-    boost::asio::io_context& context
-): 
-    local_udp_sock(context),
-    local_tcp_sock(context),
-    local_tcp_housekeeping_sock(context),
-    uplink_buffer(new_uplink_buffer),
-    downlink_buffer(new_downlink_buffer)
-{
-    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
-    active_state = STATE_ORDER::IDLE;
-
-    // commands = CommandDeck();
-    
-    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
-    downlink_buff = tmp_vec;
-    uplink_buff = tmp_vec;
-    
-    std::vector<uint8_t> tmp_cmd = {};
-    command_pipe = tmp_cmd;
-
-    boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
-    boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(remote_udp_ip);
-    boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(remote_tcp_ip);
-    boost::asio::ip::address remote_tcp_housekeeping_addr = boost::asio::ip::make_address(remote_tcp_housekeeping_ip);
-    
-    boost::asio::ip::udp::endpoint local_udp_endpoint(local_addr, local_port);
-    boost::asio::ip::tcp::endpoint local_tcp_endpoint(local_addr, local_port);
-    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_endpoint(local_addr, remote_tcp_housekeeping_port);
-
-    remote_udp_endpoint = boost::asio::ip::udp::endpoint(remote_udp_addr, remote_udp_port);
-    remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, remote_tcp_port);
-    remote_tcp_housekeeping_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_housekeeping_addr, remote_tcp_housekeeping_port);
-
-    local_udp_sock.open(boost::asio::ip::udp::v4());
-    local_udp_sock.bind(local_udp_endpoint);
-
-    local_tcp_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_sock.bind(local_tcp_endpoint);
-    local_tcp_sock.connect(remote_tcp_endpoint);
-
-    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_endpoint);
-    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
-}
-
-
 // construct from existing boost asio endpoints
 TransportLayerMachine::TransportLayerMachine(
     boost::asio::ip::udp::endpoint local_udp_end,

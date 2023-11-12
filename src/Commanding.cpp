@@ -1101,7 +1101,6 @@ std::vector<uint8_t> CommandDeck::get_read_command_bytes_for_sys_for_HARDCODE(ui
     return full_packet;
 }
 
-// todo: write this. Base on get_read_command_from_template.
 std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len) {
     // make sure the System has info on SpaceWire:
     System& sys_obj = get_sys_for_code(sys);
@@ -1124,6 +1123,43 @@ std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sy
     tailer.push_back(sys_obj.spacewire->source_logical_address);
     tailer.push_back(0x00);                         // transaction ID MSB
     tailer.push_back(0x00);                         // transaction ID LSB
+    tailer.push_back(0x00);                         // extended address
+    tailer.insert(tailer.end(), read_addr.begin(), read_addr.end());
+    tailer.insert(tailer.end(), read_len_bytes.begin(), read_len_bytes.end());
+    tailer.push_back(sys_obj.spacewire->crc(tailer));
+    
+    packet.insert(packet.end(), sys_obj.spacewire->target_path_address.begin(), sys_obj.spacewire->target_path_address.end());
+    packet.insert(packet.end(), tailer.begin(), tailer.end());
+
+    std::vector<uint8_t> ether_header = get_spw_ether_header(packet);
+    packet.insert(packet.begin(), ether_header.begin(), ether_header.end());
+
+    return packet;
+}
+
+std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address_and_transaction_id(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len, uint16_t transaction_id) {
+
+    System& sys_obj = get_sys_for_code(sys);
+    if(!sys_obj.spacewire) {
+        utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
+        utilities::debug_print("for system " + sys_obj.name + " with code key " + std::to_string(sys) + "\n");
+        return {};
+    }
+    
+    std::vector<uint8_t> read_len_bytes(utilities::splat_to_nbytes(3, read_len));
+    std::vector<uint8_t> transact_id_bytes(utilities::splat_to_nbytes(2, transaction_id));
+
+    std::vector<uint8_t> packet;
+    std::vector<uint8_t> tailer;
+    
+    tailer.push_back(sys_obj.spacewire->target_logical_address);
+    tailer.push_back(0x01);                         // RMAP protocol ID
+    tailer.push_back(0x4d);                         // instruction
+    tailer.push_back(sys_obj.spacewire->key);       // key
+    tailer.insert(tailer.end(), sys_obj.spacewire->reply_path_address.begin(), sys_obj.spacewire->reply_path_address.end());
+    tailer.push_back(sys_obj.spacewire->source_logical_address);
+    tailer.push_back(transact_id_bytes[0]);                         // transaction ID MSB
+    tailer.push_back(transact_id_bytes[1]);                         // transaction ID LSB
     tailer.push_back(0x00);                         // extended address
     tailer.insert(tailer.end(), read_addr.begin(), read_addr.end());
     tailer.insert(tailer.end(), read_len_bytes.begin(), read_len_bytes.end());

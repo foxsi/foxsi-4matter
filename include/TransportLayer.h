@@ -120,30 +120,6 @@ class TransportLayerMachine {
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
         );
-        /**
-         * @brief Construct a new Transport Layer Machine from `std::string` IP address and `unsigned short` port number pairs.
-         * 
-         * @param local_ip The IP address of the local machine.
-         * @param remote_tcp_ip The IP address of a remote machine that communicates using TCP.
-         * @param remote_udp_ip The IP address of a remote machine that communicates using UDP.
-         * @param local_port The port number of the local machine (used for both UDP and TCP communication).
-         * @param remote_tcp_port The port number of a remote machine that communicates using TCP.
-         * @param remote_udp_port The port number of a remote machine that communicates using UDP.
-         * @param context A reference to a `boost::asio::io_context` context.
-         */
-        TransportLayerMachine(
-            std::string local_ip,
-            std::string remote_tcp_ip,
-            std::string remote_tcp_housekeeping_ip,
-            std::string remote_udp_ip,
-            unsigned short local_port,
-            unsigned short remote_tcp_port,
-            unsigned short remote_tcp_housekeeping_port,
-            unsigned short remote_udp_port,
-            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
-            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
-            boost::asio::io_context& context
-        );
 
         /**
          * @brief Construct a new Transport Layer Machine object from predefined `boost::asio` endpoint objects.
@@ -249,8 +225,6 @@ class TransportLayerMachine {
          * @brief the target functionality of this method is currently implemented inside `TransportLayerMachine::handle_cmd`. 
          * @todo consider factoring that functionality out of `TransportLayerMachine::handle_cmd`.
          */
-
-        // todo: write this using innards of `handle_cmd`.
         void sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type);
 
         // implemented.

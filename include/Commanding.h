@@ -159,6 +159,9 @@ class CommandDeck {
          */
         std::vector<uint8_t> get_read_command_for_sys_at_address(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len);
 
+        std::vector<uint8_t> get_read_command_for_sys_at_address_and_transaction_id(uint8_t sys, std::vector<uint8_t> read_addr, size_t read_len, uint16_t transaction_id);
+
+
         std::vector<uint8_t> get_spw_ether_header(std::vector<uint8_t> rmap_packet);
 
         std::vector<uint8_t> get_write_command_bytes_for_sys_for_HARDCODE(uint8_t sys, uint8_t code);

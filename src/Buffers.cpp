@@ -378,6 +378,20 @@ std::vector<uint8_t> PacketFramer::pop_from_frame(size_t block_size) {
     return result;
 }
 
+uint16_t PacketFramer::get_spw_transaction_id() {
+    if (system.hex > 0xf) {
+        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+    }
+    // todo: since packet_counter is 1-indexed this may not be true!
+    if (packet_counter > 0xfff | packets_per_frame > 0xfff) {
+        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+    }
+
+    uint16_t msb = (system.hex & 0xf) << 12;
+    uint16_t lsb = packet_counter & 0xfff;
+    return msb | lsb;
+}
+
 const std::string PacketFramer::to_string() {
     std::string result;
     result.append("PacketFramer::");
