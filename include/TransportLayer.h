@@ -251,7 +251,7 @@ class TransportLayerMachine {
          */
 
         // todo: write this using innards of `handle_cmd`.
-        void sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type);
+        size_t sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer);
 
         // implemented.
         void sync_tcp_send_buffer_commands_to_system(SystemManager& sys_man);

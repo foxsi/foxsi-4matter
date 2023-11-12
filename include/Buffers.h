@@ -28,7 +28,7 @@ class DownlinkBufferElement {
          * @param to_system The `System` object which is responsible for transmitting the data.
          * @param type An index into `from_system.ring_params` specifying the buffer parameters to use.
          */
-        DownlinkBufferElement(System* from_system, System* to_system, RING_BUFFER_TYPE_OPTIONS type);
+        DownlinkBufferElement(System* from_system, System* to_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
         DownlinkBufferElement& operator=(const DownlinkBufferElement& other);
 
@@ -54,10 +54,12 @@ class DownlinkBufferElement {
         const size_t get_max_packet_size() const {return max_packet_size;};
         const uint16_t get_packets_per_frame() const {return packets_per_frame;};
         const uint16_t get_this_packet_index() const {return this_packet_index;};
+        const RING_BUFFER_TYPE_OPTIONS get_type() const {return type;};
         
         void set_payload(std::vector<uint8_t> new_payload);
         void set_packets_per_frame(uint16_t new_packets_per_frame);
         void set_this_packet_index(uint16_t new_this_packet_index);
+        void set_type(RING_BUFFER_TYPE_OPTIONS new_type);
 
         const std::string to_string();
 
@@ -105,6 +107,11 @@ class DownlinkBufferElement {
          * This will be used on the ground to assemble one data frame.
          */
         uint16_t this_packet_index;
+        /**
+         * @brief The data type transferred in this packet.
+         * This will be used on the ground to log data to the appropriate file.
+         */
+        RING_BUFFER_TYPE_OPTIONS type;
 };
 
 
@@ -198,9 +205,10 @@ class PacketFramer{
          */
 
         // todo: reimplement with new System model
-        PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type);
+        PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
         System& get_system() {return system;};
+        RING_BUFFER_TYPE_OPTIONS get_type() const {return type;};
 
         /**
          * @brief Empty the stored `frame` (to reuse this object to build a new frame).
@@ -287,6 +295,12 @@ class PacketFramer{
          * @brief The `System` that produced the `frame` data.
          */
         System& system;
+
+        /**
+         * @brief The type of data in the frame.
+         * 
+         */
+        RING_BUFFER_TYPE_OPTIONS type;
 };
 
 
@@ -319,7 +333,7 @@ class FramePacketizer{
         FramePacketizer(System& new_system, size_t new_max_packet_size, size_t new_packets_per_frame);
 
         // todo: implement
-        FramePacketizer(System& from_system, System& to_system, RING_BUFFER_TYPE_OPTIONS type);
+        FramePacketizer(System& from_system, System& to_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
         /**
          * @brief Construct a new `FramePacketizer` from a `PacketFramer`.
@@ -423,6 +437,12 @@ class FramePacketizer{
          * @brief The `System` that originated the data in `frame`.
          */
         System& system;
+
+        /**
+         * @brief The type of data in the frame.
+         * 
+         */
+        RING_BUFFER_TYPE_OPTIONS type;
 };
 
 
@@ -433,8 +453,6 @@ class SystemManager {
             System& new_system,
             std::queue<UplinkBufferElement>& new_uplink_buffer
         );
-        // SystemManager(SystemManager& other);
-        // SystemManager(SystemManager&& other);
 
         void add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer);
         void add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketFramer* new_packet_framer);
@@ -451,9 +469,22 @@ class SystemManager {
         FLIGHT_STATE flight_state;
         SYSTEM_STATE system_state;
 
+        /**
+         * @brief Track which type of remote memory this `System` is currently reading.
+         * 
+         */
+        RING_BUFFER_TYPE_OPTIONS active_type;
+        
+        /**
+         * @brief Track the most recent write pointer location in remote memory, for ring buffer access.
+         * Can use to prevent repeated reads of same location in memory, if the memory has not been updated in
+         */
+        std::unordered_map<RING_BUFFER_TYPE_OPTIONS, size_t> last_write_pointer;
+    
     private:
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, FramePacketizer*> lookup_frame_packetizer;
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, PacketFramer*> lookup_packet_framer;
+        
 };
 
 #endif
