@@ -1,7 +1,9 @@
 #ifndef DIRECTMEMORYACCESS_H
 #define DIRECTMEMORYACCESS_H
 
+#include "Parameters.h"
 #include <cstdlib>
+#include <string>
 #include <stdint.h>
 
 class RingBufferParameters {
@@ -13,7 +15,8 @@ class RingBufferParameters {
             uint32_t new_start_address,
             size_t new_frames_per_ring,
             uint32_t new_write_pointer_address,
-            size_t new_write_pointer_width_bytes
+            size_t new_write_pointer_width_bytes,
+            RING_BUFFER_TYPE_OPTIONS new_type
         );
         bool operator==(RingBufferParameters& other);
 
@@ -22,6 +25,10 @@ class RingBufferParameters {
         size_t frames_per_ring;
         uint32_t write_pointer_address;
         size_t write_pointer_width_bytes;
+
+        RING_BUFFER_TYPE_OPTIONS type;
+
+        const std::string to_string();
 
     private:
 };

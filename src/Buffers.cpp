@@ -4,6 +4,7 @@
 #include "Utilities.h"
 #include "Parameters.h"
 #include <algorithm>
+#include <cmath>
 
 // ====================== DownlinkBufferElement ====================== //
 
@@ -15,9 +16,10 @@ DownlinkBufferElement::DownlinkBufferElement(System* new_system, size_t new_max_
     DownlinkBufferElement::set_this_packet_index(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
+    type = RING_BUFFER_TYPE_OPTIONS::NONE;
 }
 
-DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_system, RING_BUFFER_TYPE_OPTIONS type): system(from_system) {
+DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_system, RING_BUFFER_TYPE_OPTIONS new_type): system(from_system) {
 
     if (!to_system->ethernet) {
         // todo: throw
@@ -32,7 +34,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     switch (from_system->type) {
         case COMMAND_TYPE_OPTIONS::SPW:
             if (from_system->ring_params.size() > 0) {
-                source_frame_size = from_system->get_frame_size(type);
+                source_frame_size = from_system->get_frame_size(new_type);
             } else {
                 source_frame_size = from_system->get_frame_size();
             }
@@ -47,6 +49,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     this_packet_index = 0;
     payload.reserve(max_packet_size - 8);
     payload.resize(0);
+    type = new_type;
 }
 
 DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElement &other) {
@@ -55,6 +58,7 @@ DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElem
     system = other.system;
     packets_per_frame = other.packets_per_frame;
     this_packet_index = other.this_packet_index;
+    type = other.type;
 
     return *this;
 }
@@ -62,6 +66,7 @@ DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElem
 DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other) : system(other.system)
 {
     max_packet_size = other.max_packet_size;
+    DownlinkBufferElement::set_type(other.get_type());
     DownlinkBufferElement::set_packets_per_frame(other.get_packets_per_frame());
     DownlinkBufferElement::set_this_packet_index(other.get_this_packet_index());
     DownlinkBufferElement::set_payload(other.get_payload());
@@ -74,6 +79,7 @@ DownlinkBufferElement::DownlinkBufferElement() {
     DownlinkBufferElement::set_this_packet_index(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
+    DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS::NONE);
 }
 
 void DownlinkBufferElement::set_payload(std::vector<uint8_t> new_payload) {
@@ -103,12 +109,17 @@ void DownlinkBufferElement::set_this_packet_index(uint16_t new_this_packet_index
     this_packet_index = new_this_packet_index;
 }
 
+void DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS new_type) {
+    type = new_type;
+}
+
 const std::string DownlinkBufferElement::to_string() {
     std::string result;
     result.append("DownlinkBufferElement::");
     result.append("\n\tmax_packet_size \t= " + std::to_string(max_packet_size));
     result.append("\n\tpackets_per_frame \t= " + std::to_string(packets_per_frame));
     result.append("\n\tthis_packet_index \t= " + std::to_string(this_packet_index));
+    result.append("\n\ttype \t\t\t= " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
     result.append("\n\tpayload.size() \t\t= " + std::to_string(payload.size()));
     result.append("\n\tsystem.name, .hex \t= " + system->name + ", " + std::to_string(system->hex));
     result.append("\n");
@@ -129,9 +140,10 @@ std::vector<uint8_t> DownlinkBufferElement::get_header() {
     header.push_back(system->hex);
     std::vector<uint8_t> bytes_packets_per_frame = utilities::splat_to_nbytes(2, get_packets_per_frame());
     std::vector<uint8_t> bytes_packet_index = utilities::splat_to_nbytes(2, get_this_packet_index());
-    std::vector<uint8_t> reserved_pad = {0x00, 0x00, 0x00};
+    std::vector<uint8_t> reserved_pad = {0x00, 0x00};
     header.insert(header.end(), bytes_packets_per_frame.begin(), bytes_packets_per_frame.end());
     header.insert(header.end(), bytes_packet_index.begin(), bytes_packet_index.end());
+    header.push_back(static_cast<uint8_t>(type));
     header.insert(header.end(), reserved_pad.begin(), reserved_pad.end());
 
     return header;
@@ -204,7 +216,8 @@ PacketFramer::PacketFramer(PacketFramer &other):
     frame_size(other.frame_size),
     frame(other.frame),
     frame_done(other.frame_done),
-    system(other.system) 
+    system(other.system),
+    type(other.type)
 {
     // todo: do other setup
     // static_strip_footer_size = other.static_strip_footer_size;
@@ -226,11 +239,12 @@ PacketFramer::PacketFramer(PacketFramer &other):
     // frame.reserve(frame_size);
 }
 
-PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS type): system(new_system) {
+PacketFramer::PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS new_type): system(new_system) {
     // todo: do other setup
     DataLinkLayer* system_if;
     frame_size = new_system.get_frame_size();
     size_t packet_size = 0;
+    type = new_type;
 
     switch (new_system.type) {
         case COMMAND_TYPE_OPTIONS::ETHERNET:
@@ -387,6 +401,7 @@ const std::string PacketFramer::to_string() {
     result.append("\n\tpackets_per_frame \t\t= " + std::to_string(packets_per_frame));
     result.append("\n\tpacket_counter \t\t\t= " + std::to_string(packet_counter));
     result.append("\n\tsystem.name, system.hex \t= " + system.name + ", " + std::to_string(system.hex));
+    result.append("\n\ttype \t\t\t\t= " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
     result.append("\n\tstatic_strip_header_size \t= " + std::to_string(static_strip_header_size));
     result.append("\n\tstatic_strip_footer_size \t= " + std::to_string(static_strip_footer_size));
     result.append("\n\tinitial_strip_header_size \t= " + std::to_string(initial_strip_header_size));
@@ -408,13 +423,15 @@ FramePacketizer::FramePacketizer(System &new_system, size_t new_max_packet_size,
     packets_remaining_in_frame = 0;
     header_size = 8;
     frame.resize(0);
+    type = RING_BUFFER_TYPE_OPTIONS::NONE;
 }
 
-FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS type): system(from_system) {
+FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS new_type): system(from_system) {
     if (!to_system.ethernet) {
         // todo: throw
         utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
     }
+    type = new_type;
 
     size_t frame_size = 0;
     switch(from_system.type) {
@@ -431,11 +448,13 @@ FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BU
     }
     max_packet_size = to_system.ethernet->max_payload_size;
 
-    size_t last_packet_size = frame_size % max_packet_size;
-    packets_per_frame = frame_size / max_packet_size + std::min(last_packet_size, (size_t)1);
-
+    // size_t last_packet_size = frame_size % max_packet_size;
+    // packets_per_frame = frame_size / max_packet_size + std::min(last_packet_size, (size_t)1);
+    // packets_per_frame = std::ceil(packets_per_frame*(1.0 + 8.0/max_packet_size));
+    
+    header_size = 8;    // todo: migrate to foxsi4-commands/ethernets/*, instantiate from to_system::header_size
+    packets_per_frame = std::ceil((float)frame_size / (float)(max_packet_size - header_size));
     packets_remaining_in_frame = packets_per_frame;
-    header_size = 8;
     frame.resize(0); 
     frame.reserve(max_packet_size*packets_per_frame);
 }
@@ -443,6 +462,8 @@ FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BU
 FramePacketizer::FramePacketizer(PacketFramer &pf): system(pf.get_system()) {
     auto biggest_header = std::max(pf.initial_strip_header_size, pf.subsequent_strip_header_size);
     auto biggest_footer = std::max(pf.initial_strip_footer_size, pf.subsequent_strip_footer_size);
+
+    type = pf.type;
     
     // max length packet sent to `PacketFramer` includes headers and footers.
     max_packet_size = pf.frame_size/pf.packets_per_frame;
@@ -463,7 +484,8 @@ FramePacketizer::FramePacketizer(FramePacketizer &other):
     max_packet_size(other.max_packet_size),
     packets_remaining_in_frame(other.packets_remaining_in_frame),
     packets_per_frame(other.packets_per_frame),
-    system(other.system) {}
+    system(other.system),
+    type(other.type) {}
 
 std::vector<uint8_t> FramePacketizer::pop_packet() {
     
@@ -497,11 +519,16 @@ DownlinkBufferElement FramePacketizer::pop_buffer_element() {
     std::vector<uint8_t> header = get_header();
     std::vector<uint8_t> payload = pop_payload();
 
+    double efficiency = 1.0 + 8.0/max_packet_size;
+    // size_t downlink_packets_per_frame = std::ceil(efficiency*packets_per_frame);
+    // dbel.set_packets_per_frame(downlink_packets_per_frame);
+    // dbel.set_this_packet_index(downlink_packets_per_frame - packets_remaining_in_frame);
     dbel.set_packets_per_frame(packets_per_frame);
     dbel.set_this_packet_index(packets_per_frame - packets_remaining_in_frame);
 
-    utilities::debug_print("\t\tFramePacketizer::packets_remaining_in_frame: " + std::to_string(packets_remaining_in_frame) + "\n");
+    // utilities::debug_print("\t\tFramePacketizer::packets_remaining_in_frame: " + std::to_string(packets_remaining_in_frame) + "\n");
     dbel.set_payload(payload);
+    dbel.set_type(type);
     return dbel;
 }
 
@@ -533,6 +560,7 @@ const std::string FramePacketizer::to_string() {
     result.append("\n\tpackets_per_frame \t\t= " + std::to_string(packets_per_frame));
     result.append("\n\tpackets_remaining_in_frame \t= " + std::to_string(packets_remaining_in_frame));
     result.append("\n\tsystem.name, system.hex \t= " + system.name + ", " + std::to_string(system.hex));
+    result.append("\n\ttype \t\t\t\t= " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
     result.append("\n");
 
     return result;
@@ -553,7 +581,7 @@ std::vector<uint8_t> FramePacketizer::get_header() {
     header.push_back(count_lsb);
     header.push_back(remain_msb);
     header.push_back(remain_lsb);
-    header.push_back(0x00);
+    header.push_back(static_cast<uint8_t>(type));
     header.push_back(0x00);
     header.push_back(0x00);
 

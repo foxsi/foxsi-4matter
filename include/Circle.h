@@ -60,7 +60,16 @@ class Circle {
         void manage_housekeeping_state();
         boost::asio::chrono::milliseconds get_state_time();
 
+        SystemManager* get_sys_man_for_name(std::string name);
+        SystemManager* get_sys_man_for_hex(uint8_t hex);
+
         boost::asio::chrono::milliseconds period_ms;
+
+        // find better way to save this (factor into SystemManager hk):
+        // size_t last_cdte_write_pointer;
+        // size_t last_cmos_pc_write_pointer;
+        // size_t last_cmos_ql_write_pointer;
+        // bool cmos_pc_state; 
 
 };
 

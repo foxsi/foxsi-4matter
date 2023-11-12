@@ -145,6 +145,8 @@ class LineInterface {
         LineInterface(int argc, char* argv[], boost::asio::io_context& context);
 
         CommandDeck get_command_deck() const {return command_deck;};
+
+        std::string get_test_system_name() const {return test_system_name;};
     
     private:
         boost::program_options::options_description options;
@@ -153,6 +155,8 @@ class LineInterface {
 
         std::string help_msg;
         bool do_verbose;
+
+        std::string test_system_name;
 
     private:
         void collapse_endpoints();

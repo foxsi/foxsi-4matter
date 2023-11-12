@@ -135,18 +135,29 @@ namespace config::spw{
 }
 
 namespace utilities{
+    std::string get_now_string() {
+        char time_format[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        auto start_time = std::time({});
+
+        std::strftime(std::data(time_format), std::size(time_format), "auto_%F_%T", std::gmtime(&start_time));
+
+        return std::string(time_format);
+    }
 
     // add spdlog setup files function here (filename with "log-today-time.log")
     // add spdlog write function (error, debug, info) here
     
     std::shared_ptr<spdlog::logger> logger;
     std::shared_ptr<spdlog::logger> prelogger;
+    void setup_logs_nowtime(std::string prefix)
+    {
+        // char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        // auto start_time = std::time({});
 
-    void setup_logs_nowtime(std::string prefix) {
-        char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
-        auto start_time = std::time({});
+        // std::strftime(std::data(time_fmt), std::size(time_fmt), "auto_%F_%T", std::gmtime(&start_time));
 
-        std::strftime(std::data(time_fmt), std::size(time_fmt), "auto_%F_%T", std::gmtime(&start_time));
+        std::string time_fmt = get_now_string();
+
         std::string file_name = prefix + std::string(time_fmt);
         std::string prefile_name = prefix + std::string(time_fmt) + "_pre";
         std::string extension = ".log";

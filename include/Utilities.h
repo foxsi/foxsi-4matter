@@ -24,6 +24,7 @@ namespace config::spw{
 
 namespace utilities{
 
+    std::string get_now_string();
     // std::shared_ptr<spdlog::logger> debug_logger;
     // possibly group here
     void setup_logs_nowtime(std::string prefix);
