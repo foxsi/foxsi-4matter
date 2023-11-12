@@ -48,9 +48,74 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock.bind(local_udp_endpoint);
 
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    boost::asio::socket_base::reuse_address option(true);
+    local_tcp_sock.set_option(option);
+
     local_tcp_sock.bind(local_tcp_endpoint);
     local_tcp_sock.connect(remote_tcp_endpoint);
 }
+
+// construct from IP address:port pairs
+TransportLayerMachine::TransportLayerMachine(
+    std::string local_ip,
+    std::string remote_tcp_ip,
+    std::string remote_tcp_housekeeping_ip,
+    std::string remote_udp_ip,
+    unsigned short local_port,
+    unsigned short remote_tcp_port,
+    unsigned short remote_tcp_housekeeping_port,
+    unsigned short remote_udp_port,
+    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+    boost::asio::io_context& context
+): 
+    local_udp_sock(context),
+    local_tcp_sock(context),
+    local_tcp_housekeeping_sock(context),
+    uplink_buffer(new_uplink_buffer),
+    downlink_buffer(new_downlink_buffer)
+{
+    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    active_state = STATE_ORDER::IDLE;
+
+    // commands = CommandDeck();
+    
+    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
+    downlink_buff = tmp_vec;
+    uplink_buff = tmp_vec;
+    
+    std::vector<uint8_t> tmp_cmd = {};
+    command_pipe = tmp_cmd;
+
+    boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
+    boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(remote_udp_ip);
+    boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(remote_tcp_ip);
+    boost::asio::ip::address remote_tcp_housekeeping_addr = boost::asio::ip::make_address(remote_tcp_housekeeping_ip);
+    
+    boost::asio::ip::udp::endpoint local_udp_endpoint(local_addr, local_port);
+    boost::asio::ip::tcp::endpoint local_tcp_endpoint(local_addr, local_port);
+    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_endpoint(local_addr, remote_tcp_housekeeping_port);
+
+    remote_udp_endpoint = boost::asio::ip::udp::endpoint(remote_udp_addr, remote_udp_port);
+    remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, remote_tcp_port);
+    remote_tcp_housekeeping_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_housekeeping_addr, remote_tcp_housekeeping_port);
+
+    boost::asio::socket_base::reuse_address option(true);
+    
+    local_udp_sock.open(boost::asio::ip::udp::v4());
+    local_udp_sock.bind(local_udp_endpoint);
+
+    local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    local_tcp_sock.set_option(option);
+    local_tcp_sock.bind(local_tcp_endpoint);
+    local_tcp_sock.connect(remote_tcp_endpoint);
+
+    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
+    local_tcp_housekeeping_sock.set_option(option);
+    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_endpoint);
+    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
+}
+
 
 // construct from existing boost asio endpoints
 TransportLayerMachine::TransportLayerMachine(
@@ -407,24 +472,22 @@ void TransportLayerMachine::handle_cmd() {
     std::fill(command_pipe.begin(), command_pipe.end(), '\0');
 }
 
-void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type) {
+size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer) {
     utilities::debug_print("in sync_remote_buffer_transaction() for " + sys_man.system.name + "\n");
-
 
     if(!sys_man.system.spacewire) {
         utilities::error_print("require spacewire interface to read ring buffer.\n");
-        return;
+        return prior_write_pointer;
     }
 
     // checking if the ring buffer parameters contains the desired buffer_type
     if(sys_man.system.ring_params.size() < static_cast<uint8_t>(buffer_type)) {
         utilities::error_print("System::ring_params does not contain the requested buffer type.\n");
-        return;
+        return prior_write_pointer;
     }
-
     
     // select the ring buffer parameter object to use for this interaction
-    RingBufferParameters ring_params(sys_man.system.ring_params[static_cast<uint8_t>(buffer_type)]);
+    RingBufferParameters ring_params(sys_man.system.ring_params[buffer_type]);
     utilities::debug_print("\tcan access ring buffer\n");
 
     // get write address width
@@ -445,7 +508,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
-    std::fill(last_reply.begin(), last_reply.end(), 0x00);
+    std::fill(last_reply.begin(), last_reply.end(), 0x00); // this may be superstitious, try remove
     size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
     utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
     
@@ -456,7 +519,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     if (reply_len < 26) {
         utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
         utilities::spw_print(last_reply, nullptr);
-        return;
+        return prior_write_pointer;
     }
 
     // extract the data field from the reply
@@ -469,7 +532,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
-        last_reply = utilities::swap_endian4(last_write_pointer_bytes);
+        last_write_pointer_bytes = utilities::swap_endian4(last_write_pointer_bytes);
         utilities::debug_print("\tfound cmos, swapped endianness\n");
     }
     // later, use EVTM? Or a union object?
@@ -481,9 +544,20 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
 
     // confirm write pointer in ring buffer
-    if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
-        utilities::error_print("write pointer outside ring buffer for system!\n");
+    // todo: this is not a valid criterion for cmos, which does not use all of its buffer area for frames.
+
+    // if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
+    //     utilities::error_print("write pointer " + std::to_string(last_write_pointer) + " outside ring buffer for system with ");
+    //     utilities::error_print(ring_params.to_string());
+    //     return prior_write_pointer;
+    // }
+
+    // check if we are reading a duplicate frame (interlock with Circle::manager_systems())
+    if (last_write_pointer == prior_write_pointer) {
+        utilities::debug_print("write pointer has not advanced, skipping\n");
+        return prior_write_pointer;
     }
+
 
     auto frame_start_time = std::chrono::high_resolution_clock::now();
     size_t packet_counter = 0;
@@ -516,7 +590,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         
 // debug
         // log raw data to prelogger
-        size_t remaining_size = std::min(32780 - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
+        size_t remaining_size = std::min(ring_params.frame_size_bytes - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
         
         std::vector<uint8_t> trace_vec(last_buffer_reply.begin() + sys_man.system.spacewire->static_header_size, last_buffer_reply.end() - sys_man.system.spacewire->static_footer_size);
         trace_vec.resize(remaining_size);
@@ -529,7 +603,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
 
         // push that response onto the frame:
         pf->push_to_frame(last_buffer_reply);
-        utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
+        // utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
 
         ++packet_counter;
     }
@@ -549,13 +623,14 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         // fp.pop_buffer_element()
         DownlinkBufferElement this_dbe(fp->pop_buffer_element());
         downlink_buffer->enqueue(this_dbe);
-        utilities::debug_print("\t\tqueued packet\n");
+        // utilities::debug_print("\t\tqueued packet\n");
     }
     
     // clear the old frame to use the PacketFramer again.
     pf->clear_frame();
 
     utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
+    return last_write_pointer;
 }
 
 void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManager &sys_man) {
@@ -729,8 +804,9 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
 
     while (has_data && dbe.get_system().hex != 0x05) {
         std::vector<uint8_t> packet = dbe.get_packet();
-        utilities::debug_print("sending to gse: ");
+        // utilities::debug_print("sending to gse: ");
         // utilities::hex_print(packet);
+
         local_udp_sock.send_to(
             boost::asio::buffer(packet), 
             remote_udp_endpoint
@@ -774,6 +850,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
     return reply;
 }
 
+// todo: implement this if needed?
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_command_transaction(std::vector<uint8_t> data_to_send) {
     utilities::debug_print("in sync_tcp_command_transaction\n");
     return std::vector<uint8_t>();

@@ -22,81 +22,135 @@ int main(int argc, char* argv[]) {
     System cmos1 = deck.get_sys_for_name("cmos1");
     System gse = deck.get_sys_for_name("gse");
 
-    std::queue<DownlinkBufferElement> downlink_buffer;
+    std::cout << "cdte ring buffers size " << std::to_string(cdte1.ring_params.size()) << "\n";
+    std::cout << "cmos ring buffers size " << std::to_string(cmos1.ring_params.size()) << "\n";
 
-    moodycamel::ConcurrentQueue<DownlinkBufferElement> concurrent_downlink_buffer;
+    std::queue<DownlinkBufferElement> downlink_buffer_cdte;
+    std::queue<DownlinkBufferElement> downlink_buffer_cmos;
 
-    PacketFramer pf(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
-    FramePacketizer fp(cdte1, gse, RING_BUFFER_TYPE_OPTIONS::PC);
+    moodycamel::ConcurrentQueue<DownlinkBufferElement> concurrent_downlink_buffer_cdte;
+    moodycamel::ConcurrentQueue<DownlinkBufferElement> concurrent_downlink_buffer_cmos;
+
+    PacketFramer pf_cdte(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cdte(cdte1, gse, RING_BUFFER_TYPE_OPTIONS::PC);
+    PacketFramer pf_cmos(cmos1, RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cmos(cmos1, gse, RING_BUFFER_TYPE_OPTIONS::PC);
     
     // print out pf and fp to check
-    std::cout << pf.to_string();
-    std::cout << fp.to_string();
+    std::cout << pf_cdte.to_string();
+    std::cout << fp_cdte.to_string();
+    std::cout << pf_cmos.to_string();
+    std::cout << fp_cmos.to_string();
 
     // build false frame data 
-    size_t false_data_length = cdte1.get_frame_size(RING_BUFFER_TYPE_OPTIONS::PC);
+    size_t false_data_length_cdte = cdte1.get_frame_size(RING_BUFFER_TYPE_OPTIONS::PC);
+    size_t false_data_length_cmos = cmos1.get_frame_size(RING_BUFFER_TYPE_OPTIONS::PC);
     
-    std::vector<uint8_t> false_data;
-    false_data.push_back(0x01);
-    for (int i = 0; i < false_data_length - 2; ++i) {
-        false_data.push_back(0x00);
+    std::vector<uint8_t> false_data_cdte;
+    false_data_cdte.push_back(0x01);
+    for (int i = 0; i < false_data_length_cdte - 2; ++i) {
+        false_data_cdte.push_back(0x00);
     }
-    false_data.push_back(0x01);
+    false_data_cdte.push_back(0x01);
+
+    std::vector<uint8_t> false_data_cmos;
+    false_data_cmos.push_back(0x01);
+    for (int i = 0; i < false_data_length_cmos - 2; ++i) {
+        false_data_cmos.push_back(0x00);
+    }
+    false_data_cmos.push_back(0x01);
 
     // make packets out of false data, add spw header to each:
     size_t false_spw_header_size = 24;
     size_t false_spw_footer_size = 1;
-    size_t packet_size = cdte1.spacewire->max_payload_size - false_spw_header_size - false_spw_footer_size;    
+    size_t packet_size_cdte = cdte1.spacewire->max_payload_size - false_spw_header_size - false_spw_footer_size;    
+    size_t packet_size_cmos = cmos1.spacewire->max_payload_size - false_spw_header_size - false_spw_footer_size;    
 
-    std::vector<uint8_t> false_spw_header(false_spw_header_size);
+    std::vector<uint8_t> false_spw_header_cdte(false_spw_header_size);
     for (size_t i = 0; i < false_spw_header_size; ++i) {
-        false_spw_header[i] = i;
+        false_spw_header_cdte[i] = i;
     }
-    std::vector<uint8_t> false_spw_footer(false_spw_footer_size);
+    std::vector<uint8_t> false_spw_footer_cdte(false_spw_footer_size);
     for (size_t i = 0; i < false_spw_footer_size; ++i) {
-        false_spw_footer[i] = 0xff;
+        false_spw_footer_cdte[i] = 0xff;
+    }
+
+    std::vector<uint8_t> false_spw_header_cmos(false_spw_header_size);
+    for (size_t i = 0; i < false_spw_header_size; ++i) {
+        false_spw_header_cmos[i] = i;
+    }
+    std::vector<uint8_t> false_spw_footer_cmos(false_spw_footer_size);
+    for (size_t i = 0; i < false_spw_footer_size; ++i) {
+        false_spw_footer_cmos[i] = 0xff;
     }
 
     // assemble vector of packets of false data:
-    std::vector<std::vector<uint8_t>> false_input_packets;
-    for (size_t i = 0; i < false_data.size(); i += packet_size) {
-        size_t last_element = std::min(false_data.size(), i + packet_size);
+    std::vector<std::vector<uint8_t>> false_input_packets_cdte;
+    for (size_t i = 0; i < false_data_cdte.size(); i += packet_size_cdte) {
+        size_t last_element = std::min(false_data_cdte.size(), i + packet_size_cdte);
         std::vector<uint8_t> this_packet;
-        std::vector<uint8_t> this_data(false_data.begin() + i, false_data.begin() + last_element);
-        this_packet.insert(this_packet.begin(), false_spw_header.begin(), false_spw_header.end());
+        std::vector<uint8_t> this_data(false_data_cdte.begin() + i, false_data_cdte.begin() + last_element);
+        this_packet.insert(this_packet.begin(), false_spw_header_cdte.begin(), false_spw_header_cdte.end());
         this_packet.insert(this_packet.end(), this_data.begin(), this_data.end());
-        this_packet.insert(this_packet.end(), false_spw_footer.begin(), false_spw_footer.end());
+        this_packet.insert(this_packet.end(), false_spw_footer_cdte.begin(), false_spw_footer_cdte.end());
         
-        false_input_packets.push_back(this_packet);
+        false_input_packets_cdte.push_back(this_packet);
+    }
+    std::cout << "\n";
 
-        // std::cout << "\nfalse packet (size " << this_packet.size() << "): ";
-        // for (size_t j = 0; j < this_packet.size(); ++j) {
-        //     std::cout << " " << std::to_string(this_packet[j]);
-        // }
+    // assemble vector of packets of false data:
+    std::vector<std::vector<uint8_t>> false_input_packets_cmos;
+    for (size_t i = 0; i < false_data_cmos.size(); i += packet_size_cmos) {
+        size_t last_element = std::min(false_data_cmos.size(), i + packet_size_cmos);
+        std::vector<uint8_t> this_packet;
+        std::vector<uint8_t> this_data(false_data_cmos.begin() + i, false_data_cmos.begin() + last_element);
+        this_packet.insert(this_packet.begin(), false_spw_header_cmos.begin(), false_spw_header_cmos.end());
+        this_packet.insert(this_packet.end(), this_data.begin(), this_data.end());
+        this_packet.insert(this_packet.end(), false_spw_footer_cmos.begin(), false_spw_footer_cmos.end());
+        
+        false_input_packets_cmos.push_back(this_packet);
     }
     std::cout << "\n";
     // now, can loop over false_input_packets like they are received from SPMU-001
 
     // false_data represents one frame.
-    for (int i = 0; i < false_input_packets.size(); ++i) {
-        // std::cout << "loop " << std::to_string(i) << "/" << std::to_string(false_input_packets.size()) << "\n";
-        pf.push_to_frame(false_input_packets[i]);
+    for (int i = 0; i < false_input_packets_cdte.size(); ++i) {
+        pf_cdte.push_to_frame(false_input_packets_cdte[i]);
+    }
+    for (int i = 0; i < false_input_packets_cmos.size(); ++i) {
+        pf_cmos.push_to_frame(false_input_packets_cmos[i]);
     }
 
     std::cout << "\n";
-    std::cout << "PacketFramer::check_frame_done(): " << std::to_string(pf.check_frame_done()) << "\n";
-    if (!pf.check_frame_done()) {
-        std::cout << "PacketFramer::frame.size(): " << std::to_string(pf.get_frame().size()) << "\n";
+    std::cout << "PacketFramer::check_frame_done() (for cdte): " << std::to_string(pf_cdte.check_frame_done()) << "\n";
+    if (!pf_cdte.check_frame_done()) {
+        std::cout << "PacketFramer::frame.size(): " << std::to_string(pf_cdte.get_frame().size()) << "\n";
+    }
+    std::cout << "PacketFramer::check_frame_done() (for cmos): " << std::to_string(pf_cmos.check_frame_done()) << "\n";
+    if (!pf_cmos.check_frame_done()) {
+        std::cout << "PacketFramer::frame.size(): " << std::to_string(pf_cmos.get_frame().size()) << "\n";
     }
 
     // hand the frame over to FramePacketizer:
-    fp.set_frame(pf.get_frame());
+    fp_cdte.set_frame(pf_cdte.get_frame());
+    fp_cmos.set_frame(pf_cmos.get_frame());
 
-    while(!fp.frame_emptied()) {
-        DownlinkBufferElement this_db(fp.pop_buffer_element());
+    while(!fp_cdte.frame_emptied()) {
+        DownlinkBufferElement this_db(fp_cdte.pop_buffer_element());
         // std::cout << this_db.to_string() << "\n";
-        downlink_buffer.push(this_db);
-        concurrent_downlink_buffer.enqueue(this_db);
+        downlink_buffer_cdte.push(this_db);
+        concurrent_downlink_buffer_cdte.enqueue(this_db);
+        std::vector<uint8_t> this_pack(this_db.get_packet());
+        // hex_print(this_pack);
+        // std::cout << "payload.size(): " << std::to_string(this_db.get_payload().size()) << "\n";
+        // std::cout << "packet.size(): " << std::to_string(this_db.get_packet().size()) << "\n";
+        // std::cout << fp.to_string() << "\n";
+    }
+    while(!fp_cmos.frame_emptied()) {
+        DownlinkBufferElement this_db(fp_cmos.pop_buffer_element());
+        // std::cout << this_db.to_string() << "\n";
+        downlink_buffer_cmos.push(this_db);
+        concurrent_downlink_buffer_cmos.enqueue(this_db);
         std::vector<uint8_t> this_pack(this_db.get_packet());
         // hex_print(this_pack);
         // std::cout << "payload.size(): " << std::to_string(this_db.get_payload().size()) << "\n";
@@ -104,43 +158,80 @@ int main(int argc, char* argv[]) {
         // std::cout << fp.to_string() << "\n";
     }
 
-    std::cout << "pushed frame to downlink queue. FramePacketizer::frame_emptied(): " << fp.frame_emptied() << "\n";
+    std::cout << "pushed cdte frame to downlink queue. FramePacketizer::frame_emptied(): " << fp_cdte.frame_emptied() << "\n";
+    std::cout << "pushed cmos frame to downlink queue. FramePacketizer::frame_emptied(): " << fp_cmos.frame_emptied() << "\n";
 
-    std::cout << fp.to_string();
+    std::cout << fp_cdte.to_string();
+    std::cout << fp_cmos.to_string();
 
     // pop buffer to emulate downlink, and remove header "on ground". Reassemble frame.
-    std::vector<uint8_t> false_downlink;
-    DownlinkBufferElement this_concurrent_element(&cdte1, &gse, RING_BUFFER_TYPE_OPTIONS::PC);
-    while(downlink_buffer.size() > 0) {
+    std::vector<uint8_t> false_downlink_cdte;
+    DownlinkBufferElement this_concurrent_element_cdte(&cdte1, &gse, RING_BUFFER_TYPE_OPTIONS::PC);
+    // this_concurrent_element_cdte.set_type(RING_BUFFER_TYPE_OPTIONS::PC);
+    while(downlink_buffer_cdte.size() > 0) {
 
         // try using the std::queue
-        DownlinkBufferElement this_downlink(downlink_buffer.front());
-        downlink_buffer.pop();
+        DownlinkBufferElement this_downlink(downlink_buffer_cdte.front());
+        downlink_buffer_cdte.pop();
 
         // try using moodycamel::ConcurrentQueue
-        concurrent_downlink_buffer.try_dequeue(this_concurrent_element);
+        concurrent_downlink_buffer_cdte.try_dequeue(this_concurrent_element_cdte);
         // std::vector<uint8_t> this_packet = this_downlink.get_packet();
-        std::vector<uint8_t> this_packet = this_concurrent_element.get_packet();
+        std::vector<uint8_t> this_packet = this_concurrent_element_cdte.get_packet();
 
         std::vector<uint8_t> this_payload = {this_packet.begin() + 8, this_packet.end()};
         // std::cout << "this_payload.size(): " << std::to_string(this_payload.size()) << "\n";
         // hex_print(this_payload);
         // std::cout << "\n";
         
-        false_downlink.insert(false_downlink.end(), this_payload.begin(), this_payload.end());
+        false_downlink_cdte.insert(false_downlink_cdte.end(), this_payload.begin(), this_payload.end());
     }
+    std::vector<uint8_t> false_downlink_cmos;
+    DownlinkBufferElement this_concurrent_element_cmos(&cmos1, &gse, RING_BUFFER_TYPE_OPTIONS::PC);
+    while(downlink_buffer_cmos.size() > 0) {
+
+        // try using the std::queue
+        DownlinkBufferElement this_downlink(downlink_buffer_cmos.front());
+        downlink_buffer_cmos.pop();
+
+        // try using moodycamel::ConcurrentQueue
+        concurrent_downlink_buffer_cmos.try_dequeue(this_concurrent_element_cmos);
+        // std::vector<uint8_t> this_packet = this_downlink.get_packet();
+        std::vector<uint8_t> this_packet = this_concurrent_element_cmos.get_packet();
+
+        std::vector<uint8_t> this_payload = {this_packet.begin() + 8, this_packet.end()};
+        // std::cout << "this_payload.size(): " << std::to_string(this_payload.size()) << "\n";
+        // hex_print(this_payload);
+        // std::cout << "\n";
+        
+        false_downlink_cmos.insert(false_downlink_cmos.end(), this_payload.begin(), this_payload.end());
+    }
+    std::cout << "cmos FramePacketizer: " << fp_cmos.to_string() << "\n";
 
     // check if source data is reconstructed correctly.
-    if (false_downlink == false_data) {
-        std::cout << "\nSUCCESS.\n";
+    if (false_downlink_cdte == false_data_cdte) {
+        std::cout << "\nSUCCESS for cdte transfer.\n";
     } else {
-        std::cout << "\ntry again :(\n";
-        std::cout << "\t received " << std::to_string(false_downlink.size()) << " bytes of data: \n";
-        for (size_t i = 0; i < false_downlink.size(); ++i) {
-            std::cout << " " << std::to_string(false_downlink[i]);
+        std::cout << "\ntry again cdte transfer :(\n";
+        std::cout << "\t received " << std::to_string(false_downlink_cdte.size()) << " bytes of data: \n";
+        for (size_t i = 0; i < false_downlink_cdte.size(); ++i) {
+            std::cout << " " << std::to_string(false_downlink_cdte[i]);
         }
         std::cout << "\n";
     }
+    if (false_downlink_cmos == false_data_cmos) {
+        std::cout << "\nSUCCESS for cmos transfer.\n";
+    } else {
+        std::cout << "\ntry again cmos transfer :(\n";
+        std::cout << "\t received " << std::to_string(false_downlink_cmos.size()) << " bytes of data: \n";
+        for (size_t i = 0; i < false_downlink_cmos.size(); ++i) {
+            std::cout << " " << std::to_string(false_downlink_cmos[i]);
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+
+    // ---------------------------- SpaceWire print tests ---------------------------- //
 
     std::cout << "test SpaceWire printing:\n";
     std::vector<uint8_t> test_cdte_write_msg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23, 0x01, 0x02, 0xfe, 0x01, 0x7d, 0x02, 0x00, 0x00, 0x01, 0x03, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0xb5, 0x3c, 0x3c, 0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x3c, 0x3c, 0x3c, 0x3c, 0x3e};

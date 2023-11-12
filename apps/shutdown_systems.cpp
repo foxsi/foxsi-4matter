@@ -77,7 +77,10 @@ int main(int argc, char** argv) {
     machine.sync_tcp_send_command_for_sys(cdtede, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
     std::this_thread::sleep_for(delay);
 
-    std::cout << "CMOS shutdown not implemented yet!\n";
+    std::cout << "sending CMOS shutdown to both detectors...\n";
+    machine.sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x13));
+    std::this_thread::sleep_for(delay);
+    machine.sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x13));
     std::this_thread::sleep_for(delay);
 
     std::cout << "closing sockets...\n";

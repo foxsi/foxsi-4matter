@@ -70,6 +70,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         ("version",                                                             "output software version number")
         ("verbose,v",                                                           "output verbosely")
         ("config,c",          boost::program_options::value<std::string>(),       "config file with options")
+        ("system",            boost::program_options::value<std::string>(),       "name of system to test")
     ;
     boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(options).run(), vm);
     boost::program_options::notify(vm);
@@ -92,11 +93,16 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     }
     if(vm.count("version")) {
         std::cout << "version: " << version << "\n";
+        exit(0);
     }
     if(vm.count("verbose")) {
         do_verbose = true;
         DEBUG = true;
         verbose_print("verbose printing on");
+    }
+    if(vm.count("system")) {
+        test_system_name = vm["system"].as<std::string>();
+        std::cout << "testing system " << test_system_name << "\n";
     }
     
     // =============== NEW ============================================
@@ -278,10 +284,11 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                                 this_start_address,
                                 this_frames_per_ring,
                                 this_write_pointer_address,
-                                this_write_pointer_width_bytes
+                                this_write_pointer_width_bytes,
+                                RING_BUFFER_TYPE_OPTIONS::PC
                             );
 
-                            this_system_object.ring_params.push_back(*this_rbp);
+                            this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
 
                         } catch(std::exception& e) {}
 
@@ -305,10 +312,11 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                                 this_start_address,
                                 this_frames_per_ring,
                                 this_write_pointer_address,
-                                this_write_pointer_width_bytes
+                                this_write_pointer_width_bytes,
+                                RING_BUFFER_TYPE_OPTIONS::QL
                             );
 
-                            this_system_object.ring_params.push_back(*this_rbp);
+                            this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
 
 
                         } catch(std::exception& e) {}

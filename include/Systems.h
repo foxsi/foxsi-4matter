@@ -3,7 +3,9 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
+
 #include "DataLinkLayer.h"
 #include "DirectMemoryAccess.h"
 #include "Utilities.h"
@@ -28,7 +30,7 @@ class System {
             UART* new_uart,
             SpaceWire* new_spacewire,
             Ethernet* new_ethernet,
-            std::vector<RingBufferParameters> new_ring_params
+            std::unordered_map<RING_BUFFER_TYPE_OPTIONS, RingBufferParameters> new_ring_params
         );
         System(
             std::string new_name, 
@@ -62,7 +64,7 @@ class System {
         Ethernet* ethernet;
         // todo: add `Timing* timing;` as a field?
 
-        std::vector<RingBufferParameters> ring_params;
+        std::unordered_map<RING_BUFFER_TYPE_OPTIONS, RingBufferParameters> ring_params;
     
     private:
 };

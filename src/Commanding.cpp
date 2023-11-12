@@ -570,7 +570,8 @@ Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
         if(commands[sys].contains(code)) {
             // utilities::debug_print("\tcontains code\n");
             // utilities::debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
-            return (commands[sys][code]);
+            // return (commands[sys][code]);
+            return commands.at(sys).at(code);
         }
         // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
         utilities::error_print("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
