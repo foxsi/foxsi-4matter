@@ -1,7 +1,7 @@
 import socket, struct, sys, math
 
 housekeeping_filename = "log/gse/housekeeping.log";
-housekeeping_file = open(housekeeping_filename, "wb");
+housekeeping_file = open(housekeeping_filename, "wb", buffering=0);
 
 cdte1_filename = "log/gse/cdte1.log";
 cdte1_file = open(cdte1_filename, "wb");
@@ -71,7 +71,7 @@ def reframe(data, payload_len, queue, queued):
 	npackets = int.from_bytes(data[1:3], byteorder='big')
 	ipacket = int.from_bytes(data[3:5], byteorder='big')
 
-	print("npackets: " + str(npackets) + ", ipacket: " + str(ipacket))
+	# print("npackets: " + str(npackets) + ", ipacket: " + str(ipacket))
 	
 	if ipacket <= npackets:
 		# queue.extend(data[8:])
@@ -105,12 +105,22 @@ while True:
 	try:
 		data, sender_endpoint = sock.recvfrom(2048)  #receive data
 		# print(str(sender_endpoint[0]) + ":" + str(sender_endpoint[1]) + " sent " + data.hex())
-		if data[0] == 0x02:
+		if data[0] == 0x02 or data[0] == 0x01:
 			# housekeeping system
 			# print(str(sender_endpoint[0]) + ":" + str(sender_endpoint[1]) + " sent " + data[0:7].hex())
-			
+
 			housekeeping_file.write(data[8:])
 			print("wrote " + str(len(data[8:])) + " bytes to log file")
+
+			if (data[0] == 0x02):
+				for i in range(6,42,4):
+					error_state = data[i]
+					# if error_state == 1:
+					temp_bin = data[i+1:i+4]
+					temp_long = (temp_bin[0] << 16) | (temp_bin[1] << 8) | (temp_bin[2])
+					temp_float = temp_long / 1024.0
+					print("\tch" + str(int((i - 6)/4)) + "\terror: " + str(error_state) + "\ttemp: " + str(temp_float))
+
 		elif data[0] == 0x09:
 			# cdte1 system
 			done = reframe(data, cdte1_payload_len, cdte1_queue, cdte1_queued)
