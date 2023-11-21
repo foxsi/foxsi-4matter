@@ -12,10 +12,15 @@ cdte3_file = open(cdte3_filename, "wb");
 cdte4_filename = "log/gse/cdte4.log";
 cdte4_file = open(cdte4_filename, "wb");
 
-cmos_pc_filename = "log/gse/cmos_pc.log";
-cmos_pc_file = open(cmos_pc_filename, "wb");
-cmos_ql_filename = "log/gse/cmos_ql.log";
-cmos_ql_file = open(cmos_ql_filename, "wb");
+cmos1_pc_filename = "log/gse/cmos1_pc.log";
+cmos1_pc_file = open(cmos1_pc_filename, "wb");
+cmos1_ql_filename = "log/gse/cmos1_ql.log";
+cmos1_ql_file = open(cmos1_ql_filename, "wb");
+
+cmos2_pc_filename = "log/gse/cmos2_pc.log";
+cmos2_pc_file = open(cmos2_pc_filename, "wb");
+cmos2_ql_filename = "log/gse/cmos2_ql.log";
+cmos2_ql_file = open(cmos2_ql_filename, "wb");
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -48,19 +53,33 @@ cdte4_queue = bytearray(cdte4_queue_len)
 cdte4_queued = [0]*17
 cdte4_queued_full = [1]*17
 
-cmos_pc_queue_len = 590848 # for PC
-cmos_pc_payload_len = 1992
-cmos_pc_packets_per_frame = math.ceil(cmos_pc_queue_len/cmos_pc_payload_len)
-cmos_pc_queue = bytearray(cmos_pc_queue_len)
-cmos_pc_queued = [0]*297
-cmos_pc_queued_full = [1]*297
+cmos1_pc_queue_len = 590848 # for PC
+cmos1_pc_payload_len = 1992
+cmos1_pc_packets_per_frame = math.ceil(cmos1_pc_queue_len/cmos1_pc_payload_len)
+cmos1_pc_queue = bytearray(cmos1_pc_queue_len)
+cmos1_pc_queued = [0]*297
+cmos1_pc_queued_full = [1]*297
 
-cmos_ql_queue_len = 492544 # for QL
-cmos_ql_payload_len = 1992
-cmos_ql_packets_per_frame = math.ceil(cmos_ql_queue_len/cmos_ql_payload_len)
-cmos_ql_queue = bytearray(cmos_ql_queue_len)
-cmos_ql_queued = [0]*248
-cmos_ql_queued_full = [1]*248
+cmos1_ql_queue_len = 492544 # for QL
+cmos1_ql_payload_len = 1992
+cmos1_ql_packets_per_frame = math.ceil(cmos1_ql_queue_len/cmos1_ql_payload_len)
+cmos1_ql_queue = bytearray(cmos1_ql_queue_len)
+cmos1_ql_queued = [0]*248
+cmos1_ql_queued_full = [1]*248
+
+cmos2_pc_queue_len = 590848 # for PC
+cmos2_pc_payload_len = 1992
+cmos2_pc_packets_per_frame = math.ceil(cmos2_pc_queue_len/cmos2_pc_payload_len)
+cmos2_pc_queue = bytearray(cmos2_pc_queue_len)
+cmos2_pc_queued = [0]*297
+cmos2_pc_queued_full = [1]*297
+
+cmos2_ql_queue_len = 492544 # for QL
+cmos2_ql_payload_len = 1992
+cmos2_ql_packets_per_frame = math.ceil(cmos2_ql_queue_len/cmos2_ql_payload_len)
+cmos2_ql_queue = bytearray(cmos2_ql_queue_len)
+cmos2_ql_queued = [0]*248
+cmos2_ql_queued_full = [1]*248
 
 done = False
 
@@ -152,19 +171,35 @@ while True:
 				
 		elif data[0] == 0x0e:
 			if data[5] == 0x00:
-				done = reframe(data, cmos_pc_payload_len, cmos_pc_queue, cmos_pc_queued)
-				if try_write(cmos_pc_queue, done, cmos_pc_file):
-					cmos_pc_queue = bytearray(cmos_pc_queue_len)
-					cmos_pc_queued = [0]*len(cmos_pc_queued)
+				done = reframe(data, cmos1_pc_payload_len, cmos1_pc_queue, cmos1_pc_queued)
+				if try_write(cmos1_pc_queue, done, cmos1_pc_file):
+					cmos1_pc_queue = bytearray(cmos1_pc_queue_len)
+					cmos1_pc_queued = [0]*len(cmos1_pc_queued)
 					done = False
 			elif data[5] == 0x01:
-				done = reframe(data, cmos_ql_payload_len, cmos_ql_queue, cmos_ql_queued)
-				if try_write(cmos_ql_queue, done, cmos_ql_file):
-					cmos_ql_queue = bytearray(cmos_ql_queue_len)
-					cmos_ql_queued = [0]*len(cmos_ql_queued)
+				done = reframe(data, cmos1_ql_payload_len, cmos1_ql_queue, cmos1_ql_queued)
+				if try_write(cmos1_ql_queue, done, cmos1_ql_file):
+					cmos1_ql_queue = bytearray(cmos1_ql_queue_len)
+					cmos1_ql_queued = [0]*len(cmos1_ql_queued)
 					done = False
 			else:
-				print("got unidentifiable datatype in cmos packet!")
+				print("got unidentifiable datatype in cmos1 packet!")
+				print(data[0:8])
+		elif data[0] == 0x0f:
+			if data[5] == 0x00:
+				done = reframe(data, cmos2_pc_payload_len, cmos2_pc_queue, cmos2_pc_queued)
+				if try_write(cmos2_pc_queue, done, cmos2_pc_file):
+					cmos2_pc_queue = bytearray(cmos2_pc_queue_len)
+					cmos2_pc_queued = [0]*len(cmos2_pc_queued)
+					done = False
+			elif data[5] == 0x01:
+				done = reframe(data, cmos2_ql_payload_len, cmos2_ql_queue, cmos2_ql_queued)
+				if try_write(cmos2_ql_queue, done, cmos2_ql_file):
+					cmos2_ql_queue = bytearray(cmos2_ql_queue_len)
+					cmos2_ql_queued = [0]*len(cmos2_ql_queued)
+					done = False
+			else:
+				print("got unidentifiable datatype in cmos2 packet!")
 				print(data[0:8])
 		else:
 			print("system fell through!")
