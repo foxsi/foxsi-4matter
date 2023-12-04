@@ -319,7 +319,7 @@ uint8_t SpaceWire::crc(std::vector<uint8_t> data)
 namespace utilities {
     void spw_print(std::vector<uint8_t> data, SpaceWire* spw) {
         // assumes a 12-B Ethernet header (SPMU-001) is prepended
-        if (data[0] != 0x00) {
+        if (data.at(0) != 0x00) {
             error_print("got malformed SpaceWire Ethernet header!\n");
             hex_print(data);
             return;
@@ -350,7 +350,7 @@ namespace utilities {
             less_target_path_size = data.size() - target_path_size;
 
             size_t instr_index = 11 + target_path_size + 3;
-            if ((data[instr_index] & 0x20) != 0) {
+            if ((data.at(instr_index) & 0x20) != 0) {
                 // write
                 payload_size = data.size() - 12 - target_path_size - 4 - reply_path_size - 12 - 1;
                 block_sizes = {12, target_path_size, 1,1,1,1, reply_path_size, 1,2,1,4,3,1, payload_size, 1};
