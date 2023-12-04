@@ -23,7 +23,8 @@ doc/*
 # remote testing
 # examples/CLI/config.ini
 
-/doc/*
+/doc/html/*
+/doc/html/latex/*
 
 */log/*
 log/*
