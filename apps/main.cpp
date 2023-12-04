@@ -74,6 +74,14 @@ int main(int argc, char** argv) {
 
     housekeeping_manager->add_timing(&lif.lookup_timing[housekeeping]);
     cdtede_manager->add_timing(&lif.lookup_timing[cdtede]);
+    cdte1_manager->add_timing(&lif.lookup_timing[cdte1]);
+    cdte2_manager->add_timing(&lif.lookup_timing[cdte2]);
+    cdte3_manager->add_timing(&lif.lookup_timing[cdte3]);
+    cdte4_manager->add_timing(&lif.lookup_timing[cdte4]);
+    cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
+    cmos2_manager->add_timing(&lif.lookup_timing[cmos2]);
+
+    std::cout << "Timing for cdtede: " << cdtede_manager->timing->to_string() << "\n";
 
     cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte1);
     cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte1);
@@ -154,6 +162,7 @@ int main(int argc, char** argv) {
 
 
     std::cout << "machine: \n";
+    try {
     auto machine = std::make_shared<TransportLayerMachine>(
         local_udp_end,
         local_tcp_end,
@@ -175,6 +184,7 @@ int main(int argc, char** argv) {
         machine,
         context
     );
+    
 
     loop.slowmo_gain = 1;
 
@@ -189,6 +199,9 @@ int main(int argc, char** argv) {
 
     std::cout <<"setup done\n";
     context.run();
+    } catch (std::exception& e) {
+        std::cout << e.what() << "\n";
+    }
     std::cout <<"doner\n";
 
     return 0;

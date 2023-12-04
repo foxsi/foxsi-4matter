@@ -45,7 +45,6 @@ class TransportLayerMachine {
          * @brief a remote machine's TCP endpoint.
          */
         boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
-        
 
         /**
          * @brief a rudimentary buffer for data to downlink (send to UDP endpoint).
@@ -222,6 +221,40 @@ class TransportLayerMachine {
         void handle_cmd();
 
         /**
+         * @brief receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
+         * 
+         * @param socket 
+         * @param buffer 
+         * @param sys_man 
+         * @return size_t 
+         */
+        size_t read(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+
+        /**
+         * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
+         * 
+         * @param timeout_ms 
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> sync_tcp_receive(size_t receive_size, std::chrono::milliseconds timeout_ms);
+
+        std::vector<uint8_t> sync_tcp_receive(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+
+        /**
+         * @brief handler for `sync_tcp_receive(...)`
+         * 
+         * @param ec 
+         * @param length 
+         * @param out_ec 
+         * @param out_length 
+         */
+        static void sync_tcp_receive_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_udp_receive_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+
+        bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        void run_tcp_context(SystemManager& sys_man);
+
+        /**
          * @brief the target functionality of this method is currently implemented inside `TransportLayerMachine::handle_cmd`. 
          * @todo consider factoring that functionality out of `TransportLayerMachine::handle_cmd`.
          */
@@ -243,6 +276,7 @@ class TransportLayerMachine {
 
         // implemented. todo: change arg to `SystemManager`
         std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+        std::vector<uint8_t> sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd);
         std::vector<uint8_t> sync_tcp_command_transaction(std::vector<uint8_t> data_to_send);
 
         void async_udp_receive_push_to_uplink_buffer(const boost::system::error_code& err, std::size_t byte_count);
@@ -278,7 +312,12 @@ class TransportLayerMachine {
 
     private:
         std::vector<uint8_t> uplink_swap;
+        std::vector<uint8_t> tcp_local_receive_swap;
+        std::vector<uint8_t> udp_local_receive_swap;
 
+        void set_socket_options();
+
+        boost::asio::io_context& io_context;
 };
 
 #endif
