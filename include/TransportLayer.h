@@ -12,6 +12,7 @@
 #include <map>
 #include <queue>
 #include "moodycamel/concurrentqueue.h"
+#include "UartInterface.h"
 
 /**
  * @brief Manager for network operations.
@@ -45,7 +46,11 @@ class TransportLayerMachine {
          * @brief a remote machine's TCP endpoint.
          */
         boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
-        
+
+        /**
+         * @brief the local machine's UART port object
+         */
+        UARTPort uart;
 
         /**
          * @brief a rudimentary buffer for data to downlink (send to UDP endpoint).
@@ -228,6 +233,15 @@ class TransportLayerMachine {
          * @brief asynchronously filters, then sends data stored in `TransportLayerMachine::downlink_buffer` to  `TransportLayerMachine::remote_udp_endpoint`.
          */
         void send_udp(const boost::system::error_code& err, std::size_t byte_count);
+
+        /**
+         * @brief sending UART message
+         */
+        void send_uart();
+        /**
+         * @brief receive UART message
+         */
+        void recv_uart();
 
         /**
          * @brief convenience method to receive and print UDP packets.
