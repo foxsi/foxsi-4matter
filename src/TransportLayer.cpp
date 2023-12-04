@@ -638,7 +638,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         // receive the command response:
         // want 1825 bytes back for CdTe 1
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
-        // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
+        utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
 
         reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
