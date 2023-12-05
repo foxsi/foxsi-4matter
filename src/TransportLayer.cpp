@@ -865,6 +865,9 @@ void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost:
     }
     // trim extra buffer:
     uplink_swap.resize(byte_count);
+    utilities::debug_print("received uplink command: ");
+    utilities::hex_print(uplink_swap);
+
     uint8_t sys_code = uplink_swap[0];
     if (commands->get_sys_name_for_code(sys_code) == "formatter") {
         // don't queue command, act on it immediately.
