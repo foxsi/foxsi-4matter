@@ -154,7 +154,7 @@ void foxsimile::Responder::await_full_buffer(const boost::system::error_code &er
 
 void foxsimile::Responder::send_response(std::vector<uint8_t> response) {
     // delay to test timeout:
-    size_t delay_ms = 10000;
+    size_t delay_ms = 25;
     std::cout << "in " << std::to_string(delay_ms) << " ms, will send  response ";
     utilities::hex_print(response);
     std::cout << "\n";
