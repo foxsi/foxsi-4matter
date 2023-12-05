@@ -16,7 +16,7 @@ add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 # enable_testing()
 
-add_compile_options("$<$<CONFIG:Debug>:-Og>")
+# add_compile_options("$<$<CONFIG:Debug>:-Og>")
 
 # Build library targets "lib..." to link to multiple executables
 add_library(

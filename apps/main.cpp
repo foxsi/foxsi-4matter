@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
     utilities::error_log("main check error log");
 
     boost::asio::io_context context;
+    boost::asio::io_context circle_timer_context;
     LineInterface lif(argc, argv, context);
     auto deck = std::make_shared<CommandDeck>(lif.get_command_deck());
 
@@ -163,46 +164,46 @@ int main(int argc, char** argv) {
 
     std::cout << "machine: \n";
     try {
-    auto machine = std::make_shared<TransportLayerMachine>(
-        local_udp_end,
-        local_tcp_end,
-        local_tcp_housekeeping_end,
-        remote_udp_end,
-        remote_tcp_end,
-        remote_tcp_housekeeping_end,
-        new_uplink_buffer,
-        new_downlink_buffer,
-        context
-    );
-    machine->add_commands(deck);
+        auto machine = std::make_shared<TransportLayerMachine>(
+            local_udp_end,
+            local_tcp_end,
+            local_tcp_housekeeping_end,
+            remote_udp_end,
+            remote_tcp_end,
+            remote_tcp_housekeeping_end,
+            new_uplink_buffer,
+            new_downlink_buffer,
+            context
+        );
+        machine->add_commands(deck);
 
-    std::cout << "loop: \n";
-    Circle loop(
-        2.0,
-        order,
-        deck,
-        machine,
-        context
-    );
-    
+        std::cout << "loop: \n";
+        Circle loop(
+            2.0,
+            order,
+            deck,
+            machine,
+            circle_timer_context
+        );
 
-    loop.slowmo_gain = 1;
+        loop.slowmo_gain = 1;
 
-    // std::cout << "async udp listen: \n";
+        // std::cout << "async udp listen: \n";
 
-    // machine->async_udp_receive_to_uplink_buffer();
-    // machine->async_udp_send_downlink_buffer();
-    
-    // debug:
-    // machine->recv_udp_fwd_tcp_cmd();
-    // machine->recv_tcp_fwd_udp();
+        // machine->async_udp_receive_to_uplink_buffer();
+        // machine->async_udp_send_downlink_buffer();
+        
+        // debug:
+        // machine->recv_udp_fwd_tcp_cmd();
+        // machine->recv_tcp_fwd_udp();
 
-    std::cout <<"setup done\n";
-    context.run();
+        std::cout <<"setup done\n";
+        context.poll();
+        circle_timer_context.run();
     } catch (std::exception& e) {
         std::cout << e.what() << "\n";
     }
-    std::cout <<"doner\n";
+    std::cout <<"exiting\n";
 
     return 0;
 }

@@ -181,64 +181,73 @@ void Circle::init_cmos() {
     // Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
     // return;
 
-    
-    System& cmos1 = deck->get_sys_for_name("cmos1");
-    System& cmos2 = deck->get_sys_for_name("cmos2");
+    SystemManager* cmos1 = Circle::get_sys_man_for_name("cmos1");
+    SystemManager* cmos2 = Circle::get_sys_man_for_name("cmos2");
 
-    Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::LOOP;
-    Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::LOOP;
+    cmos1->system_state = SYSTEM_STATE::LOOP;
+    cmos2->system_state = SYSTEM_STATE::LOOP;
 
     auto delay = std::chrono::milliseconds(2000);
 
     /*----------------------- for cmos1 -----------------------*/
 
+    // Check cmos linetime       0x0f 0xa0
+    utilities::debug_print("checking cmos1 status...\n");
+    std::vector<uint8_t> cmos1_status = transport->sync_tcp_send_command_for_sys(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0xa0));
+    if (cmos1_status.size() < 4) {
+        utilities::error_print("could not receive from cmos1: ABANDONing\n");
+        cmos1->system_state = SYSTEM_STATE::ABANDON;
+    } else {
+        cmos1_status = transport->get_reply_data(cmos1_status, cmos1->system.hex);
+        utilities::debug_print("cmos1 linetime: ");
+        utilities::hex_print(cmos1_status);
+    }
+
     // send start_cmos_init         0x0f 0x18
-    transport->sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x18));
+    transport->sync_tcp_send_command_for_sys(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x18));
     std::this_thread::sleep_for(delay);
 	
     // send start_cmos_training     0x0f 0x1f
-    transport->sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x1f));
+    transport->sync_tcp_send_command_for_sys(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x1f));
     std::this_thread::sleep_for(delay);
 	
     // send set_cmos_params         0x0f 0x10
-    transport->sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x10));
+    transport->sync_tcp_send_command_for_sys(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x10));
     std::this_thread::sleep_for(delay);
 	
     // send start_cmos_exposure     0x0f 0x12
-    transport->sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x12));
+    transport->sync_tcp_send_command_for_sys(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x12));
     std::this_thread::sleep_for(delay);
-
-    // Check cmos linetime       0x0f 0xa0
-    utilities::debug_print("checking cmos1 status...\n");
-    std::vector<uint8_t> cmos1_status = transport->sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0xa0));
-    cmos1_status = transport->get_reply_data(cmos1_status, cmos1.hex);
-    utilities::debug_print("cmos1 linetime: ");
-    utilities::hex_print(cmos1_status);
 
     /*----------------------- for cmos2 -----------------------*/
 
+    // Check cmos linetime       0x0f 0xa0
+    utilities::debug_print("checking cmos2 status...\n");
+    std::vector<uint8_t> cmos2_status = transport->sync_tcp_send_command_for_sys(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0xa0));
+    if (cmos2_status.size() < 4) {
+        utilities::error_print("could not receive from cmos2: ABANDONing\n");
+        cmos2->system_state = SYSTEM_STATE::ABANDON;
+    } else {
+        cmos2_status = transport->get_reply_data(cmos2_status, cmos2->system.hex);
+        utilities::debug_print("cmos2 linetime: ");
+        utilities::hex_print(cmos2_status);
+        std::this_thread::sleep_for(delay);
+    }
+
      // send start_cmos_init         0x0f 0x18
-    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x18));
+    transport->sync_tcp_send_command_for_sys(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x18));
     std::this_thread::sleep_for(delay);
 	
     // send start_cmos_training     0x0f 0x1f
-    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x1f));
+    transport->sync_tcp_send_command_for_sys(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x1f));
     std::this_thread::sleep_for(delay);
 	
     // send set_cmos_params         0x0f 0x10
-    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x10));
+    transport->sync_tcp_send_command_for_sys(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x10));
     std::this_thread::sleep_for(delay);
 	
     // send start_cmos_exposure     0x0f 0x12
-    transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x12));
-    std::this_thread::sleep_for(delay);
-
-    // Check cmos linetime       0x0f 0xa0
-    utilities::debug_print("checking cmos2 status...\n");
-    std::vector<uint8_t> cmos2_status = transport->sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0xa0));
-    cmos2_status = transport->get_reply_data(cmos2_status, cmos2.hex);
-    utilities::debug_print("cmos2 linetime: ");
-    utilities::hex_print(cmos2_status);
+    transport->sync_tcp_send_command_for_sys(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x12));
     std::this_thread::sleep_for(delay);
 
     // then can read ring buffer

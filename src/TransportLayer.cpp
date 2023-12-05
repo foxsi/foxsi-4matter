@@ -491,7 +491,8 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::
     boost::system::error_code err;
     tcp_local_receive_swap.resize(receive_size);
 
-    socket.async_receive(
+    boost::asio::async_read(
+        socket,
         boost::asio::buffer(tcp_local_receive_swap),
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
@@ -559,7 +560,7 @@ bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms
         io_context.run();
         return true;
     }
-    io_context.run();
+    // io_context.run();
     return false;
 }
 
@@ -691,6 +692,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         last_buffer_reply.resize(reply_len);
         if (reply_len != expected_size) {
             utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+            return 0;
         }
         
 // debug
@@ -978,10 +980,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
         utilities::debug_print("waiting for response\n");
         size_t expected_size = cmd.get_spw_reply_length();
         reply.resize(expected_size);
-        size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+        // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+        size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, reply, sys_man);
         utilities::debug_print("got response!!: ");
         utilities::hex_print(reply);
-        // reply.resize(reply_len);
+        reply.resize(reply_len);
     } else {
         reply.resize(0);
     }
@@ -1072,6 +1075,11 @@ std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> 
     size_t data_length_length = 3;
 
     utilities::debug_print("\tlast header access: " + std::to_string(ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length) + "\n");
+
+    if (ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + 1 > spw_reply.size()) {
+        utilities::error_print("message too short to parse!\n");
+        return {};
+    }
 
     std::vector<uint8_t> data_length_vec(
         spw_reply.begin() 
