@@ -148,6 +148,7 @@ class TransportLayerMachine {
         );
 
         /**
+         * @deprecated Superseded functionality in `Circle`.
          * @brief Intended as interface for `Metronome`.
          * 
          * @todo currently undefined.
@@ -188,44 +189,44 @@ class TransportLayerMachine {
          */
         void handle_recv();
         /**
-         * @brief asynchronously forwards any received TCP packets over UDP.
+         * @brief Asynchronously forwards any received TCP packets over UDP.
          */
         void recv_tcp_fwd_udp();
         /**
-         * @brief asynchronously forwards any received UDP packets over TCP.
+         * @brief Asynchronously forwards any received UDP packets over TCP.
          */
         void recv_udp_fwd_tcp();
         /**
-         * @brief parses and acts on a command string received over UDP.
+         * @brief Parses and acts on a command string received over UDP.
          * 
          * A command string is at least a pair of bytes `<system><command code>` where both the `system` and `command code` values are defined in [foxsi4-commands](https://github.com/foxsi/foxsi4-commands). This method checks a received UDP packet is a valid command string, then delegates handling of the command to `TransportLayerMachine::handle_cmd()`.
          */
         void recv_udp_fwd_tcp_cmd();
         /**
-         * @brief asynchronously sends data stored in `TransportLayerMachine::uplink_buffer` to  `TransportLayerMachine::remote_tcp_endpoint`.
+         * @brief Asynchronously sends data stored in `TransportLayerMachine::uplink_buffer` to  `TransportLayerMachine::remote_tcp_endpoint`.
          */
         void send_tcp();
         /**
-         * @brief asynchronously filters, then sends data stored in `TransportLayerMachine::downlink_buffer` to  `TransportLayerMachine::remote_udp_endpoint`.
+         * @brief Asynchronously filters, then sends data stored in `TransportLayerMachine::downlink_buffer` to  `TransportLayerMachine::remote_udp_endpoint`.
          */
         void send_udp(const boost::system::error_code& err, std::size_t byte_count);
 
         /**
-         * @brief sending UART message
+         * @brief Sending UART message
          */
         void send_uart();
         /**
-         * @brief receive UART message
+         * @brief Receive UART message
          */
         void recv_uart();
 
         /**
-         * @brief convenience method to receive and print UDP packets.
+         * @brief Convenience method to receive and print UDP packets.
          */
         void print_udp_basic();
 
         /**
-         * @brief parses and acts on or sends a command string in `TransportLayerMachine::uplink_buff`. 
+         * @brief Parses and acts on or sends a command string in `TransportLayerMachine::uplink_buff`. 
          * 
          * The uplinked command string will be checked against `TransportLayerMachine::commands`. If it is generic, it will be sent asynchronously to the appropriate system. If it is a frame read command (remote ring buffer access), a synchronous remote read-loop is executed and full remote ring buffer data is **printed**. Frame read command status is decided by `TransportLayerMachine::check_frame_read_cmd`.
          * 
@@ -236,22 +237,30 @@ class TransportLayerMachine {
         void handle_cmd();
 
         /**
-         * @brief receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
+         * @brief Receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
          * 
-         * @param socket the TCP socket used to receive data.
-         * @param buffer the buffer to fill with data.
-         * @param sys_man the `SystemManager` describing the remote end of the socket.
-         * @return size_t number of bytes received.
+         * Uses underlying `boost::asio::read()` method, so will return once `buffer.size()` bytes have been received from socket. Use `TransportLayerMachine::read_some()` if you want to get any available data in the socket.
+         * 
+         * @warning This method starts/stops the underlying `boost::io_context` and cancels asynchronous socket operations in order to handle the socket timeout. Only call in a context that can handle these `io_context` work interruptions.
+         * 
+         * @param socket the socket object to read from.
+         * @param buffer the buffer to fill with data. Will be resized 
+         * @param sys_man the `SystemManager` object describing the remote end of the socket. Used to derive timeout/retry information.
+         * @return size_t the number of bytes read.
          */
         size_t read(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
         /**
-         * @brief similar to `::read`, but uses underlying `boost::asio::ip::tcp::socket::read_some()` method.
+         * @brief Receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
          * 
-         * @param socket 
-         * @param buffer 
-         * @param sys_man 
-         * @return size_t 
+         * Uses underlying `boost::asio::ip::tcp::socket::read_some()` method, so will return any available data in the socket. Use `TransportLayerMachine::read` if you want to read a specific data size from the socket.
+         * 
+         * @warning This method starts/stops the underlying `boost::io_context` and cancels asynchronous socket operations in order to handle the socket timeout. Only call in a context that can handle these `io_context` work interruptions.
+         * 
+         * @param socket the socket object to read from.
+         * @param buffer the buffer to fill with data. Will be resized 
+         * @param sys_man the `SystemManager` object describing the remote end of the socket. Used to derive timeout/retry information.
+         * @return size_t the number of bytes read.
          */
         size_t read_some(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
@@ -263,11 +272,26 @@ class TransportLayerMachine {
          */
         std::vector<uint8_t> sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms);
 
+        /**
+         * @brief receive data `receive_size` amount of data from `socket`, timing out after specified `timeout_ms`.
+         * 
+         * @param socket 
+         * @param receive_size 
+         * @param timeout_ms 
+         * @return std::vector<uint8_t> 
+         */
         std::vector<uint8_t> sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+        /**
+         * @brief receive any amount of data from `socket`, timing out after specified `timeout_ms`.
+         * 
+         * @param socket 
+         * @param timeout_ms 
+         * @return std::vector<uint8_t> 
+         */
         std::vector<uint8_t> sync_tcp_read_some(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
 
         /**
-         * @brief handler for `sync_tcp_receive(...)`
+         * @brief handler for `sync_tcp_receive(...)`.
          * 
          * @param ec 
          * @param length 
@@ -278,14 +302,26 @@ class TransportLayerMachine {
         static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+
+        /**
+         * @brief A fool's daydream. Maybe someday I will implement.
+         * 
+         * @param sys_man 
+         */
         void run_tcp_context(SystemManager& sys_man);
 
         /**
-         * @brief the target functionality of this method is currently implemented inside `TransportLayerMachine::handle_cmd`. 
-         * @todo consider factoring that functionality out of `TransportLayerMachine::handle_cmd`.
+         * @brief Execute remote memory transaction over SpaceWire RMAP for `buffer_type` memory region in the remote endpoint described by `sys_man`.
+         * 
+         * Synchronously reads ring buffer data frame from `sys_man`, using timeout/retry parameters. Supply a `prior_write_pointer` to check the last position in remote memory that was read. If the write pointer has not advanced, no read will be performed.
+         * 
+         * @warning This method starts/stops the underlying `boost::io_context` and cancels asynchronous socket operations in order to handle the socket timeout. Only call in a context that can handle these `io_context` work interruptions.
+         * 
+         * @param sys_man description of the remote system being queried.
+         * @param buffer_type the type of ring buffer data to read.
+         * @param prior_write_pointer the region of remote memory last written by the remote system.
+         * @return size_t the number of bytes read from remote memory.
          */
-
-        // todo: write this using innards of `handle_cmd`.
         size_t sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer);
 
         // implemented.
@@ -300,8 +336,21 @@ class TransportLayerMachine {
         void async_udp_send_downlink_buffer();
         bool sync_udp_send_all_downlink_buffer();
 
-        // implemented. todo: change arg to `SystemManager`
+        /**
+         * @brief Synchronously send command `cmd` to remote `sys`.
+         * 
+         * @param sys 
+         * @param cmd 
+         * @return std::vector<uint8_t> any response data to the command.
+         */
         std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+        /**
+         * @brief Synchronously send command `cmd` to remote `sys_man`.
+         * 
+         * @param sys 
+         * @param cmd 
+         * @return std::vector<uint8_t> any response data to the command.
+         */
         std::vector<uint8_t> sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd);
         std::vector<uint8_t> sync_tcp_command_transaction(std::vector<uint8_t> data_to_send);
 

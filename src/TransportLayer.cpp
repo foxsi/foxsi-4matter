@@ -633,22 +633,21 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
-    // std::fill(last_reply.begin(), last_reply.end(), 0x00); // this may be superstitious, try remove
-    // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
     size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, last_reply, sys_man);
     utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
     
-    // wrap the reply vector to the correct length
+    // wrap the reply vector to the correct length:
     last_reply.resize(reply_len);
     utilities::spw_print(last_reply, nullptr);
 
+    // if read length is too short:
     if (reply_len < 26) {
         utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
         utilities::spw_print(last_reply, nullptr);
         return prior_write_pointer;
     }
 
-    // extract the data field from the reply
+    // extract the data field from the reply:
     std::vector<uint8_t> last_write_pointer_bytes(get_reply_data(last_reply, sys_man.system.hex));
     if(last_write_pointer_bytes.size() != 4) {
         utilities::error_print("got bad write pointer length!\n");
@@ -678,13 +677,13 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     //     return prior_write_pointer;
     // }
 
-    // check if we are reading a duplicate frame (interlock with Circle::manager_systems())
+    // check if we are reading a duplicate frame (interlock with Circle::manager_systems() context)
     if (last_write_pointer == prior_write_pointer) {
         utilities::debug_print("write pointer has not advanced, skipping\n");
         return prior_write_pointer;
     }
 
-
+    // log this time for frame time measurement:
     auto frame_start_time = std::chrono::high_resolution_clock::now();
     size_t packet_counter = 0;
     while (!pf->check_frame_done()) {
@@ -702,39 +701,38 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         local_tcp_sock.send(boost::asio::buffer(buffer_read_command));
 
         // receive the command response:
-        // want 1825 bytes back for CdTe 1
+        // want 1825 bytes back for CdTe (runtime constant per foxsi4-commands/systems.json)
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
         utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
 
-        // reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
+        // read, using timeout/retry properties in `sys_man`
         reply_len = TransportLayerMachine::read(local_tcp_sock, last_buffer_reply, sys_man);
 
+        // error if incorrect length is read
         last_buffer_reply.resize(reply_len);
         if (reply_len != expected_size) {
             utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
             return 0;
         }
         
-// debug
-        // log raw data to prelogger
+        // log raw data to prelogger file for debug
         size_t remaining_size = std::min(ring_params.frame_size_bytes - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
         
         std::vector<uint8_t> trace_vec(last_buffer_reply.begin() + sys_man.system.spacewire->static_header_size, last_buffer_reply.end() - sys_man.system.spacewire->static_footer_size);
         trace_vec.resize(remaining_size);
         utilities::trace_prelog(trace_vec);
-// end debug
 
-        // log RTT timer
+        // log RTT timer to logger file for debug
         utilities::debug_log("rtt read time (ms): ");
         utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - rtt_start_time).count()));
 
         // push that response onto the frame:
         pf->push_to_frame(last_buffer_reply);
-        // utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
 
         ++packet_counter;
     }
+    // write to log
     utilities::debug_log("frame read time (ms): ");
     utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
 
@@ -743,6 +741,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     utilities::debug_print("\tset frame packetizer frame\n");
     utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
     
+    // write to log
     utilities::debug_log("PacketFramer::frame: ");
     utilities::trace_log(pf->get_frame());
 

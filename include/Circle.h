@@ -33,12 +33,22 @@ class Circle {
 
         void update_state();
         
+        /**
+         * @brief Initialize all systems in `::system_order`.
+         * 
+         * Delegates initialization to `::init_housekeeping()`, `::init_cdte()`, etc. These all send specific commands to initialize their systems. 
+         */
         void init_systems();
+
         void init_housekeeping();
         void init_cdte();
         void init_cmos();
         void init_timepix();
         
+        /**
+         * @brief Perform state- and system-specific actions on each `System`.
+         * Currently handles all systems by lookup of `::current_system`. In the future, delegate management to `::manage_cdte_state()`, `::manage_housekeeping_state()`, etc.
+         */
         void manage_systems();
 
         void normalize_times_to_period();
