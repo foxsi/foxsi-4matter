@@ -162,6 +162,10 @@ void Circle::init_cdte() {
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));
     std::this_thread::sleep_for(delay);
 
+    // Set sparse readout for all canister    0x08 0x18
+    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x18));
+    // std::this_thread::sleep_for(delay);
+
     // Start observe for all canister   0x08 0x11
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x11));
     std::this_thread::sleep_for(delay);
