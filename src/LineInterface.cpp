@@ -448,6 +448,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 );
 
                 this_times->timeout_millis = time_data.at("receive_timeout_millis").get<double>();
+                this_times->retry_max_count = time_data.at("retry_max_count").get<uint32_t>();
                 this_times->intercommand_space_millis = time_data.at("intercommand_spacing_millis").get<double>();
 
                 lookup_timing.insert(std::make_pair(this_system_object, *this_times));

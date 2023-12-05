@@ -48,6 +48,7 @@ class Timing {
         uint32_t reply_millis;
         uint32_t idle_millis;
 
+        uint32_t retry_max_count;
         uint32_t timeout_millis;
         uint32_t intercommand_space_millis;
 };

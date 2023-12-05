@@ -240,6 +240,13 @@ class PacketFramer{
          */
         const std::vector<uint8_t> get_frame() const {return frame;};
 
+        /**
+         * @brief Make a 2B Transaction ID for an RMAP command. 
+         * First four bytes are unique system ID, last twelve bytes are packet counter.
+         * @return uint16_t 
+         */
+        uint16_t get_spw_transaction_id();
+
         const std::string to_string();
 
     private:
