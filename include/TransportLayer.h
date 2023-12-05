@@ -223,12 +223,22 @@ class TransportLayerMachine {
         /**
          * @brief receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
          * 
+         * @param socket the TCP socket used to receive data.
+         * @param buffer the buffer to fill with data.
+         * @param sys_man the `SystemManager` describing the remote end of the socket.
+         * @return size_t number of bytes received.
+         */
+        size_t read(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+
+        /**
+         * @brief similar to `::read`, but uses underlying `boost::asio::ip::tcp::socket::read_some()` method.
+         * 
          * @param socket 
          * @param buffer 
          * @param sys_man 
          * @return size_t 
          */
-        size_t read(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+        size_t read_some(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
         /**
          * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
@@ -236,9 +246,10 @@ class TransportLayerMachine {
          * @param timeout_ms 
          * @return std::vector<uint8_t> 
          */
-        std::vector<uint8_t> sync_tcp_receive(size_t receive_size, std::chrono::milliseconds timeout_ms);
+        std::vector<uint8_t> sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms);
 
-        std::vector<uint8_t> sync_tcp_receive(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+        std::vector<uint8_t> sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+        std::vector<uint8_t> sync_tcp_read_some(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
 
         /**
          * @brief handler for `sync_tcp_receive(...)`
@@ -248,8 +259,8 @@ class TransportLayerMachine {
          * @param out_ec 
          * @param out_length 
          */
-        static void sync_tcp_receive_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
-        static void sync_udp_receive_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_tcp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_tcp_context(std::chrono::milliseconds timeout_ms);
         void run_tcp_context(SystemManager& sys_man);
