@@ -243,6 +243,27 @@ void TransportLayerMachine::recv_udp_fwd_tcp_cmd() {
     );
 }
 
+void TransportLayerMachine::send_uart() {
+    std::cout << "in send_uart\n";
+
+    const std::vector<uint8_t> FRAME1 = {0x03, 0x02, 0x05, 0x07};
+    uart.vsettings(5, FRAME1.size()); // can set up the port with this info or change when needed
+
+    // send the frame information
+    uart.send(FRAME1);    
+}
+
+void TransportLayerMachine::recv_uart() {
+    std::cout << "in rec_uart\n";
+
+    // define a vector to be used as a buffer 
+    // randomly choose 4
+    std::vector<uint8_t> buffer(4);
+
+    // send buffer to the reading port method
+    uart.recv(buffer);    
+}
+
 // todo: rewrite this with Buffer.h stuff
 void TransportLayerMachine::handle_cmd() {
     // todo: save pointers in these buffers (cmd and uplink) to manage multiple sequential reads/writes safely. Maybe with vector of vectors
