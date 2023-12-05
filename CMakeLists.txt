@@ -82,6 +82,13 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_executable(stop ${CMAKE_CURRENT_SOURCE_DIR}/apps/stop_systems.cpp)
+target_include_directories(
+    stop
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 add_executable(log ${CMAKE_CURRENT_SOURCE_DIR}/apps/log.cpp)
 target_include_directories(
     log
@@ -170,6 +177,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libutil PRIVATE Threads::Threads)
     target_link_libraries(libgse PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
+    target_link_libraries(stop PRIVATE Threads::Threads)
     target_link_libraries(shutdown PRIVATE Threads::Threads)
     target_link_libraries(log PRIVATE Threads::Threads)
     target_link_libraries(mock PRIVATE Threads::Threads)
@@ -239,6 +247,7 @@ if(Boost_FOUND)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(stop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(shutdown PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(log PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
     target_link_libraries(mock PUBLIC Boost::filesystem libcom libsubsys libutil libgse)

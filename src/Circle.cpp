@@ -22,10 +22,8 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
     normalize_times_to_period();
     init_systems();
 
-    // write:
-    // 1. filtering of uplink buffer into housekeeping system
-    // 2. this blocking TransportLayerMachine::await_loop_begin() to block until uplink command received to proceed.
-    transport->await_loop_begin();
+    // disable for testing
+    // transport->await_loop_begin();
 
     slowmo_gain = 1;
 
@@ -107,6 +105,16 @@ void Circle::init_cdte() {
     System& cdte4 = deck->get_sys_for_name("cdte4");
 
     auto delay = std::chrono::milliseconds(2000);
+    auto delay_60to200v = std::chrono::seconds(30);
+    auto delay_post200v = std::chrono::seconds(300);
+
+// debug cmos
+    // Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cdtede")->system_state = SYSTEM_STATE::ABANDON;
+    // return;
 
     // Check canister ping status       0x08 0x8a
     utilities::debug_print("checking canister status...\n");
@@ -147,13 +155,17 @@ void Circle::init_cdte() {
     // std::this_thread::sleep_for(delay);
 
     // Apply HV 60V for all canister    0x08 0x14
-    transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
+    // std::this_thread::sleep_for(delay);
 
     // Set full readout for all canister    0x08 0x19
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));
     std::this_thread::sleep_for(delay);
-    
+
+    // Set sparse readout for all canister    0x08 0x18
+    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x18));
+    // std::this_thread::sleep_for(delay);
+
     // Start observe for all canister   0x08 0x11
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x11));
     std::this_thread::sleep_for(delay);
