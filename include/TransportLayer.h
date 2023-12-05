@@ -125,30 +125,6 @@ class TransportLayerMachine {
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
         );
-        /**
-         * @brief Construct a new Transport Layer Machine from `std::string` IP address and `unsigned short` port number pairs.
-         * 
-         * @param local_ip The IP address of the local machine.
-         * @param remote_tcp_ip The IP address of a remote machine that communicates using TCP.
-         * @param remote_udp_ip The IP address of a remote machine that communicates using UDP.
-         * @param local_port The port number of the local machine (used for both UDP and TCP communication).
-         * @param remote_tcp_port The port number of a remote machine that communicates using TCP.
-         * @param remote_udp_port The port number of a remote machine that communicates using UDP.
-         * @param context A reference to a `boost::asio::io_context` context.
-         */
-        TransportLayerMachine(
-            std::string local_ip,
-            std::string remote_tcp_ip,
-            std::string remote_tcp_housekeeping_ip,
-            std::string remote_udp_ip,
-            unsigned short local_port,
-            unsigned short remote_tcp_port,
-            unsigned short remote_tcp_housekeeping_port,
-            unsigned short remote_udp_port,
-            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
-            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
-            boost::asio::io_context& context
-        );
 
         /**
          * @brief Construct a new Transport Layer Machine object from predefined `boost::asio` endpoint objects.
@@ -260,12 +236,57 @@ class TransportLayerMachine {
         void handle_cmd();
 
         /**
+         * @brief receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
+         * 
+         * @param socket the TCP socket used to receive data.
+         * @param buffer the buffer to fill with data.
+         * @param sys_man the `SystemManager` describing the remote end of the socket.
+         * @return size_t number of bytes received.
+         */
+        size_t read(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+
+        /**
+         * @brief similar to `::read`, but uses underlying `boost::asio::ip::tcp::socket::read_some()` method.
+         * 
+         * @param socket 
+         * @param buffer 
+         * @param sys_man 
+         * @return size_t 
+         */
+        size_t read_some(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+
+        /**
+         * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
+         * 
+         * @param timeout_ms 
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms);
+
+        std::vector<uint8_t> sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+        std::vector<uint8_t> sync_tcp_read_some(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
+
+        /**
+         * @brief handler for `sync_tcp_receive(...)`
+         * 
+         * @param ec 
+         * @param length 
+         * @param out_ec 
+         * @param out_length 
+         */
+        static void sync_tcp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+
+        bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        void run_tcp_context(SystemManager& sys_man);
+
+        /**
          * @brief the target functionality of this method is currently implemented inside `TransportLayerMachine::handle_cmd`. 
          * @todo consider factoring that functionality out of `TransportLayerMachine::handle_cmd`.
          */
 
         // todo: write this using innards of `handle_cmd`.
-        void sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type);
+        size_t sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer);
 
         // implemented.
         void sync_tcp_send_buffer_commands_to_system(SystemManager& sys_man);
@@ -281,6 +302,7 @@ class TransportLayerMachine {
 
         // implemented. todo: change arg to `SystemManager`
         std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+        std::vector<uint8_t> sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd);
         std::vector<uint8_t> sync_tcp_command_transaction(std::vector<uint8_t> data_to_send);
 
         void async_udp_receive_push_to_uplink_buffer(const boost::system::error_code& err, std::size_t byte_count);
@@ -316,7 +338,12 @@ class TransportLayerMachine {
 
     private:
         std::vector<uint8_t> uplink_swap;
+        std::vector<uint8_t> tcp_local_receive_swap;
+        std::vector<uint8_t> udp_local_receive_swap;
 
+        void set_socket_options();
+
+        boost::asio::io_context& io_context;
 };
 
 #endif

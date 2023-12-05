@@ -2,11 +2,12 @@
 
 
 Timing::Timing() {
-    period_millis = 0.0;
-    command_millis = 0.0;
-    request_millis = 0.0;
-    reply_millis = 0.0;
-    idle_millis = 0.0;
+    period_millis = 0;
+    command_millis = 0;
+    request_millis = 0;
+    reply_millis = 0;
+    idle_millis = 0;
+    retry_max_count = 1;
 }
 
 void Timing::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
@@ -36,6 +37,7 @@ const std::string Timing::to_string() {
     result.append("\n\trequest \t\t= " + std::to_string(request_millis) + " ms");
     result.append("\n\treply \t\t\t= " + std::to_string(reply_millis) + " ms");
     result.append("\n\tidle \t\t\t= " + std::to_string(idle_millis) + " ms");
+    result.append("\n\tretry_max_count \t= " + std::to_string(retry_max_count));
     result.append("\n\ttimeout \t\t= " + std::to_string(timeout_millis) + " ms");
     result.append("\n\tintercommand_space \t= " + std::to_string(intercommand_space_millis) + " ms");
     result.append("\n");

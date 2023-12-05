@@ -1,14 +1,16 @@
-#pragma once
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#pragma once
+
 #include <stdint.h>
 #include <string>
+#include <unordered_map>
 
 // Versioning
 static const unsigned short         MAJOR_VERSION   = 0;
 static const unsigned short         MINOR_VERSION   = 0;
-static const unsigned short         PATCH_VERSION   = 2;
+static const unsigned short         PATCH_VERSION   = 4;
 
 // Debugging
 static bool DEBUG = true;
@@ -116,6 +118,12 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     NONE                = 0xff
 };
 
+static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFFER_TYPE_OPTIONS_NAMES = {
+    {RING_BUFFER_TYPE_OPTIONS::PC,      "pc"},
+    {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
+    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
+};
+
 enum class SPACEWIRE_END_OPTIONS: uint8_t {
     EOP                 = 0x00,
     EEP                 = 0x01,
@@ -138,6 +146,8 @@ enum class SYSTEM_STATE: uint8_t {
     INIT                = 0x03,
     LOOP                = 0x04,
     END                 = 0x05,
+    DISCONNECT          = 0x06,
+    ABANDON             = 0x07,
     INVALID             = 0xff
 };
 

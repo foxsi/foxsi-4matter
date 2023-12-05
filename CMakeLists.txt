@@ -16,6 +16,8 @@ add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 # enable_testing()
 
+# add_compile_options("$<$<CONFIG:Debug>:-Og>")
+
 # Build library targets "lib..." to link to multiple executables
 add_library(
     libcom 
@@ -39,6 +41,11 @@ add_library(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Fragmenter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Circle.cpp
 )
+add_library(
+    libgse
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Foxsimile.cpp
+)
 
 target_include_directories(
     libcom
@@ -55,6 +62,11 @@ target_include_directories(
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+target_include_directories(
+    libgse
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 # Build the target "formatter" using source files
 add_executable(formatter ${CMAKE_CURRENT_SOURCE_DIR}/apps/main.cpp)
@@ -67,6 +79,27 @@ target_include_directories(
 add_executable(shutdown ${CMAKE_CURRENT_SOURCE_DIR}/apps/shutdown_systems.cpp)
 target_include_directories(
     shutdown
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(stop ${CMAKE_CURRENT_SOURCE_DIR}/apps/stop_systems.cpp)
+target_include_directories(
+    stop
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(log ${CMAKE_CURRENT_SOURCE_DIR}/apps/log.cpp)
+target_include_directories(
+    log
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(mock ${CMAKE_CURRENT_SOURCE_DIR}/apps/mock.cpp)
+target_include_directories(
+    mock
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -99,6 +132,14 @@ target_include_directories(
 add_executable(test_spw_crc ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
 target_include_directories(
     test_spw_crc
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Build the target "test_spw_ping" using source files
+add_executable(test_spw_ping ${CMAKE_CURRENT_SOURCE_DIR}/test/test_spw_ping.cpp)
+target_include_directories(
+    test_spw_ping
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -143,12 +184,17 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(libcom PRIVATE Threads::Threads)
     target_link_libraries(libsubsys PRIVATE Threads::Threads)
     target_link_libraries(libutil PRIVATE Threads::Threads)
+    target_link_libraries(libgse PRIVATE Threads::Threads)
     target_link_libraries(formatter PRIVATE Threads::Threads)
+    target_link_libraries(stop PRIVATE Threads::Threads)
     target_link_libraries(shutdown PRIVATE Threads::Threads)
+    target_link_libraries(log PRIVATE Threads::Threads)
+    target_link_libraries(mock PRIVATE Threads::Threads)
     # target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     # target_link_libraries(cli_example PRIVATE Threads::Threads)
     # target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
+    target_link_libraries(test_spw_ping PRIVATE Threads::Threads)
     target_link_libraries(test_loop PRIVATE Threads::Threads)
     target_link_libraries(test_buffers PRIVATE Threads::Threads)
     target_link_libraries(test PRIVATE Threads::Threads)
@@ -206,15 +252,20 @@ if(Boost_FOUND)
     target_link_libraries(libcom PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libsubsys PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libutil PUBLIC Boost::filesystem Boost::program_options)
+    target_link_libraries(libgse PUBLIC Boost::filesystem Boost::program_options)
     # target_link_libraries(libutil PRIVATE spdlog::spdlog_header_only)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(stop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(shutdown PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(log PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
+    target_link_libraries(mock PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
     # target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
     # target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     # target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_spw_ping PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_loop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_buffers PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil)

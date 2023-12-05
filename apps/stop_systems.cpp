@@ -87,18 +87,6 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(delay);
     machine.sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x13));
     std::this_thread::sleep_for(delay);
-
-    std::cout << "enabling CMOS double commands...\n";
-    machine.sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x0f));
-    std::this_thread::sleep_for(delay);
-    machine.sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x0f));
-    std::this_thread::sleep_for(delay);
-
-    std::cout << "shutting down CMOS...\n";
-    machine.sync_tcp_send_command_for_sys(cmos1, deck->get_command_for_sys_for_code(cmos1.hex, 0x0c));
-    std::this_thread::sleep_for(delay);
-    machine.sync_tcp_send_command_for_sys(cmos2, deck->get_command_for_sys_for_code(cmos2.hex, 0x0c));
-    std::this_thread::sleep_for(delay);
     
     std::cout << "closing sockets...\n";
     machine.local_tcp_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both);

@@ -23,7 +23,7 @@ System::System(std::string new_name, uint8_t new_hex, COMMAND_TYPE_OPTIONS new_t
     type = new_type;
 }
 
-System::System(std::string new_name, uint8_t new_hex, COMMAND_TYPE_OPTIONS new_type, UART *new_uart, SpaceWire *new_spacewire, Ethernet *new_ethernet, std::vector<RingBufferParameters> new_ring_params):
+System::System(std::string new_name, uint8_t new_hex, COMMAND_TYPE_OPTIONS new_type, UART *new_uart, SpaceWire *new_spacewire, Ethernet *new_ethernet, std::unordered_map<RING_BUFFER_TYPE_OPTIONS, RingBufferParameters> new_ring_params):
     uart(new_uart),
     spacewire(new_spacewire),
     ethernet(new_ethernet),
@@ -165,15 +165,27 @@ size_t System::get_frame_size() {
 
 size_t System::get_frame_size(RING_BUFFER_TYPE_OPTIONS buffer_type) {
     size_t result = 0;
+
     if (spacewire) {
         try {
-            result = ring_params[static_cast<uint8_t>(buffer_type)].frame_size_bytes;
-        } catch (std::exception& e) {
-            utilities::error_print("System frame size lookup out of range!\n");
+            result = ring_params.at(buffer_type).frame_size_bytes;
+        } catch(std::exception& e) {
+            utilities::error_print("System does not contain requested buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + "!\n");
             result = 0;
         }
     } else {
         utilities::error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
     }
+
+    // if (spacewire) {
+    //     try {
+    //         result = ring_params[static_cast<uint8_t>(buffer_type)].frame_size_bytes;
+    //     } catch (std::exception& e) {
+    //         utilities::error_print("System frame size lookup out of range!\n");
+    //         result = 0;
+    //     }
+    // } else {
+    //     utilities::error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
+    // }
     return result;
 }

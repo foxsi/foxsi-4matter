@@ -16,6 +16,7 @@ TransportLayerMachine::TransportLayerMachine(
     std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
 ):  
+    io_context(context),
     local_udp_sock(context), 
     local_tcp_sock(context),
     local_tcp_housekeeping_sock(context),
@@ -48,67 +49,11 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock.bind(local_udp_endpoint);
 
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    set_socket_options();
+
     local_tcp_sock.bind(local_tcp_endpoint);
     local_tcp_sock.connect(remote_tcp_endpoint);
 }
-
-// construct from IP address:port pairs
-TransportLayerMachine::TransportLayerMachine(
-    std::string local_ip,
-    std::string remote_tcp_ip,
-    std::string remote_tcp_housekeeping_ip,
-    std::string remote_udp_ip,
-    unsigned short local_port,
-    unsigned short remote_tcp_port,
-    unsigned short remote_tcp_housekeeping_port,
-    unsigned short remote_udp_port,
-    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
-    std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
-    boost::asio::io_context& context
-): 
-    local_udp_sock(context),
-    local_tcp_sock(context),
-    local_tcp_housekeeping_sock(context),
-    uplink_buffer(new_uplink_buffer),
-    downlink_buffer(new_downlink_buffer)
-{
-    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
-    active_state = STATE_ORDER::IDLE;
-
-    // commands = CommandDeck();
-    
-    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
-    downlink_buff = tmp_vec;
-    uplink_buff = tmp_vec;
-    
-    std::vector<uint8_t> tmp_cmd = {};
-    command_pipe = tmp_cmd;
-
-    boost::asio::ip::address local_addr = boost::asio::ip::make_address(local_ip);
-    boost::asio::ip::address remote_udp_addr = boost::asio::ip::make_address(remote_udp_ip);
-    boost::asio::ip::address remote_tcp_addr = boost::asio::ip::make_address(remote_tcp_ip);
-    boost::asio::ip::address remote_tcp_housekeeping_addr = boost::asio::ip::make_address(remote_tcp_housekeeping_ip);
-    
-    boost::asio::ip::udp::endpoint local_udp_endpoint(local_addr, local_port);
-    boost::asio::ip::tcp::endpoint local_tcp_endpoint(local_addr, local_port);
-    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_endpoint(local_addr, remote_tcp_housekeeping_port);
-
-    remote_udp_endpoint = boost::asio::ip::udp::endpoint(remote_udp_addr, remote_udp_port);
-    remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, remote_tcp_port);
-    remote_tcp_housekeeping_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_housekeeping_addr, remote_tcp_housekeeping_port);
-
-    local_udp_sock.open(boost::asio::ip::udp::v4());
-    local_udp_sock.bind(local_udp_endpoint);
-
-    local_tcp_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_sock.bind(local_tcp_endpoint);
-    local_tcp_sock.connect(remote_tcp_endpoint);
-
-    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_endpoint);
-    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
-}
-
 
 // construct from existing boost asio endpoints
 TransportLayerMachine::TransportLayerMachine(
@@ -122,6 +67,7 @@ TransportLayerMachine::TransportLayerMachine(
     std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
 ): 
+    io_context(context),
     local_udp_sock(context),
     local_tcp_sock(context),
     local_tcp_housekeeping_sock(context),
@@ -148,10 +94,13 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock.bind(local_udp_end);
 
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
+    
+    set_socket_options();
+    
     local_tcp_sock.bind(local_tcp_end);
     local_tcp_sock.connect(remote_tcp_endpoint);
 
-    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
     local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
     local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
 }
@@ -204,6 +153,13 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
         utilities::debug_print("checking for frame read of an unimplemented system!\n");
     }
     return false;
+}
+
+void TransportLayerMachine::set_socket_options() {
+    boost::asio::socket_base::reuse_address reuse_addr_option(true);
+    
+    local_tcp_sock.set_option(reuse_addr_option);
+    local_tcp_housekeeping_sock.set_option(reuse_addr_option);
 }
 
 /* -- network I/F ---------------------------------------- */
@@ -486,24 +442,177 @@ void TransportLayerMachine::handle_cmd() {
     std::fill(command_pipe.begin(), command_pipe.end(), '\0');
 }
 
-void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type) {
-    utilities::debug_print("in sync_remote_buffer_transaction() for " + sys_man.system.name + "\n");
+size_t TransportLayerMachine::read(boost::asio::ip::tcp::socket &socket, std::vector<uint8_t> &buffer, SystemManager &sys_man) {
+    size_t retry_count = 0;
+    bool did_read = false;
+    while (retry_count < sys_man.timing->retry_max_count && !did_read) {
+        std::vector<uint8_t> reply = TransportLayerMachine::sync_tcp_read(socket, buffer.size(), std::chrono::milliseconds(sys_man.timing->timeout_millis));
+        if (reply.size() == 0) {
+            utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+        } else {
+            buffer = reply;
+            return buffer.size();
+        }
+        ++retry_count;
+    }
+    utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    return 0;
+}
 
+size_t TransportLayerMachine::read_some(boost::asio::ip::tcp::socket &socket, std::vector<uint8_t> &buffer, SystemManager &sys_man) {
+    size_t retry_count = 0;
+    bool did_read = false;
+    while (retry_count < sys_man.timing->retry_max_count && !did_read) {
+        std::vector<uint8_t> reply = TransportLayerMachine::sync_tcp_read_some(socket, std::chrono::milliseconds(sys_man.timing->timeout_millis));
+        if (reply.size() == 0) {
+            utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+        } else {
+            buffer = reply;
+            return buffer.size();
+        }
+        ++retry_count;
+    }
+    utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    return 0;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms)
+{
+    tcp_local_receive_swap.resize(receive_size);
+    boost::system::error_code ec;
+
+    for (size_t i = 0; i < 3; ++i) {
+        local_tcp_sock.async_receive(
+            boost::asio::buffer(tcp_local_receive_swap),
+            boost::bind(
+                &TransportLayerMachine::sync_tcp_read_handler,
+                boost::placeholders::_1, 
+                boost::placeholders::_2, 
+                &ec, 
+                &receive_size
+            )
+        );
+
+        // Run the operation until it completes, or until the timeout.
+        bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+        if (!timed_out) {
+            break;
+        } else {
+            utilities::error_print("read attempt " + std::to_string(i) + " timed out! trying again.\n");
+        }
+    }
+    std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+    swap_copy.resize(receive_size);
+    tcp_local_receive_swap.resize(0);
+
+    return swap_copy;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
+    boost::system::error_code err;
+    tcp_local_receive_swap.resize(receive_size);
+
+    boost::asio::async_read(
+        socket,
+        boost::asio::buffer(tcp_local_receive_swap),
+        boost::bind(
+            &TransportLayerMachine::sync_tcp_read_handler,
+            boost::placeholders::_1, 
+            boost::placeholders::_2, 
+            &err, 
+            &receive_size
+        )
+    );
+    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+
+    if (timed_out) {
+        return {};
+    } else {
+        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        swap_copy.resize(receive_size);
+        tcp_local_receive_swap.resize(0);
+        return swap_copy;
+    }
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::tcp::socket &socket, std::chrono::milliseconds timeout_ms) {
+    boost::system::error_code err;
+    tcp_local_receive_swap.resize(4096);
+    size_t receive_size;
+
+    socket.async_read_some(
+        boost::asio::buffer(tcp_local_receive_swap),
+        boost::bind(
+            &TransportLayerMachine::sync_tcp_read_handler,
+            boost::placeholders::_1, 
+            boost::placeholders::_2, 
+            &err, 
+            &receive_size
+        )
+    );
+    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+
+    if (timed_out) {
+        return {};
+    } else {
+        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        swap_copy.resize(receive_size);
+        tcp_local_receive_swap.resize(0);
+        return swap_copy;
+    }
+}
+
+void TransportLayerMachine::sync_tcp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length) {
+    *out_ec = ec;
+    *out_length = length;
+}
+
+void TransportLayerMachine::sync_udp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length) {
+    *out_ec = ec;
+    *out_length = length;
+}
+
+bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms) {
+    io_context.restart();
+    io_context.run_for(timeout_ms);
+    if (!io_context.stopped()) {
+        // utilities::error_print("context timed out in TransportLayerMachine!\n");
+        local_tcp_sock.cancel();
+        io_context.run();
+        return true;
+    }
+    // io_context.run();
+    return false;
+}
+
+void TransportLayerMachine::run_tcp_context(SystemManager &sys_man) {
+    // will need some logic to pick the right io_context.
+    io_context.restart();
+
+    for (uint32_t i = 0; i < sys_man.timing->retry_max_count; ++i) {
+        io_context.run_for(std::chrono::milliseconds(sys_man.timing->timeout_millis));
+        if (!io_context.stopped()) {
+            utilities::error_print("Attempt " + std::to_string(i) + " timed out in TransportLayerMachine for " + sys_man.system.name + "!");
+        }
+    }
+}
+
+size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer) {
+    utilities::debug_print("in sync_remote_buffer_transaction() for " + sys_man.system.name + "\n");
 
     if(!sys_man.system.spacewire) {
         utilities::error_print("require spacewire interface to read ring buffer.\n");
-        return;
+        return prior_write_pointer;
     }
 
     // checking if the ring buffer parameters contains the desired buffer_type
     if(sys_man.system.ring_params.size() < static_cast<uint8_t>(buffer_type)) {
         utilities::error_print("System::ring_params does not contain the requested buffer type.\n");
-        return;
+        return prior_write_pointer;
     }
-
     
     // select the ring buffer parameter object to use for this interaction
-    RingBufferParameters ring_params(sys_man.system.ring_params[static_cast<uint8_t>(buffer_type)]);
+    RingBufferParameters ring_params(sys_man.system.ring_params[buffer_type]);
     utilities::debug_print("\tcan access ring buffer\n");
 
     // get write address width
@@ -524,8 +633,9 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
-    std::fill(last_reply.begin(), last_reply.end(), 0x00);
-    size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
+    // std::fill(last_reply.begin(), last_reply.end(), 0x00); // this may be superstitious, try remove
+    // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(last_reply));
+    size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, last_reply, sys_man);
     utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
     
     // wrap the reply vector to the correct length
@@ -535,7 +645,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     if (reply_len < 26) {
         utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
         utilities::spw_print(last_reply, nullptr);
-        return;
+        return prior_write_pointer;
     }
 
     // extract the data field from the reply
@@ -548,7 +658,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
-        last_reply = utilities::swap_endian4(last_write_pointer_bytes);
+        last_write_pointer_bytes = utilities::swap_endian4(last_write_pointer_bytes);
         utilities::debug_print("\tfound cmos, swapped endianness\n");
     }
     // later, use EVTM? Or a union object?
@@ -560,9 +670,20 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
     size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
 
     // confirm write pointer in ring buffer
-    if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
-        utilities::error_print("write pointer outside ring buffer for system!\n");
+    // todo: this is not a valid criterion for cmos, which does not use all of its buffer area for frames.
+
+    // if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
+    //     utilities::error_print("write pointer " + std::to_string(last_write_pointer) + " outside ring buffer for system with ");
+    //     utilities::error_print(ring_params.to_string());
+    //     return prior_write_pointer;
+    // }
+
+    // check if we are reading a duplicate frame (interlock with Circle::manager_systems())
+    if (last_write_pointer == prior_write_pointer) {
+        utilities::debug_print("write pointer has not advanced, skipping\n");
+        return prior_write_pointer;
     }
+
 
     auto frame_start_time = std::chrono::high_resolution_clock::now();
     size_t packet_counter = 0;
@@ -583,19 +704,21 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         // receive the command response:
         // want 1825 bytes back for CdTe 1
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
-        // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
+        utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
 
-        reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
+        // reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
+        reply_len = TransportLayerMachine::read(local_tcp_sock, last_buffer_reply, sys_man);
 
         last_buffer_reply.resize(reply_len);
         if (reply_len != expected_size) {
             utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+            return 0;
         }
         
 // debug
         // log raw data to prelogger
-        size_t remaining_size = std::min(32780 - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
+        size_t remaining_size = std::min(ring_params.frame_size_bytes - pf->get_frame().size(), reply_len - sys_man.system.spacewire->static_header_size - sys_man.system.spacewire->static_footer_size);
         
         std::vector<uint8_t> trace_vec(last_buffer_reply.begin() + sys_man.system.spacewire->static_header_size, last_buffer_reply.end() - sys_man.system.spacewire->static_footer_size);
         trace_vec.resize(remaining_size);
@@ -608,7 +731,7 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
 
         // push that response onto the frame:
         pf->push_to_frame(last_buffer_reply);
-        utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
+        // utilities::debug_print("\t\tappended to frame, PacketFramer::frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
 
         ++packet_counter;
     }
@@ -628,13 +751,14 @@ void TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_ma
         // fp.pop_buffer_element()
         DownlinkBufferElement this_dbe(fp->pop_buffer_element());
         downlink_buffer->enqueue(this_dbe);
-        utilities::debug_print("\t\tqueued packet\n");
+        // utilities::debug_print("\t\tqueued packet\n");
     }
     
     // clear the old frame to use the PacketFramer again.
     pf->clear_frame();
 
     utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
+    return last_write_pointer;
 }
 
 void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManager &sys_man) {
@@ -808,8 +932,9 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
 
     while (has_data && dbe.get_system().hex != 0x05) {
         std::vector<uint8_t> packet = dbe.get_packet();
-        utilities::debug_print("sending to gse: ");
+        // utilities::debug_print("sending to gse: ");
         // utilities::hex_print(packet);
+
         local_udp_sock.send_to(
             boost::asio::buffer(packet), 
             remote_udp_endpoint
@@ -845,7 +970,41 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
 
     if (cmd.read) {
         utilities::debug_print("waiting for response\n");
-        size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
+        // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
+        std::chrono::milliseconds timeout(500);
+        reply = sync_tcp_read(cmd.get_spw_reply_length(), timeout);
+        utilities::debug_print("got response!!: ");
+        utilities::hex_print(reply);
+        // reply.resize(reply_len);
+    } else {
+        reply.resize(0);
+    }
+    return reply;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd) {
+    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
+
+    std::vector<uint8_t> reply(4096);
+
+    utilities::debug_print("in sync_tcp_send_command_for_sys(), sending ");
+    if (sys_man.system.type == COMMAND_TYPE_OPTIONS::SPW) {
+        utilities::spw_print(packet, sys_man.system.spacewire);
+    } else {
+        utilities::hex_print(packet);
+    }
+
+    local_tcp_sock.send(boost::asio::buffer(packet));
+    utilities::debug_print("in sync_tcp_send_command_for_sys(), sent request\n");
+
+    if (cmd.read) {
+        utilities::debug_print("waiting for response\n");
+        size_t expected_size = cmd.get_spw_reply_length();
+        reply.resize(expected_size);
+        // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+        size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, reply, sys_man);
+        utilities::debug_print("got response!!: ");
+        utilities::hex_print(reply);
         reply.resize(reply_len);
     } else {
         reply.resize(0);
@@ -853,6 +1012,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
     return reply;
 }
 
+// todo: implement this if needed?
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_command_transaction(std::vector<uint8_t> data_to_send) {
     utilities::debug_print("in sync_tcp_command_transaction\n");
     return std::vector<uint8_t>();
@@ -867,6 +1027,9 @@ void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost:
     }
     // trim extra buffer:
     uplink_swap.resize(byte_count);
+    utilities::debug_print("received uplink command: ");
+    utilities::hex_print(uplink_swap);
+
     uint8_t sys_code = uplink_swap[0];
     if (commands->get_sys_name_for_code(sys_code) == "formatter") {
         // don't queue command, act on it immediately.
@@ -933,6 +1096,11 @@ std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> 
     size_t data_length_length = 3;
 
     utilities::debug_print("\tlast header access: " + std::to_string(ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length) + "\n");
+
+    if (ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + 1 > spw_reply.size()) {
+        utilities::error_print("message too short to parse!\n");
+        return {};
+    }
 
     std::vector<uint8_t> data_length_vec(
         spw_reply.begin() 

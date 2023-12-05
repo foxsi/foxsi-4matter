@@ -132,21 +132,43 @@ namespace config::spw{
         }
         return crc;
     }
+
+    bool check_packet_complete(std::vector<uint8_t> &data) {
+        uint64_t length_remain = utilities::unsplat_from_4bytes(std::vector<uint8_t>(data.begin() + 8, data.begin() + 12));
+        std::vector<uint8_t> remain(data.begin()+12, data.end());
+
+        if (length_remain < remain.size()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
 }
 
 namespace utilities{
+    std::string get_now_string() {
+        char time_format[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        auto start_time = std::time({});
+
+        std::strftime(std::data(time_format), std::size(time_format), "auto_%F_%T", std::gmtime(&start_time));
+
+        return std::string(time_format);
+    }
 
     // add spdlog setup files function here (filename with "log-today-time.log")
     // add spdlog write function (error, debug, info) here
     
     std::shared_ptr<spdlog::logger> logger;
     std::shared_ptr<spdlog::logger> prelogger;
+    void setup_logs_nowtime(std::string prefix)
+    {
+        // char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        // auto start_time = std::time({});
 
-    void setup_logs_nowtime(std::string prefix) {
-        char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
-        auto start_time = std::time({});
+        // std::strftime(std::data(time_fmt), std::size(time_fmt), "auto_%F_%T", std::gmtime(&start_time));
 
-        std::strftime(std::data(time_fmt), std::size(time_fmt), "auto_%F_%T", std::gmtime(&start_time));
+        std::string time_fmt = get_now_string();
+
         std::string file_name = prefix + std::string(time_fmt);
         std::string prefile_name = prefix + std::string(time_fmt) + "_pre";
         std::string extension = ".log";

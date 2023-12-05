@@ -20,10 +20,12 @@ namespace config::spw{
     // more Spacewire stuff
     char spw_calculate_crc_F(std::vector<char>& data);
     uint8_t spw_calculate_crc_uint_F(std::vector<uint8_t>& data);
+    bool check_packet_complete(std::vector<uint8_t>& data);
 }
 
 namespace utilities{
 
+    std::string get_now_string();
     // std::shared_ptr<spdlog::logger> debug_logger;
     // possibly group here
     void setup_logs_nowtime(std::string prefix);
