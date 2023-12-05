@@ -578,7 +578,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager& sys_
         // receive the command response:
         // want 1825 bytes back for CdTe 1
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
-        // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
+        utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
 
         reply_len = boost::asio::read(local_tcp_sock, boost::asio::buffer(last_buffer_reply));
@@ -865,6 +865,9 @@ void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost:
     }
     // trim extra buffer:
     uplink_swap.resize(byte_count);
+    utilities::debug_print("received uplink command: ");
+    utilities::hex_print(uplink_swap);
+
     uint8_t sys_code = uplink_swap[0];
     if (commands->get_sys_name_for_code(sys_code) == "formatter") {
         // don't queue command, act on it immediately.
