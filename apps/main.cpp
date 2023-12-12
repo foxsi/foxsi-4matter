@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
     boost::asio::io_context context;
     boost::asio::io_context circle_timer_context;
     LineInterface lif(argc, argv, context);
+    bool do_uart = lif.do_uart;
     auto deck = std::make_shared<CommandDeck>(lif.get_command_deck());
 
     System& housekeeping = deck->get_sys_for_name("housekeeping");
@@ -160,6 +161,16 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
+
+    std::cout << "uart: \n";
+    if (do_uart) {
+        if (deck->get_sys_for_name("timepix").uart) {
+            std::cout << "timepix has uart interface\n";
+        } else {
+            std::cout << "timepix has no uart interface!\n";
+        }
+        std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
+    }
 
 
     std::cout << "machine: \n";

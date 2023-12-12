@@ -97,9 +97,9 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-add_executable(mock ${CMAKE_CURRENT_SOURCE_DIR}/apps/mock.cpp)
+add_executable(foxsimile ${CMAKE_CURRENT_SOURCE_DIR}/apps/foxsimile.cpp)
 target_include_directories(
-    mock
+    foxsimile
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -189,7 +189,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(stop PRIVATE Threads::Threads)
     target_link_libraries(shutdown PRIVATE Threads::Threads)
     target_link_libraries(log PRIVATE Threads::Threads)
-    target_link_libraries(mock PRIVATE Threads::Threads)
+    target_link_libraries(foxsimile PRIVATE Threads::Threads)
     # target_link_libraries(forwarding_example PRIVATE Threads::Threads)
     # target_link_libraries(cli_example PRIVATE Threads::Threads)
     # target_link_libraries(commanding_example PRIVATE Threads::Threads)
@@ -260,7 +260,7 @@ if(Boost_FOUND)
     target_link_libraries(stop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(shutdown PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(log PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
-    target_link_libraries(mock PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
+    target_link_libraries(foxsimile PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
     # target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
     # target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     # target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)

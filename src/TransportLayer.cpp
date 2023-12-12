@@ -21,7 +21,9 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock(context),
     local_tcp_housekeeping_sock(context),
     uplink_buffer(new_uplink_buffer),
-    downlink_buffer(new_downlink_buffer)
+    downlink_buffer(new_downlink_buffer),
+    local_uart_port(context),
+    uplink_uart_port(context)
 {
     active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
     active_state = STATE_ORDER::IDLE;
@@ -72,7 +74,9 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock(context),
     local_tcp_housekeeping_sock(context),
     uplink_buffer(new_uplink_buffer),
-    downlink_buffer(new_downlink_buffer)
+    downlink_buffer(new_downlink_buffer),
+    local_uart_port(context),
+    uplink_uart_port(context)
 {
     remote_udp_endpoint = remote_udp_end;
     remote_tcp_endpoint = remote_tcp_end;
@@ -103,6 +107,61 @@ TransportLayerMachine::TransportLayerMachine(
 
     local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
     local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
+}
+
+TransportLayerMachine::TransportLayerMachine(
+    boost::asio::ip::udp::endpoint local_udp_end, 
+    boost::asio::ip::tcp::endpoint local_tcp_end, 
+    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end, 
+    boost::asio::ip::udp::endpoint remote_udp_end, 
+    boost::asio::ip::tcp::endpoint remote_tcp_end, 
+    boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end, 
+    std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer, 
+    std::shared_ptr<UART> local_uart, 
+    std::shared_ptr<UART> uplink_uart, 
+    boost::asio::io_context &context
+): 
+    io_context(context),
+    local_udp_sock(context),
+    local_tcp_sock(context),
+    local_tcp_housekeeping_sock(context),
+    uplink_buffer(new_uplink_buffer),
+    downlink_buffer(new_downlink_buffer),
+    local_uart_port(context),
+    uplink_uart_port(context)
+{
+    remote_udp_endpoint = remote_udp_end;
+    remote_tcp_endpoint = remote_tcp_end;
+    remote_tcp_housekeeping_endpoint = remote_tcp_housekeeping_end;
+    
+    active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
+    active_state = STATE_ORDER::IDLE;
+    
+    // commands = CommandDeck();
+    
+    std::vector<uint8_t> tmp_vec(config::buffer::RECV_BUFF_LEN, '\0');
+    downlink_buff = tmp_vec;
+    uplink_buff = tmp_vec;
+    
+    std::vector<uint8_t> tmp_cmd = {};
+    command_pipe = tmp_cmd;
+
+    local_udp_sock.open(boost::asio::ip::udp::v4());
+    local_udp_sock.bind(local_udp_end);
+
+    local_tcp_sock.open(boost::asio::ip::tcp::v4());
+    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
+    
+    set_socket_options();
+    
+    local_tcp_sock.bind(local_tcp_end);
+    local_tcp_sock.connect(remote_tcp_endpoint);
+
+    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
+    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
+
+    local_uart_port.open(local_uart->tty_path);
+    uplink_uart_port.open(uplink_uart->tty_path);
 }
 
 void TransportLayerMachine::add_commands(std::shared_ptr<CommandDeck> new_commands) {
@@ -246,11 +305,11 @@ void TransportLayerMachine::recv_udp_fwd_tcp_cmd() {
 void TransportLayerMachine::send_uart() {
     std::cout << "in send_uart\n";
 
-    const std::vector<uint8_t> FRAME1 = {0x03, 0x02, 0x05, 0x07};
-    uart.vsettings(5, FRAME1.size()); // can set up the port with this info or change when needed
+    // const std::vector<uint8_t> FRAME1 = {0x03, 0x02, 0x05, 0x07};
+    // uart.vsettings(5, FRAME1.size()); // can set up the port with this info or change when needed
 
-    // send the frame information
-    uart.send(FRAME1);    
+    // // send the frame information
+    // uart.send(FRAME1);    
 }
 
 void TransportLayerMachine::recv_uart() {
@@ -258,10 +317,10 @@ void TransportLayerMachine::recv_uart() {
 
     // define a vector to be used as a buffer 
     // randomly choose 4
-    std::vector<uint8_t> buffer(4);
+    // std::vector<uint8_t> buffer(4);
 
-    // send buffer to the reading port method
-    uart.recv(buffer);    
+    // // send buffer to the reading port method
+    // uart.recv(buffer);    
 }
 
 // todo: rewrite this with Buffer.h stuff

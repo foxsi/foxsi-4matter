@@ -123,21 +123,6 @@ void System::print() {
         default:
             std::cout << "found no type!\n";
     }
-
-    // if (ethernet) {
-    //     std::cout << "\tEthernet interface: ";
-    //     std::cout << ethernet->to_string;
-    // }
-    // if (spacewire) {
-    //     std::cout << "\tSpaceWire interface: ";
-    //     std::cout << ""
-    // }
-    // if (uart) {
-
-    // }
-    // if (ring_params) {
-
-    // }
 }
 
 size_t System::get_frame_size() {

@@ -48,9 +48,14 @@ class TransportLayerMachine {
         boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
 
         /**
-         * @brief the local machine's UART port object
+         * @brief the local machine's UART port object;
          */
-        UARTPort uart;
+        boost::asio::serial_port local_uart_port;
+
+        /**
+         * @brief the local machine's UART port, reserved for uplink use.
+         */
+        boost::asio::serial_port uplink_uart_port;
 
         /**
          * @brief a rudimentary buffer for data to downlink (send to UDP endpoint).
@@ -144,6 +149,35 @@ class TransportLayerMachine {
             boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+            boost::asio::io_context& context
+        );
+
+        /**
+         * @brief Construct a new Transport Layer Machine object from predefined `boost::asio` endpoint objects and `UART` interfaces.
+         * 
+         * @param local_udp_end 
+         * @param local_tcp_end 
+         * @param local_tcp_housekeeping_end 
+         * @param remote_udp_end 
+         * @param remote_tcp_end 
+         * @param remote_tcp_housekeeping_end 
+         * @param new_uplink_buffer 
+         * @param new_downlink_buffer 
+         * @param local_uart 
+         * @param uplink_uart 
+         * @param context 
+         */
+        TransportLayerMachine(
+            boost::asio::ip::udp::endpoint local_udp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint remote_udp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
+            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+            std::shared_ptr<UART> local_uart,
+            std::shared_ptr<UART> uplink_uart,
             boost::asio::io_context& context
         );
 
@@ -386,6 +420,8 @@ class TransportLayerMachine {
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
 
     private:
+        bool do_uart;
+        
         std::vector<uint8_t> uplink_swap;
         std::vector<uint8_t> tcp_local_receive_swap;
         std::vector<uint8_t> udp_local_receive_swap;

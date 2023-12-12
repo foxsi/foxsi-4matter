@@ -202,6 +202,7 @@ class UART: public DataLinkLayer {
         UART(const UART& other);
         UART(const DataLinkLayer& link_layer);
         UART(
+            std::string new_tty_path,
             uint32_t new_baud_rate,
             uint8_t new_parity,
             uint8_t new_stop_bits,
@@ -213,6 +214,7 @@ class UART: public DataLinkLayer {
             size_t new_static_footer_size
         );
         UART(
+            std::string new_tty_path,
             uint32_t new_baud_rate,
             uint8_t new_parity,
             uint8_t new_stop_bits,
@@ -230,6 +232,9 @@ class UART: public DataLinkLayer {
 
         bool operator==(UART& other);
 
+        std::string to_string();
+
+        std::string tty_path;
         uint32_t baud_rate;
         uint8_t parity;
         uint8_t stop_bits;

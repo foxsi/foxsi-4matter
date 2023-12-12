@@ -30,45 +30,12 @@ std::string EndpointData::as_string() {
     return "("+protocol+")"+address+":"+std::to_string(port);
 }
 
-// Timing::Timing(double period_s) {
-//     if(period_s > 0) {
-//         period_millis = period_s;
-//     } else {
-//         throw "period must be positive\n";
-//     } 
-// }
-
-// Timing::Timing() {
-//     period_millis = 0.0;
-//     command_millis = 0.0;
-//     request_millis = 0.0;
-//     reply_millis = 0.0;
-//     idle_millis = 0.0;
-// }
-
-// void Timing::add_times_seconds(double total_allocation_seconds, double command_time_seconds, double request_time_seconds, double reply_time_seconds, double idle_time_seconds) {
-//     period_millis = (uint32_t)(total_allocation_seconds*1000);
-//     command_millis = (uint32_t)(command_time_seconds*1000);
-//     request_millis = (uint32_t)(request_time_seconds*1000);
-//     reply_millis = (uint32_t)(reply_time_seconds*1000);
-//     idle_millis = (uint32_t)(idle_time_seconds*1000);
-
-//     Timing::resolve_times();
-// }
-
-// void Timing::resolve_times() {
-//     double sum = command_millis + request_millis + reply_millis + idle_millis;
-//     command_millis = command_millis*period_millis/sum;
-//     request_millis = request_millis*period_millis/sum;
-//     reply_millis = reply_millis*period_millis/sum;
-//     idle_millis = idle_millis*period_millis/sum;
-// }
-
 LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& context): options("options") {
     options.add_options()
         ("help,h",                                                              "output help message")
         ("version",                                                             "output software version number")
         ("verbose,v",                                                           "output verbosely")
+        ("uart,u",                                                                "run without uart interfaces")
         ("config,c",          boost::program_options::value<std::string>(),       "config file with options")
         ("system",            boost::program_options::value<std::string>(),       "name of system to test")
     ;
@@ -77,13 +44,16 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
     version = std::to_string(MAJOR_VERSION) + "." + std::to_string(MINOR_VERSION) + "." + std::to_string(PATCH_VERSION);
     // long help message (move this elsewhere? TODO:write it)
-    help_msg = R"(usage: ??? [options]
+    help_msg = R"(usage: formatter [options]
     
     Launch Formatter with set global options.
     
     General options:
         --help,         -h                  Display help message.
         --version,                          Check software version.
+        --verbose,      -v                  Verbose output.
+        --uart,         -u                  Do not use UART interfaces.
+        --config,       -c                  Provide a systems configuration JSON file.
     )";
 
     // handle all the options:
@@ -103,6 +73,13 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     if(vm.count("system")) {
         test_system_name = vm["system"].as<std::string>();
         std::cout << "testing system " << test_system_name << "\n";
+    }
+    if(vm.count("uart")) {
+        do_uart = true;
+        std::cout << "UART interfaces are enabled.\n";
+    } else {
+        do_uart = false;
+        std::cout << "running without UART interfaces.\n";
     }
     
     // =============== NEW ============================================
@@ -346,9 +323,8 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 // lookup_command_file.insert(std::make_pair(this_system_object, spwif.at("commands").get<std::string>()));
 
             }
-
         } catch(std::exception& e) {
-            utilities::debug_print("exception while adding spacewire interface\n");
+            utilities::debug_print("\texception while adding spacewire interface\n");
             // std::cout << "couldn't find a SpaceWire interface.\n";
         }
 
@@ -374,66 +350,47 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                 has_uart = true;
 
                 if (this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
-                    UART* uart = new UART(
-                        uartif.at("baud_rate").get<uint32_t>(),
-                        uartif.at("parity_bits").get<uint8_t>(),
-                        uartif.at("stop_bits").get<uint8_t>(),
-                        uartif.at("data_bits").get<uint8_t>(),
-                        uartif.at("mean_speed_bps").get<uint32_t>(),
-                        uartif.at("max_payload_bytes").get<size_t>(),
-                        uartif.at("frame_size").get<size_t>(),
-                        uartif.at("static_header_size").get<size_t>(),
-                        uartif.at("static_footer_size").get<size_t>()
-                    );
+                    try {
+                        UART* uart = new UART(
+                            uartif.at("tty_path").get<std::string>(),
+                            uartif.at("baud_rate").get<uint32_t>(),
+                            uartif.at("parity_bits").get<uint8_t>(),
+                            uartif.at("stop_bits").get<uint8_t>(),
+                            uartif.at("data_bits").get<uint8_t>(),
+                            uartif.at("mean_speed_bps").get<uint32_t>(),
+                            uartif.at("max_payload_bytes").get<size_t>(),
+                            uartif.at("frame_size").get<size_t>(),
+                            uartif.at("static_header_size").get<size_t>(),
+                            uartif.at("static_footer_size").get<size_t>()
+                        );
 
-                    this_system_object.uart = uart;
-                } else {
-                    UART* uart = new UART(
-                        uartif.at("baud_rate").get<uint32_t>(),
-                        uartif.at("parity_bits").get<uint8_t>(),
-                        uartif.at("stop_bits").get<uint8_t>(),
-                        uartif.at("data_bits").get<uint8_t>(),
-                        0,
-                        uartif.at("max_payload_bytes").get<size_t>(),
-                        0,
-                        0,
-                        0
-                    );
+                        this_system_object.uart = uart;
+                    } catch (std::exception& e) {}
+
+                    try {
+                        UART* uart = new UART(
+                            uartif.at("tty_path").get<std::string>(),
+                            uartif.at("baud_rate").get<uint32_t>(),
+                            uartif.at("parity_bits").get<uint8_t>(),
+                            uartif.at("stop_bits").get<uint8_t>(),
+                            uartif.at("data_bits").get<uint8_t>(),
+                            0,
+                            uartif.at("max_payload_bytes").get<size_t>(),
+                            0,
+                            0,
+                            0
+                        );
+
+                        this_system_object.uart = uart;
+
+                    } catch (std::exception& e) {}
                 }
             }
 
-        } catch(std::exception& e) {}
-            
-        // check if we can command it
-        // try {
-        //     command_file_path = ethif.at("command_path").get<std::string>();
-        //     is_command = true;
-
-        //     // an Ethernet-commandable system
-        //     lookup_command_file.insert(std::make_pair(this_system_object, command_file_path));
-            
-        //     this_system_object.type = COMMAND_TYPE_OPTIONS::ETHERNET;
-            
-        // } catch(std::exception& e) {}
-
+        } catch(std::exception& e) {
+            utilities::debug_print("exception while adding a UART interface\n");
+        }
         
-
-        // TODO:do sanity checks
-        // debug_print("\tfound command type: \n");
-        // if(this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
-        //         debug_print("\t\tUART\n");
-        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPW) {
-        //         debug_print("\t\tSPW\n");
-        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::SPI) {
-        //         debug_print("\t\tSPI\n");
-        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-        //         debug_print("\t\tETHERNET\n");
-        //     } else if(this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
-        //         debug_print("\t\tnone\n");
-        //     } else {
-        //         debug_print("\t\tDID NOT FIND TYPE\n");
-        // }
-
         // now add more command-specific info to this_system_object
         if(is_command) {
             try {
