@@ -35,11 +35,23 @@ int main(int argc, char* argv[]) {
     std::cout << "housekeeping address: " << housekeeping_manager->system.ethernet->address << ":" << housekeeping_manager->system.ethernet->port << "\n";
     std::cout << "gse address: " << gse_manager->system.ethernet->address << ":" << gse_manager->system.ethernet->port << "\n";
 
+    std::string cdte1_mmap_file = "util/mock/de_mmap_mod";
+
+    std::vector<uint8_t> housekeeping_request1 = {0x01, 0xf2};
+    std::vector<uint8_t> housekeeping_request2 = {0x02, 0xf2};
+    std::vector<uint8_t> housekeeping_reply = {
+        0x01,0x00,0x65,0x04,0xb8,0x42,0x01,0x70,0x44,0x00,0x01,0x30,0x64,0x00,
+        0x01,0x10,0x64,0x00,0x81,0x30,0x64,0x00,0x05,0xf0,0x64,0x00,0x01,0xf0,
+        0x64,0x00,0x01,0x70,0x64,0x00,0x81,0xf0,0x64,0x00,0x01,0x00,0x5f,0x13
+    };
+    housekeeping_response_lookup[housekeeping_request1] = housekeeping_reply;
+    housekeeping_response_lookup[housekeeping_request2] = housekeeping_reply;
+
     try {
         std::cout << "starting cdte1\n";
         foxsimile::Responder cdte1_mock(
             false, 
-            cdte1_response_lookup, 
+            cdte1_mmap_file, 
             cdte1_manager,
             deck, 
             context
@@ -52,14 +64,14 @@ int main(int argc, char* argv[]) {
             deck, 
             context
         );
-        // std::cout << "starting gse\n";
-        // foxsimile::Responder gse_mock(
-        //     false, 
-        //     gse_response_lookup, 
-        //     gse_manager,
-        //     deck, 
-        //     context
-        // );
+        std::cout << "starting gse\n";
+        foxsimile::Responder gse_mock(
+            false, 
+            gse_response_lookup, 
+            gse_manager,
+            deck, 
+            context
+        );
 
         std::cout << "listening...\n";
         // cdte1_mock.async_receive();

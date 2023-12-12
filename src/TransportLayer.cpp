@@ -48,11 +48,11 @@ TransportLayerMachine::TransportLayerMachine(
     remote_tcp_endpoint = boost::asio::ip::tcp::endpoint(remote_tcp_addr, config::ethernet::SPMU_PORT);
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
-    local_udp_sock.bind(local_udp_endpoint);
-
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
+
     set_socket_options();
 
+    local_udp_sock.bind(local_udp_endpoint);
     local_tcp_sock.bind(local_tcp_endpoint);
     local_tcp_sock.connect(remote_tcp_endpoint);
 }
@@ -95,12 +95,12 @@ TransportLayerMachine::TransportLayerMachine(
     command_pipe = tmp_cmd;
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
-    local_udp_sock.bind(local_udp_end);
-
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
     local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
     
     set_socket_options();
+
+    local_udp_sock.bind(local_udp_end);
     
     local_tcp_sock.bind(local_tcp_end);
     local_tcp_sock.connect(remote_tcp_endpoint);
@@ -216,7 +216,9 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
 
 void TransportLayerMachine::set_socket_options() {
     boost::asio::socket_base::reuse_address reuse_addr_option(true);
+    std::cout << "trying to set ::reuse_address\n";
     
+    local_udp_sock.set_option(reuse_addr_option);
     local_tcp_sock.set_option(reuse_addr_option);
     local_tcp_housekeeping_sock.set_option(reuse_addr_option);
 }
@@ -772,7 +774,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         last_buffer_reply.resize(reply_len);
         if (reply_len != expected_size) {
             utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
-            return 0;
+            return prior_write_pointer;
         }
         
         // log raw data to prelogger file for debug

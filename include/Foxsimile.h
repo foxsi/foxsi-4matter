@@ -21,22 +21,32 @@ namespace foxsimile {
         mmap    =       0x03
     };
 
+    namespace mmap {
+        RING_BUFFER_TYPE_OPTIONS is_ring_buffer(SystemManager& sys_man, size_t address, size_t offset);
+        void advance_write_pointer(System& system, RING_BUFFER_TYPE_OPTIONS type, std::vector<uint8_t>& mmap);
+        void advance_write_pointer(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS type, std::vector<uint8_t>& mmap);
+        void advance_time(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS type, std::vector<uint8_t>& mmap);
+        void random_update(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS type, std::vector<uint8_t>& mmap);
+    };
+
     /**
      * @brief Abstract base for mocking detector system responses to commands.
      */
     class Responder {
         public:
             Responder(
-                bool do_except, 
+                bool do_except,
                 std::map<std::vector<uint8_t>, std::vector<uint8_t>> new_response_lookup,
-                std::shared_ptr<SystemManager> new_system_manager, std::shared_ptr<CommandDeck> new_deck, 
+                std::shared_ptr<SystemManager> new_system_manager, 
+                std::shared_ptr<CommandDeck> new_deck, 
                 boost::asio::io_context& context
             );
 
             Responder(
                 bool do_except, 
                 std::string new_response_mmap_file, 
-                std::shared_ptr<SystemManager> new_system_manager, std::shared_ptr<CommandDeck> new_deck, 
+                std::shared_ptr<SystemManager> new_system_manager, 
+                std::shared_ptr<CommandDeck> new_deck, 
                 boost::asio::io_context& context
             );
 
@@ -56,8 +66,13 @@ namespace foxsimile {
             boost::asio::ip::tcp::acceptor acceptor;
 
         private:
+            void handle_frame_timer();
+            boost::asio::steady_timer* frame_timer;
+            std::chrono::milliseconds frame_update_ms;
+
             std::map<std::vector<uint8_t>, std::vector<uint8_t>> response_lookup;
             std::string response_mmap_file;
+            std::vector<uint8_t> mmap;
 
             std::vector<uint8_t> make_reply(std::vector<uint8_t> message);
 
@@ -72,6 +87,8 @@ namespace foxsimile {
 
             uint64_t static_latency_us;
             uint64_t bytewise_latency_us;
+
+            size_t ring_packet_counter;
 
             std::shared_ptr<SystemManager> system_manager;
 
