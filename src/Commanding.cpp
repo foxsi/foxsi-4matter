@@ -69,9 +69,17 @@ void Command::set_spw_options(
     spw_reply_length = new_spw_reply_length;
 }
 
+void Command::set_uart_options(std::vector<uint8_t> new_uart_instruction, unsigned long new_uart_reply_length) {
+    if (type != COMMAND_TYPE_OPTIONS::UART) {
+        utilities::debug_print("\tthis Command was not initialized as a UART command, but is being provided UART field data.\n");
+    }
+    uart_instruction = new_uart_instruction;
+    uart_reply_length = new_uart_reply_length;
+}
+
 void Command::set_eth_options(std::vector<uint8_t> new_eth_packet, size_t new_eth_reply_len) {
     if (type != COMMAND_TYPE_OPTIONS::ETHERNET) {
-        utilities::debug_print("\tthis Command was not initialized as an Ethernet command, but is being provided Ethernet field data. May need to change Command::type later\n");
+        utilities::debug_print("\tthis Command was not initialized as an Ethernet command, but is being provided Ethernet field data.\n");
     }
 
     eth_packet = new_eth_packet;
@@ -271,7 +279,21 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 // handle commands for TIMEPIX (over UART)
                 Command this_command = Command(this_name, this_hex, this_read, COMMAND_TYPE_OPTIONS::UART);
 
-                //TODO: more here
+                std::string this_uart_write_data_str = this_entry.value()["write_value"];
+                std::string this_uart_reply_len_str = this_entry.value()["reply.length [B]"];
+
+                std::vector<uint8_t> this_uart_write_data = utilities::string_to_chars(this_uart_write_data_str);
+
+                unsigned long this_uart_reply_length = 0;
+                if(this_read) {
+                    // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
+                    this_uart_reply_length = strtoul(this_uart_reply_len_str.c_str(), NULL, 16);
+                }
+                
+                this_command.set_uart_options(this_uart_write_data, this_uart_reply_length);
+
+                // add the command to the deck for this subsystem
+                commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
             
             } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPW) {
                 // handle commands for CDTE or CMOS (over SPW)
@@ -716,6 +738,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             break;
         case COMMAND_TYPE_OPTIONS::UART:
             std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
+            // return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
             return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::NONE:

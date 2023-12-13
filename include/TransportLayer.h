@@ -298,6 +298,8 @@ class TransportLayerMachine {
          */
         size_t read_some(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
+        size_t read(boost::asio::serial_port& port, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+        
         /**
          * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
          * 
@@ -324,6 +326,8 @@ class TransportLayerMachine {
          */
         std::vector<uint8_t> sync_tcp_read_some(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
 
+        std::vector<uint8_t> sync_uart_read(boost::asio::serial_port& port, size_t receive_size, std::chrono::milliseconds timeout_ms);
+
         /**
          * @brief handler for `sync_tcp_receive(...)`.
          * 
@@ -334,11 +338,13 @@ class TransportLayerMachine {
          */
         static void sync_tcp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
         static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_uart_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        bool run_uart_context(std::chrono::milliseconds timeout_ms);
 
         /**
-         * @brief A fool's daydream. Maybe someday I will implement.
+         * @warning A fool's daydream. Not implemented. Maybe someday I will.
          * 
          * @param sys_man 
          */
@@ -371,13 +377,23 @@ class TransportLayerMachine {
         bool sync_udp_send_all_downlink_buffer();
 
         /**
-         * @brief Synchronously send command `cmd` to remote `sys`.
+         * @brief Synchronously send command `cmd` to remote `sys` over `local_tcp` interface.
          * 
          * @param sys 
          * @param cmd 
          * @return std::vector<uint8_t> any response data to the command.
          */
         std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+
+        /**
+         * @brief Synchronously send command `cmd` to remote `sys` over `local_uart` interface.
+         * 
+         * @param sys 
+         * @param cmd 
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> sync_uart_send_command_for_sys(System sys, Command cmd);
+
         /**
          * @brief Synchronously send command `cmd` to remote `sys_man`.
          * 
@@ -425,8 +441,11 @@ class TransportLayerMachine {
         std::vector<uint8_t> uplink_swap;
         std::vector<uint8_t> tcp_local_receive_swap;
         std::vector<uint8_t> udp_local_receive_swap;
+        std::vector<uint8_t> uart_local_receive_swap;
 
         void set_socket_options();
+        void set_local_serial_options(std::shared_ptr<UART> port);
+        void set_uplink_serial_options(std::shared_ptr<UART> port);
 
         boost::asio::io_context& io_context;
 };

@@ -209,9 +209,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     verbose_print("local endpoint: " + local_address);
                 }
             }
-        } catch(std::exception& e) {
-
-        }
+        } catch(std::exception& e) {}
 
         // check for spacewire
         try {
@@ -348,8 +346,9 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
             auto& uartif = this_system.value()["uart_interface"];
             if(!uartif.is_null()) {
                 has_uart = true;
+                std::cout << "\thas uart!\n";
 
-                if (this_system_object.type == COMMAND_TYPE_OPTIONS::UART) {
+                if (this_system_object.type == COMMAND_TYPE_OPTIONS::UART || this_system_object.type == COMMAND_TYPE_OPTIONS::NONE) {
                     try {
                         UART* uart = new UART(
                             uartif.at("tty_path").get<std::string>(),

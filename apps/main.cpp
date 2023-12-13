@@ -166,15 +166,28 @@ int main(int argc, char** argv) {
     if (do_uart) {
         if (deck->get_sys_for_name("timepix").uart) {
             std::cout << "timepix has uart interface\n";
+            std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
         } else {
             std::cout << "timepix has no uart interface!\n";
         }
-        std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
+        if (deck->get_sys_for_name("uplink").uart) {
+            std::cout << "uplink has uart interface\n";
+            std::cout << "uart interface: " << deck->get_sys_for_name("uplink").uart->to_string();
+        } else {
+            std::cout << "uplink has no uart interface!\n";
+        }
     }
 
 
     std::cout << "machine: \n";
     try {
+        std::cout << "did something\n";
+        UART timepix_uart_pre = *(deck->get_sys_for_name("timepix").uart);
+        std::cout << "did something else\n";
+        auto timepix_uart = std::make_shared<UART>(*(deck->get_sys_for_name("timepix").uart));
+        auto uplink_uart = std::make_shared<UART>(*(deck->get_sys_for_name("uplink").uart));
+
+
         auto machine = std::make_shared<TransportLayerMachine>(
             local_udp_end,
             local_tcp_end,
@@ -184,6 +197,8 @@ int main(int argc, char** argv) {
             remote_tcp_housekeeping_end,
             new_uplink_buffer,
             new_downlink_buffer,
+            timepix_uart,
+            uplink_uart,
             context
         );
         machine->add_commands(deck);

@@ -32,7 +32,7 @@ class Command {
             unsigned long new_spw_reply_length
         );
 
-        void set_uart_options(std::vector<uint8_t> new_uart_instruction);
+        void set_uart_options(std::vector<uint8_t> new_uart_instruction, unsigned long new_uart_reply_length);
 
         void set_eth_options(std::vector<uint8_t> new_eth_packet, size_t new_eth_reply_len);
         
@@ -54,6 +54,7 @@ class Command {
         const std::vector<uint8_t> get_full_command() const {return full_command;}
 
         const std::vector<uint8_t> get_uart_instruction() const {return uart_instruction;}
+        const unsigned long get_uart_reply_length() const {return uart_reply_length;}
 
         const unsigned long get_eth_reply_length() const {return eth_reply_length;}
         const std::vector<uint8_t> get_eth_packet() const {return eth_packet;}
@@ -72,6 +73,7 @@ class Command {
 
         // UART-related data:
         std::vector<uint8_t> uart_instruction;
+        unsigned long uart_reply_length;
 
         // Ethernet-related data:
         std::vector<uint8_t> eth_packet;
