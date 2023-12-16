@@ -10,10 +10,8 @@ See [PISETUP.md](PISETUP.md) for instructions on booting and configuring the Ras
 - [Boost](https://www.boost.org/)
     - boost::asio
     - boost::bind
-    - boost::statechart
-    - boost::interprocess
-- [pigpio](https://abyz.me.uk/rpi/pigpio/download.html)
 - [nlohmann JSON](https://github.com/nlohmann/json)
+- [concurrentqueue](https://github.com/cameron314/concurrentqueue)
 
 ### Examples
 You can find a few examples in the [examples folder](examples).
@@ -45,31 +43,35 @@ For detail, go to the [DE github repository](https://github.com/foxsi/CdTe_DE).
 
 The DE will store raw data for each connected detector in `~/CdTe_DE/production/run/data/`. Note that the DE timestamp is disconnected from any all clock time.
 
-### DE detector mapping
-The DE identifies connected canisters (in the raw data recordings) on the SpaceWire port they are connected to. For the flight configuration, this is the DE nomenclature for each detector:
+### Detector mapping
+The DE identifies connected canisters (in the raw data recordings) on the SpaceWire port they are connected to. The power system requires a unique byte to be sent to turn on/off each system. For the flight configuration, this is the DE nomenclature for each detector and power code:
 
-| System     | Detector  | DE number | Byte   |
-|------------|-----------|-----------|--------|
-| canister 2 | no2021_02 | `det4`    | `0x06` |
-| canister 3 | no2022_03 | `det2`    | `0x05` |
-| canister 4 | no2021_05 | `det3`    | `0x04` |
-| canister 5 | no2022_01 | `det1`    | `0x03` |
-| de         | ---       | ---       | `0x00` |
-| cmos 1     | cmos 1    | ---       | `0x07` |
-| cmos 2     | cmos 2    | ---       | `0x08` |
+| System (by focal plane position)     | Detector  | DE number | Power board byte   |
+|--------------------------------------|-----------|-----------|--------------------|
+| Canister 2                           | no2021_06 | `det4`    | `0x06`             |
+| Canister 3                           | no2021_07 | `det2`    | `0x05`             |
+| Canister 4                           | no2021_05 | `det3`    | `0x04`             |
+| Canister 5                           | no2022_01 | `det1`    | `0x03`             |
+| DE                                   | ---       | ---       | `0x00`             |
+| CMOS 1                               | `0010`    | ---       | `0x08`             |
+| CMOS 2                               | `0002`    | ---       | `0x07`             |
+| Timepix                              | ---       | ---       | `0x01`             |
+| SAAS                                 | ---       | ---       | `0x01`             |
 
 ### Starting the Formatter software
 As of Nov 208 2023, the Formatter software also needs to be started manually. Do this:
 ```bash
 ssh formatter
 ```
-and then this:
+then navigate to the Formatter software directory:
+```bash
+cd foxsi-4matter
+```
+and then run the formatter software:
 ```bash
 ./bin/formatter --verbose --config foxsi4-commands/systems.json
 ```
-to run the Formatter software. Start the DE first.
-
-When the Formatter runs, it will locally record log files to `~/foxsi-4matter/log/`.
+When the Formatter runs, it will locally record log files (describing Formatter behavior, not saving detector data) to `~/foxsi-4matter/log/`. You can stop the Formatter with ctrl-C.
 
 To record the Formatter raw output on the GSE computer, navigate to `~/Documents/FOXSI/foxsi-4matter/` and run the logging application:
 ```bash
@@ -77,4 +79,4 @@ cd ~/Documents/FOXSI/foxsi-4matter/
 python3 util/logudpy.py
 ```
 
-This will save raw data to `~/foxsi-4matter/log/gse/` under a filename describing the source system for the data (for example, `cmos1_ql.log` is the raw quicklook data output of `cmos1`). **Note that these log files are overwritten on each successive run.**
+This will save raw data to `~/foxsi-4matter/log/gse/` under a filename describing the source system for the data (for example, `cmos1_ql.log` is the raw quicklook data output of `cmos1`). **Note that these log files are overwritten on each successive run.** After collecting data you want ot save, copy the file out to a different folder. You can stop logging data with ctrl-C. For the CdTe system, the raw data files can be parsed using the GSE parser.
