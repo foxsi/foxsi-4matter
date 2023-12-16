@@ -130,6 +130,7 @@ class CommandDeck {
         // for the dirty work
         std::vector<uint8_t> make_spw_packet_for_sys_for_command(System sys, Command cmd);
         std::vector<uint8_t> make_eth_packet_for_sys_for_command(System sys, Command cmd);
+        std::vector<uint8_t> make_uart_packet_for_sys_for_command(System sys, Command cmd);
 
         /**
          * @brief use to obtain full byte list to transmit (TCP) to SPMU-001 to send a SpaceWire command.

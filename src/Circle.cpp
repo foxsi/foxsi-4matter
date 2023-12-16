@@ -79,6 +79,8 @@ void Circle::init_systems() {
     // for housekeeping, init and start a conversion. (0x01 0xff, then 0x01 0xf0, then same for 0x02).
     init_housekeeping();
 
+    init_timepix();
+
     init_cdte();
 
     init_cmos();
@@ -125,10 +127,18 @@ void Circle::init_cdte() {
 
     for (uint8_t i = 0; i < 4; ++i) {
         std::string this_name = "cdte" + std::to_string(i+1);
-        if(can_status[i] != 0x00) {
-            Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
+        if (can_status.size() < 4) {
+            utilities::error_print("got too-short canister status reply! Abandoning CdTe.");
+            Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
         } else {
-            Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
+            if(can_status.at(i) != 0x00) {
+                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
+            } else {
+                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
+            }
         }
     }
 
@@ -151,8 +161,8 @@ void Circle::init_cdte() {
     // std::this_thread::sleep_for(delay);
 
     // Apply HV 0V for all canister     0x08 0x13
-    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
-    // std::this_thread::sleep_for(delay);
+    transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
+    std::this_thread::sleep_for(delay);
 
     // Apply HV 60V for all canister    0x08 0x14
     // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
@@ -255,14 +265,26 @@ void Circle::init_cmos() {
 }
 void Circle::init_timepix() {
     utilities::debug_print("initializing timepix system\n");
+
+    SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
+
+    utilities::debug_print("sending ping command:\n");
+    std::vector<uint8_t> timepix_ping = transport->sync_uart_send_command_for_sys(timepix->system, deck->get_command_for_sys_for_code(timepix->system.hex, 0x80));
+
+    if (timepix_ping.size() > 0) {
+        utilities::debug_print("got pingback from Timepix!\n");
+    } else {
+        utilities::error_print("no pingback from Timepix! ABANDONing.\n");
+        system_order[current_system]->system_state = SYSTEM_STATE::ABANDON;
+    }
 }
 
 void Circle::manage_systems() {
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order[current_system]->system_state == SYSTEM_STATE::ABANDON) {
-            utilities::error_print("current system " + system_order[current_system]->system.name + " was abandoned! Continuing.\n");
-            return;
-        }
+        utilities::error_print("current system " + system_order[current_system]->system.name + " was abandoned! Continuing.\n");
+        return;
+    }
 
     if (system_order[current_system]->system == deck->get_sys_for_name("cdte1")) {
         utilities::debug_print("managing cdte1 system\n");
@@ -351,7 +373,20 @@ void Circle::manage_systems() {
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    
+    } else if (system_order[current_system]->system == deck->get_sys_for_name("timepix")) {
+        utilities::debug_print("pinging timepix system\n");
 
+        SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
+
+        utilities::debug_print("sending ping command:\n");
+        std::vector<uint8_t> timepix_ping = transport->sync_uart_send_command_for_sys(timepix->system, deck->get_command_for_sys_for_code(timepix->system.hex, 0x80));
+
+        if (timepix_ping.size() > 0) {
+            utilities::debug_print("got pingback from Timepix!\n");
+        } else {
+            utilities::error_print("no pingback from Timepix!\n");
+        }
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");
         // read out both sensors (0x01 0xf2, then 0x02 0xf2)

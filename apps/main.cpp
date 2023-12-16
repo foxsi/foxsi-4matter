@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
     System& cdte4 = deck->get_sys_for_name("cdte4");
     System& cmos1 = deck->get_sys_for_name("cmos1");
     System& cmos2 = deck->get_sys_for_name("cmos2");
+    System& timepix = deck->get_sys_for_name("timepix");
 
     // test:
     // std::unordered_map<System, uint8_t> test;
@@ -64,6 +65,7 @@ int main(int argc, char** argv) {
     std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
     std::queue<UplinkBufferElement> cmos2_uplink_queue;
+    std::queue<UplinkBufferElement> timepix_uplink_queue;
 
     auto housekeeping_manager = std::make_shared<SystemManager>(housekeeping, housekeeping_uplink_queue);
     auto cdtede_manager = std::make_shared<SystemManager>(cdtede, cdtede_uplink_queue);
@@ -73,6 +75,7 @@ int main(int argc, char** argv) {
     auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
     auto cmos2_manager = std::make_shared<SystemManager>(cmos2, cmos2_uplink_queue);
+    auto timepix_manager = std::make_shared<SystemManager>(timepix, timepix_uplink_queue);
 
     housekeeping_manager->add_timing(&lif.lookup_timing[housekeeping]);
     cdtede_manager->add_timing(&lif.lookup_timing[cdtede]);
@@ -82,6 +85,7 @@ int main(int argc, char** argv) {
     cdte4_manager->add_timing(&lif.lookup_timing[cdte4]);
     cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
     cmos2_manager->add_timing(&lif.lookup_timing[cmos2]);
+    timepix_manager->add_timing(&lif.lookup_timing[timepix]);
 
     std::cout << "Timing for cdtede: " << cdtede_manager->timing->to_string() << "\n";
 
@@ -118,7 +122,7 @@ int main(int argc, char** argv) {
     order.emplace_back(std::move(cmos1_manager));
     order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(housekeeping_manager));
-    // order.emplace_back(std::move(cmos1_manager));
+    order.emplace_back(std::move(timepix_manager));
 
     std::cout << "endpoints: \n";
     boost::asio::ip::udp::endpoint local_udp_end(
@@ -159,6 +163,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
+    (*new_uplink_buffer)[deck->get_sys_for_name("timepix")];
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 

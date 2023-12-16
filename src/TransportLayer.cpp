@@ -163,16 +163,22 @@ TransportLayerMachine::TransportLayerMachine(
     std::cout << "opening serial ports...\n";
     try {
         local_uart_port.open(local_uart->tty_path);
-        set_uplink_serial_options(local_uart);
     } catch (std::exception& e) {
         utilities::error_print("failed to open local serial port!: " + std::string(e.what()) + "\n");
     }
 
     try {
         uplink_uart_port.open(uplink_uart->tty_path);
-        set_uplink_serial_options(uplink_uart);
     } catch (std::exception& e) {
         utilities::error_print("failed to open uplink serial port!: " + std::string(e.what()) + "\n");
+    }
+
+    try {
+        set_uplink_serial_options(local_uart);
+        set_uplink_serial_options(uplink_uart);
+        utilities::debug_print("configured serial ports.");
+    } catch (std::exception& e) {
+        utilities::error_print("failed to set serial port options!: " + std::string(e.what()) + "\n");
     }
 }
 
@@ -236,8 +242,11 @@ void TransportLayerMachine::set_socket_options() {
 }
 
 void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port) {
-    local_uart_port.set_option(boost::asio::serial_port_base::baud_rate(port->baud_rate));
-    local_uart_port.set_option(boost::asio::serial_port_base::character_size(port->data_bits));
+    // local_uart_port.set_option(boost::asio::serial_port_base::baud_rate(port->baud_rate));
+    // local_uart_port.set_option(boost::asio::serial_port_base::character_size(port->data_bits));
+
+    local_uart_port.set_option(boost::asio::serial_port_base::baud_rate(9600));
+    local_uart_port.set_option(boost::asio::serial_port_base::character_size(8));
 
     if (port->parity == 0) {
         local_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
@@ -259,8 +268,11 @@ void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port)
 }
 
 void TransportLayerMachine::set_uplink_serial_options(std::shared_ptr<UART> port) {
-    uplink_uart_port.set_option(boost::asio::serial_port_base::baud_rate(port->baud_rate));
-    uplink_uart_port.set_option(boost::asio::serial_port_base::character_size(port->data_bits));
+    // uplink_uart_port.set_option(boost::asio::serial_port_base::baud_rate(port->baud_rate));
+    // uplink_uart_port.set_option(boost::asio::serial_port_base::character_size(port->data_bits));
+
+    uplink_uart_port.set_option(boost::asio::serial_port_base::baud_rate(9600));
+    uplink_uart_port.set_option(boost::asio::serial_port_base::character_size(8));
     
     if (port->parity == 0) {
         uplink_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
@@ -700,7 +712,10 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
 
 std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_port &port, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
+    utilities::debug_print("will resize uart buffer to " + std::to_string(receive_size) + "\n");
     uart_local_receive_swap.resize(receive_size);
+
+    utilities::debug_print("starting async uart read\n");
 
     boost::asio::async_read(
         port,
@@ -716,6 +731,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_p
     bool timed_out = TransportLayerMachine::run_uart_context(timeout_ms);
 
     if (timed_out) {
+        utilities::error_print("uart read timed out!\n");
         return {};
     } else {
         std::vector<uint8_t> swap_copy(uart_local_receive_swap);
@@ -1159,16 +1175,13 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(System sys, Command cmd) {
+    utilities::debug_print("got into uart send!\n");
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys.hex, cmd.hex);
 
     std::vector<uint8_t> reply(256);
 
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sending ");
-    if (sys.type == COMMAND_TYPE_OPTIONS::UART) {
-        utilities::spw_print(packet, sys.spacewire);
-    } else {
-        utilities::hex_print(packet);
-    }
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sending ");
+    utilities::hex_print(packet);
 
     // for Timepix, `packet` should always be 1B:
     local_uart_port.write_some(boost::asio::buffer(packet));
@@ -1179,7 +1192,8 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(Syste
         utilities::debug_print("waiting for response\n");
         // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
         std::chrono::milliseconds timeout(500);
-        reply = sync_uart_read(local_uart_port, cmd.get_uart_reply_length(), timeout);
+        // reply = TransportLayerMachine::sync_uart_read(local_uart_port, cmd.get_uart_reply_length(), timeout);
+        reply = TransportLayerMachine::sync_uart_read(local_uart_port, 1, timeout);
         if (reply.size() != cmd.get_uart_reply_length()) {
             utilities::error_print("got wrong uart reply length!\n");
         }
@@ -1213,7 +1227,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
         reply.resize(expected_size);
         // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
         size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, reply, sys_man);
-        utilities::debug_print("got response!!: ");
+        if (reply_len == expected_size) {
+            utilities::debug_print("got response: ");
+        } else {
+            utilities::error_print("got wrong reply size!\n");
+        }
         utilities::hex_print(reply);
         reply.resize(reply_len);
     } else {

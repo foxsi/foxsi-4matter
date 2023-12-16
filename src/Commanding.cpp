@@ -720,6 +720,12 @@ std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys
     return response;
 }
 
+std::vector<uint8_t> CommandDeck::make_uart_packet_for_sys_for_command(System sys, Command cmd) {
+    std::vector<uint8_t> packet(cmd.get_uart_instruction());
+
+    return packet;
+}
+
 std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t code) {
     Command command = CommandDeck::get_command_for_sys_for_code(sys, code);
     System system = CommandDeck::get_sys_for_code(sys);
@@ -737,9 +743,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             return CommandDeck::make_eth_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::UART:
-            std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
-            // return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
-            return {0x00};
+            return CommandDeck::make_uart_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::NONE:
             std::cout << "NONE COMMAND TYPE NOT IMPLEMENTED\n";
