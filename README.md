@@ -26,7 +26,7 @@ The physical system is laid out like this:
 First, command the power board to turn on/off the desired systems. Then start software on detector readout systems.
 
 ### Starting DE software
-As of Nov 28 2023, the DE software needs to be started manually. SSH to the DE:
+As of Dec 16 2023, the DE software no longer needs to be started manually. You can ignore this section.
 ```bash
 ssh de
 ```
