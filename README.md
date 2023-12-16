@@ -73,6 +73,8 @@ and then run the formatter software:
 ```
 When the Formatter runs, it will locally record log files (describing Formatter behavior, not saving detector data) to `~/foxsi-4matter/log/`. You can stop the Formatter with ctrl-C.
 
+On startup the Formatter will walk through each system and try to set it up. No bias voltage will be applied to CdTe. If it cannot talk to a specific system, it will ignore it for data readout (this behavior will be different for flight). 
+
 To record the Formatter raw output on the GSE computer, navigate to `~/Documents/FOXSI/foxsi-4matter/` and run the logging application:
 ```bash
 cd ~/Documents/FOXSI/foxsi-4matter/
