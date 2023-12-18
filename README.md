@@ -90,7 +90,7 @@ mkdir your-folder-name
 cd your-folder-name
 ```
 
-From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command to push the code into `your-folder-name` in the Raspberry Pi:
+From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command (it's long) to push the code into `your-folder-name` in the Raspberry Pi:
 ```bash
 rsync -av --exclude=build --exclude=bin --exclude=doc --exclude=log ../foxsi-4matter-x.y.z foxsi@192.168.1.8:/path/to/your-folder-name
 ```
@@ -103,7 +103,7 @@ cd build
 cmake ..
 cmake --build . -j4
 ```
-This will create several binaries in `your-folder-name/bin/` that you can run.
+The Raspberry Pi build process takes a couple minutes. This will create several binaries in `your-folder-name/bin/` that you can run.   
 
 ## How to use
 
