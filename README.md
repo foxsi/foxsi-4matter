@@ -11,7 +11,10 @@ See [PISETUP.md](PISETUP.md) for instructions on booting and configuring the Ras
     - boost::asio
     - boost::bind
 - [nlohmann JSON](https://github.com/nlohmann/json)
-- [concurrentqueue](https://github.com/cameron314/concurrentqueue)
+- [Doxygen](https://doxygen.nl/)
+- [googletest](https://github.com/google/googletest)
+- [concurrentqueue](https://github.com/cameron314/concurrentqueue) (included)
+- [spdlog](https://github.com/gabime/spdlog) (included)
 
 ### Examples
 You can find a few examples in the [examples folder](examples).
@@ -21,7 +24,88 @@ The physical system is laid out like this:
 
 ![The Formatter is connected to many systems. Sorry, an image would be handy.](doc/assets/formatter_layout.svg "Formatter physical interfaces")
 
-## Operating
+## How to build
+In the following, "your computer" is a laptop or desktop connected to the Raspberry Pi which actually runs the software.
+
+Decide whether you need to build the software on your local computer in addition to building on the Raspberry Pi. If you make local edits and want to check that everything compiles, or if you want to run certain tests, or if you want to use the `foxsimile` emulator, you should build locally. If all you need to do is forward code to the Raspberry Pi and build it there, skip to [building on the Raspberry Pi to run](#building-on-the-raspberry-pi-to-run).
+
+### Installing dependencies
+If this is your first time building on your computer, you may need to install two dependencies. I can only provide instructions for macOS using Homebrew:
+```bash
+brew install nlohmann-json
+brew install boost
+brew install doxygen
+brew install googletest
+```
+(if you want to check if they are already installed, you can run `brew info <package name>` to check).
+
+I have used `boost` v1.83.0 and v1.80.0, and `nlohmann-hson` v3.11.3. I expect other 1.8x versions of `boost` and other 3.1x versions of `nlohmann-json` to also work, but have not tested.
+
+### Building on the Raspberry Pi to run
+The flight Raspberry Pi already has dependencies installed. If you are setting up a brand new Raspberry Pi, see [PISETUP.md](PISETUP.md). Otherwise, choose instructions for either
+1. [setting up from](#set-up-from-a-release) a [tagged release](https://github.com/foxsi/foxsi-4matter/tags), or
+2. [setting up from the latest version of the `main` branch available](#set-up-from-latest-main).
+
+#### Set up from a release
+Select the release you want to build on the [`foxsi-4matter` tags page](https://github.com/foxsi/foxsi-4matter/tags). On the page for a specific release ([v0.0.8, as an example](https://github.com/foxsi/foxsi-4matter/releases/tag/v0.0.8)) download the .zip or tar.gz archive to your computer. 
+
+Unzip the archive you downloaded, then open a terminal inside that folder (which should be named `foxsi-4matter-x.y.z`, where `x.y.z` is the version number you downloaded). From that terminal, run:
+```bash
+git clone https://github.com/foxsi/foxsi4-commands.git
+```
+to add the command repository to your release. If you want to try building software on your computer first, run this sequence of commands inside the folder `foxsi-4matter-x.y.z`:
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+You can omit this local build step if you just want to build on the Raspberry Pi.
+
+#### Set up from latest `main`
+Open a terminal in a folder where you want this code, and run
+```bash
+git clone --recursive https://github.com/foxsi/foxsi-4matter.git
+```
+
+If you want to try building on your computer first, run this sequence of commands inside the folder `foxsi-4matter` that was just created:
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+#### Building on Raspberry Pi
+Now that you have code stored on your computer, you can push the code base to the Raspberry Pi over an Ethernet connection. First, `ssh` into the Raspberry Pi:
+```
+ssh foxsi@192.168.1.8
+password:...
+```
+If you have issues `ssh`ing, make sure you can ping the IP `192.168.1.8` and that your local subnetwork includes that address.
+
+Once inside the Pi, create a new folder to hold your build and enter it:
+```bash
+mkdir your-folder-name
+cd your-folder-name
+```
+
+From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command to push the code into `your-folder-name` in the Raspberry Pi:
+```bash
+rsync -av --exclude=build --exclude=bin --exclude=doc --exclude=log ../foxsi-4matter-x.y.z foxsi@192.168.1.8:/path/to/your-folder-name
+```
+but replace `-x.y.z` with the version number, or omit it entirely for a build from `main`; and replace `/path/to/your-folder-name` with the real path to the folder you created.
+
+Now, go back to your other terminal that is still `ssh`'d inside the Raspberry Pi, and create a `build` folder inside `your-folder-name/`:
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . -j4
+```
+This will create several binaries in `your-folder-name/bin/` that you can run.
+
+## How to use
 
 First, command the power board to turn on/off the desired systems. Then start software on detector readout systems.
 
