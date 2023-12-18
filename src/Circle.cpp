@@ -151,12 +151,16 @@ void Circle::init_cdte() {
     // std::this_thread::sleep_for(delay);
 
     // Apply HV 0V for all canister     0x08 0x13
-    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
-    // std::this_thread::sleep_for(delay);
+    transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
+    std::this_thread::sleep_for(delay);
 
     // Apply HV 60V for all canister    0x08 0x14
     // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
-    // std::this_thread::sleep_for(delay);
+    // std::this_thread::sleep_for(delay_60to200v);
+
+    // Apply HV 200V for all canister    0x08 0x16
+    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x16));
+    // std::this_thread::sleep_for(delay_post200v);
 
     // Set full readout for all canister    0x08 0x19
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));
@@ -258,6 +262,8 @@ void Circle::init_timepix() {
 }
 
 void Circle::manage_systems() {
+    std::chrono::milliseconds delay_inter_cdte_ms(2000);
+    std::chrono::milliseconds delay_inter_cmos_ms(1000);
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order[current_system]->system_state == SYSTEM_STATE::ABANDON) {
             utilities::error_print("current system " + system_order[current_system]->system.name + " was abandoned! Continuing.\n");
@@ -273,7 +279,7 @@ void Circle::manage_systems() {
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
         // delay before reading again 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(delay_inter_cdte_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte2")) {
         utilities::debug_print("managing cdte2 system\n");
@@ -284,7 +290,7 @@ void Circle::manage_systems() {
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
         // delay before reading again to avoid duplicate 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(delay_inter_cdte_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte3")) {
         utilities::debug_print("managing cdte3 system\n");
@@ -295,7 +301,7 @@ void Circle::manage_systems() {
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
         // delay before reading again to avoid duplicate 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(delay_inter_cdte_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte4")) {
         utilities::debug_print("managing cdte4 system\n");
@@ -306,7 +312,7 @@ void Circle::manage_systems() {
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
         // delay before reading again to avoid duplicate 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(delay_inter_cdte_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cmos1")) {
         utilities::debug_print("managing cmos1\n");
@@ -328,7 +334,7 @@ void Circle::manage_systems() {
         }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(delay_inter_cmos_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cmos2")) {
         utilities::debug_print("managing cmos2\n");
@@ -350,7 +356,7 @@ void Circle::manage_systems() {
         }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(delay_inter_cmos_ms);
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");
@@ -361,7 +367,7 @@ void Circle::manage_systems() {
 
         transport->sync_tcp_housekeeping_send({0x01, 0xf0});
         transport->sync_tcp_housekeeping_send({0x02, 0xf0});
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // todo: no more magic numbers.
 
