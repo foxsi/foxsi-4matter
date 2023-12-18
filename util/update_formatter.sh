@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Because Raspberry Pi is not usually connected to internet,
-# this script pulls latest git and copies it to the Pi for testing.
+# this script updates the Pi with the current local changes.
 
 # git pull
 # scp -r ../foxsi-4matter foxsi@raspberrypi.local:/home/foxsi/foxsi-4matter

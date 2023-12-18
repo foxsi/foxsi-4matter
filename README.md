@@ -129,7 +129,7 @@ For detail, go to the [DE github repository](https://github.com/foxsi/CdTe_DE).
 The DE will store raw data for each connected detector in `~/CdTe_DE/production/run/data/`. Note that the DE timestamp is disconnected from any all clock time.
 
 #### CMOS
-The CMOS readout software automatically starts running on boot. When you start this Formatter software it will command any connected CMOS to start collecting data.
+The CMOS readout software automatically starts running on boot. When you start this Formatter software it will command any connected CMOS to start collecting and saving data.
 
 ### Detector mapping
 The DE identifies connected canisters (in the raw data recordings) on the SpaceWire port they are connected to. The power system requires a unique byte to be sent to turn on/off each system. For the flight configuration, this is the DE nomenclature for each detector and power code:
