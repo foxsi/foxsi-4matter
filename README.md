@@ -109,7 +109,8 @@ The Raspberry Pi build process takes a couple minutes. This will create several 
 
 First, command the power board to turn on/off the desired systems. Then start software on detector readout systems.
 
-### Starting DE software
+### Starting remote software
+#### CdTe DE
 As of Dec 16 2023, the DE software no longer needs to be started manually. You can ignore this section.
 ```bash
 ssh de
@@ -126,6 +127,9 @@ and run the DE software:
 For detail, go to the [DE github repository](https://github.com/foxsi/CdTe_DE).
 
 The DE will store raw data for each connected detector in `~/CdTe_DE/production/run/data/`. Note that the DE timestamp is disconnected from any all clock time.
+
+#### CMOS
+The CMOS readout software automatically starts running on boot. When you start this Formatter software it will command any connected CMOS to start collecting data.
 
 ### Detector mapping
 The DE identifies connected canisters (in the raw data recordings) on the SpaceWire port they are connected to. The power system requires a unique byte to be sent to turn on/off each system. For the flight configuration, this is the DE nomenclature for each detector and power code:
