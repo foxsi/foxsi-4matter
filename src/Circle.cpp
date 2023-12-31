@@ -166,7 +166,13 @@ void Circle::init_cdte() {
 
     // Apply HV 60V for all canister    0x08 0x14
     // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
-    // std::this_thread::sleep_for(delay);
+    // utilities::debug_print("waiting 30 seconds...\n");
+    // std::this_thread::sleep_for(delay_60to200v);
+
+    // Apply HV 200V for all canister    0x08 0x16
+    // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x16));
+    // utilities::debug_print("waiting 5 minutes...\n");
+    // std::this_thread::sleep_for(delay_post200v);
 
     // Set full readout for all canister    0x08 0x19
     transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));

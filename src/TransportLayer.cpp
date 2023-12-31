@@ -247,6 +247,9 @@ void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port)
 
     local_uart_port.set_option(boost::asio::serial_port_base::baud_rate(9600));
     local_uart_port.set_option(boost::asio::serial_port_base::character_size(8));
+    local_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+    local_uart_port.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+    return;
 
     if (port->parity == 0) {
         local_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
@@ -1186,13 +1189,16 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(Syste
     // for Timepix, `packet` should always be 1B:
     local_uart_port.write_some(boost::asio::buffer(packet));
 
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sent request\n");
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sent request\n");
 
     if (cmd.read) {
         utilities::debug_print("waiting for response\n");
         // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
-        std::chrono::milliseconds timeout(500);
+        std::chrono::milliseconds timeout(2000);
         // reply = TransportLayerMachine::sync_uart_read(local_uart_port, cmd.get_uart_reply_length(), timeout);
+        // size_t reply_size = local_tcp_sock.read_some(boost::asio::buffer(reply));
+        // utilities::debug_print("reply: " + std::to_string(reply[0]) + "\n");
+        
         reply = TransportLayerMachine::sync_uart_read(local_uart_port, 1, timeout);
         if (reply.size() != cmd.get_uart_reply_length()) {
             utilities::error_print("got wrong uart reply length!\n");
