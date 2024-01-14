@@ -163,10 +163,50 @@ When the Formatter runs, it will locally record log files (describing Formatter 
 
 On startup the Formatter will walk through each system and try to set it up. No bias voltage will be applied to CdTe. If it cannot talk to a specific system, it will ignore it for data readout (this behavior will be different for flight). 
 
-To record the Formatter raw output on the GSE computer, navigate to `~/Documents/FOXSI/foxsi-4matter/` and run the logging application:
+## Downlink data
+
+The Formatter transmits data over the UDP interface defined in `foxsi4-commands/systems.json`'s `gse` field. A complete raw data frame from an onboard system may be larger than the maximum downlink packet size, in which case it will be fragmented. A given downlink packet has the following format:
+
+| Index | Size    | Name        | Description                                                   |
+|-------|---------|-------------|---------------------------------------------------------------|
+| `0`   | 1 byte  | `system`    | Onboard system ID which produced data in packet.              |
+| `1-2` | 2 bytes | `n`         | Number of packets in this frame.                              |
+| `3-4` | 2 bytes | `i`         | Index of this packet in the frame. **This is 1-indexed.**     |
+| `5`   | 1 bytes | `data`      | An identifier of data type stored in the packet.              |
+| `6-7` | 2 bytes | `reserved`  | Reserved.                                                     |
+
+For the `system` field, the ID value is taken from `foxsi4-commands/systems.json` in the `hex` field for each system entry. For the `data` field, the following map is used:
+
+| Value  | Name  | Description           |
+|:------:|-------|-----------------------|
+| `0x00` | `pc`  | Photon-counting data  |
+| `0x01` | `ql`  | Quick-look data       |
+| `0x10` | `hk`  | Housekeeping data     |
+| `0x11` | `pow` | Power data            |
+| `0x12` | `temp`| Temperature data      |
+| `0x13` | `stat`| System status data    |
+| `0x14` | `err` | System error data     |
+| `0xff` | `none`| No data type          |
+
+### Logging frame data with simple logger
+
+This package includes a simple script to log downlinked frame data to `log/gse/`. The log file name has this format: `<source system name>_<data_type>.log`. The logger is at `util/logudp.py`, and can be run like this:
+
 ```bash
 cd ~/Documents/FOXSI/foxsi-4matter/
 python3 util/logudpy.py
 ```
 
 This will save raw data to `~/foxsi-4matter/log/gse/` under a filename describing the source system for the data (for example, `cmos1_ql.log` is the raw quicklook data output of `cmos1`). **Note that these log files are overwritten on each successive run.** After collecting data you want ot save, copy the file out to a different folder. You can stop logging data with ctrl-C. For the CdTe system, the raw data files can be parsed using the GSE parser.
+
+### Logging all downlinked data with GSE
+
+You can also log downlinked data using the [GSE software](https://github.com/foxsi/GSE-FOXSI-4). The GSE package includes a utility in the `Listener` class to reconstruct frames and log packets to file. This object is designed to be used in a background process from the main GSE, but can also be run directly from the command line (from within the GSE software directory):
+
+```bash
+python3 FoGSE/listening.py foxsi4-commands/systems.json
+```
+
+On startup, this `Listener` application creates a set of log file at this location in the GSE directory: `logs/received/<date_time>/`. Within this folder, a file is created for each system and downlink datatype from the above table, with this format: `<system>_<data>.log`. 
+
+Additionally, an ASCII-formatted file called `catch.log` is produced to log any received packets that can't be parsed into a system-specific file. Each entry in this file is newline-separated, and tagged at the start of the file with an offset timestamp from the creation time of the file.
