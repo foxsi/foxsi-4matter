@@ -165,7 +165,7 @@ On startup the Formatter will walk through each system and try to set it up. No 
 
 ## Downlink data
 
-The Formatter transmits data over the UDP interface defined in `foxsi4-commands/systems.json`'s `gse` field. A complete raw data frame from an onboard system may be larger than the maximum downlink packet size, in which case it will be fragmented. A given downlink packet has the following format:
+The Formatter transmits data over the UDP interface defined in `foxsi4-commands/systems.json`'s `gse` field. A complete raw data frame from an onboard system may be larger than the maximum downlink packet size, in which case it will be fragmented. A given downlink packet has the following header:
 
 | Index | Size    | Name        | Description                                                   |
 |-------|---------|-------------|---------------------------------------------------------------|
@@ -174,6 +174,8 @@ The Formatter transmits data over the UDP interface defined in `foxsi4-commands/
 | `3-4` | 2 bytes | `i`         | Index of this packet in the frame. **This is 1-indexed.**     |
 | `5`   | 1 bytes | `data`      | An identifier of data type stored in the packet.              |
 | `6-7` | 2 bytes | `reserved`  | Reserved.                                                     |
+
+The raw data payload is concatenated after the 8-byte header.
 
 For the `system` field, the ID value is taken from `foxsi4-commands/systems.json` in the `hex` field for each system entry. For the `data` field, the following map is used:
 
