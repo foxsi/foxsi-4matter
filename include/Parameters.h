@@ -115,12 +115,16 @@ enum class COMMAND_TYPE_OPTIONS: uint8_t {
 enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     PC                  = 0x00,
     QL                  = 0x01,
+    TPX                 = 0x02,
+    HK                  = 0x10,
     NONE                = 0xff
 };
 
 static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFFER_TYPE_OPTIONS_NAMES = {
     {RING_BUFFER_TYPE_OPTIONS::PC,      "pc"},
     {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
+    {RING_BUFFER_TYPE_OPTIONS::TPX,     "timepix"},
+    {RING_BUFFER_TYPE_OPTIONS::HK,      "hk"},
     {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
 };
 

@@ -79,6 +79,8 @@ void Circle::init_systems() {
     // for housekeeping, init and start a conversion. (0x01 0xff, then 0x01 0xf0, then same for 0x02).
     init_housekeeping();
 
+    init_timepix();
+
     init_cdte();
 
     init_cmos();
@@ -115,6 +117,8 @@ void Circle::init_cdte() {
     // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
     // Circle::get_sys_man_for_name("cdtede")->system_state = SYSTEM_STATE::ABANDON;
     // return;
+
+    // todo: add check for ethernet port open correctly.
 
     // Check canister ping status       0x08 0x8a
     utilities::debug_print("checking canister status...\n");
@@ -182,10 +186,10 @@ void Circle::init_cmos() {
     utilities::debug_print("initializing cmos system\n");
 
 // debug cdte:
-    utilities::debug_print("removing all cmos, isolating cdte\n");
-    Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
-    Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
-    return;
+    // utilities::debug_print("removing all cmos, isolating cdte\n");
+    // Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
+    // return;
 
     SystemManager* cmos1 = Circle::get_sys_man_for_name("cmos1");
     SystemManager* cmos2 = Circle::get_sys_man_for_name("cmos2");
@@ -196,6 +200,8 @@ void Circle::init_cmos() {
     auto delay = std::chrono::milliseconds(2000);
 
     /*----------------------- for cmos1 -----------------------*/
+
+    // todo: add check for ethernet port open correctly.
 
     // Check cmos linetime       0x0f 0xa0
     utilities::debug_print("checking cmos1 status...\n");
@@ -259,8 +265,31 @@ void Circle::init_cmos() {
     // then can read ring buffer
 
 }
+
 void Circle::init_timepix() {
     utilities::debug_print("initializing timepix system\n");
+    SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
+
+    // check that serial port opened correctly. 
+    // todo: figure out why `.is_open()` segfaults if port is not open.
+    // a better implementation (soon) is to store port status in a global state and check it in this `if`.
+    if (!transport->local_uart_port.is_open()) {
+        utilities::error_print("timepix uart port failed to open! ABANDONing.");
+        timepix->system_state = SYSTEM_STATE::ABANDON;
+        return;
+    }
+
+    std::vector<uint8_t> response(1);
+    response = transport->sync_uart_send_command_for_sys(*timepix, deck->get_command_for_sys_for_code(timepix->system.hex, 0x80));
+
+    if (response.size() > 0) {
+        utilities::debug_print("got response from timepix: ");
+        utilities::hex_print(response);
+        timepix->system_state = SYSTEM_STATE::LOOP;
+    } else {
+        utilities::error_print("got no response from timepix. ABANDONing!");
+        timepix->system_state = SYSTEM_STATE::ABANDON;
+    }
 }
 
 void Circle::manage_systems() {
@@ -364,6 +393,50 @@ void Circle::manage_systems() {
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
         std::this_thread::sleep_for(delay_inter_cmos_ms);
 
+    } else if (system_order[current_system]->system == deck->get_sys_for_name("timepix")) {
+        utilities::debug_print("managing timepix system\n");
+
+        // todo: write this to implement command forwarding for Timepix:
+        // transport->sync_uart_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("timepix"));
+
+        SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
+        Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
+        Command hk_req_cmd     = deck->get_command_for_sys_for_code(timepix->system.hex, 0x88);
+        Command rates_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x81);
+        
+        std::vector<uint8_t> flags_response(flags_req_cmd.get_uart_reply_length());
+        std::vector<uint8_t> hk_response(hk_req_cmd.get_uart_reply_length());
+        std::vector<uint8_t> rates_response(rates_req_cmd.get_uart_reply_length());
+        
+        std::vector<uint8_t> request_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
+
+        flags_response = transport->sync_uart_send_command_for_sys(*timepix, flags_req_cmd);
+        hk_response = transport->sync_uart_send_command_for_sys(*timepix, hk_req_cmd);
+        flags_response = transport->sync_uart_send_command_for_sys(*timepix, rates_req_cmd);
+        
+        // if got no response, resize these so they are full of zero and correct length:
+        flags_response.resize(flags_req_cmd.get_uart_reply_length());
+        hk_response.resize(hk_req_cmd.get_uart_reply_length());
+        rates_response.resize(rates_req_cmd.get_uart_reply_length());
+
+        // build the downlink packet:
+        std::vector<uint8_t> downlink;
+        downlink.push_back(timepix->system.hex);
+        downlink.push_back(0x00);
+        downlink.insert(downlink.end(), request_time.begin(), request_time.end());
+        downlink.insert(downlink.end(), flags_response.begin(), flags_response.end());
+        downlink.insert(downlink.end(), hk_response.begin(), hk_response.end());
+        downlink.insert(downlink.end(), rates_response.begin(), rates_response.end());
+
+        // create element for downlink buffer:
+        DownlinkBufferElement dbe(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+        RING_BUFFER_TYPE_OPTIONS::TPX);
+        dbe.set_payload(downlink);
+
+        // queue and send the downlink buffer:
+        transport->downlink_buffer->enqueue(dbe);
+        bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");
         // read out both sensors (0x01 0xf2, then 0x02 0xf2)
@@ -392,9 +465,9 @@ void Circle::manage_systems() {
         reply2_time.insert(reply2_time.end(),   reply2.begin(), reply2.end());
 
         DownlinkBufferElement dbe1(&(deck->get_sys_for_name("housekeeping")), &(deck->get_sys_for_name("gse")), 
-        RING_BUFFER_TYPE_OPTIONS::NONE);
+        RING_BUFFER_TYPE_OPTIONS::HK);
         DownlinkBufferElement dbe2(&(deck->get_sys_for_name("housekeeping")), &(deck->get_sys_for_name("gse")), 
-        RING_BUFFER_TYPE_OPTIONS::NONE);
+        RING_BUFFER_TYPE_OPTIONS::HK);
 
         dbe1.set_payload(reply1_time);
         dbe2.set_payload(reply2_time);
@@ -424,7 +497,6 @@ void Circle::normalize_times_to_period() {
     }
 }
 
-// todo: make this work.
 void Circle::record_uplink() {
     transport->sync_udp_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
 }

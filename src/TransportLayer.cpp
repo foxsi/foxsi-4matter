@@ -163,14 +163,22 @@ TransportLayerMachine::TransportLayerMachine(
     std::cout << "opening serial ports...\n";
     try {
         local_uart_port.open(local_uart->tty_path);
-        set_uplink_serial_options(local_uart);
+        try {
+            set_uplink_serial_options(local_uart);
+        } catch (std::exception& e) {
+            utilities::error_print("failed to set local serial port options!: " + std::string(e.what()) + "\n");
+        }
     } catch (std::exception& e) {
         utilities::error_print("failed to open local serial port!: " + std::string(e.what()) + "\n");
     }
 
     try {
         uplink_uart_port.open(uplink_uart->tty_path);
-        set_uplink_serial_options(uplink_uart);
+        try {
+            set_uplink_serial_options(uplink_uart);
+        } catch (std::exception& e) {
+            utilities::error_print("failed to set local serial port options!: " + std::string(e.what()) + "\n");
+        }
     } catch (std::exception& e) {
         utilities::error_print("failed to open uplink serial port!: " + std::string(e.what()) + "\n");
     }
@@ -741,33 +749,6 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_p
     }
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_port &port, size_t receive_size, std::chrono::milliseconds timeout_ms) {
-    boost::system::error_code err;
-    uart_local_receive_swap.resize(receive_size);
-
-    boost::asio::async_read(
-        port,
-        boost::asio::buffer(uart_local_receive_swap),
-        boost::bind(
-            &TransportLayerMachine::sync_uart_read_handler,
-            boost::placeholders::_1, 
-            boost::placeholders::_2, 
-            &err, 
-            &receive_size
-        )
-    );
-    bool timed_out = TransportLayerMachine::run_uart_context(timeout_ms);
-
-    if (timed_out) {
-        return {};
-    } else {
-        std::vector<uint8_t> swap_copy(uart_local_receive_swap);
-        swap_copy.resize(receive_size);
-        uart_local_receive_swap.resize(0);
-        return swap_copy;
-    }
-}
-
 std::vector<uint8_t> TransportLayerMachine::sync_udp_read(boost::asio::ip::udp::socket &socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
     udp_local_receive_swap.resize(receive_size);
@@ -1223,7 +1204,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(Syste
 
     std::vector<uint8_t> reply(256);
 
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sending ");
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sending ");
     if (sys.type == COMMAND_TYPE_OPTIONS::UART) {
         utilities::spw_print(packet, sys.spacewire);
     } else {
@@ -1233,11 +1214,10 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(Syste
     // for Timepix, `packet` should always be 1B:
     local_uart_port.write_some(boost::asio::buffer(packet));
 
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sent request\n");
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sent request\n");
 
     if (cmd.read) {
         utilities::debug_print("waiting for response\n");
-        // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
         std::chrono::milliseconds timeout(500);
         reply = sync_uart_read(local_uart_port, cmd.get_uart_reply_length(), timeout);
         if (reply.size() != cmd.get_uart_reply_length()) {
@@ -1273,7 +1253,35 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
         reply.resize(expected_size);
         // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
         size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, reply, sys_man);
-        utilities::debug_print("got response!!: ");
+        utilities::debug_print("got response: ");
+        utilities::hex_print(reply);
+        reply.resize(reply_len);
+    } else {
+        reply.resize(0);
+    }
+    return reply;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(SystemManager sys_man, Command cmd) {
+    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
+
+    std::vector<uint8_t> reply(4096);
+
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sending ");
+    if (sys_man.system.type != COMMAND_TYPE_OPTIONS::UART) {
+        utilities::error_print("cannot send non-UART command!");
+    }
+
+    local_uart_port.write_some(boost::asio::buffer(packet));
+    utilities::debug_print("in sync_uart_send_command_for_sys(), sent request\n");
+
+    if (cmd.read) {
+        utilities::debug_print("waiting for response\n");
+        size_t expected_size = cmd.get_uart_reply_length();
+        reply.resize(expected_size);
+        // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+        size_t reply_len = TransportLayerMachine::read(local_uart_port, reply, sys_man);
+        utilities::debug_print("got response: ");
         utilities::hex_print(reply);
         reply.resize(reply_len);
     } else {
