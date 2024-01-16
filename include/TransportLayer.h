@@ -265,6 +265,20 @@ class TransportLayerMachine {
         size_t read_some(boost::asio::ip::tcp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
         /**
+         * @brief Receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
+         * 
+         * Uses underlying `boost::asio::read()` method, so will return once `buffer.size()` bytes have been received from socket. Use `TransportLayerMachine::read_some()` if you want to get any available data in the socket.
+         * 
+         * @warning This method starts/stops the underlying `boost::io_context` and cancels asynchronous socket operations in order to handle the socket timeout. Only call in a context that can handle these `io_context` work interruptions.
+         * 
+         * @param socket the socket object to read from.
+         * @param buffer the buffer to fill with data. Will be resized 
+         * @param sys_man the `SystemManager` object describing the remote end of the socket. Used to derive timeout/retry information.
+         * @return size_t the number of bytes read.
+         */
+        size_t read_udp(boost::asio::ip::udp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+
+        /**
          * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
          * 
          * @param timeout_ms 
@@ -291,6 +305,16 @@ class TransportLayerMachine {
         std::vector<uint8_t> sync_tcp_read_some(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
 
         /**
+         * @brief receive data `receive_size` amount of data from `socket`, timing out after specified `timeout_ms`.
+         * 
+         * @param socket 
+         * @param receive_size 
+         * @param timeout_ms 
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> sync_udp_read(boost::asio::ip::udp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
+
+        /**
          * @brief handler for `sync_tcp_receive(...)`.
          * 
          * @param ec 
@@ -299,8 +323,9 @@ class TransportLayerMachine {
          * @param out_length 
          */
         static void sync_tcp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
-        static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        // static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
+        bool run_udp_context(std::chrono::milliseconds timeout_ms);
         bool run_tcp_context(std::chrono::milliseconds timeout_ms);
 
         /**
@@ -330,6 +355,7 @@ class TransportLayerMachine {
         std::vector<uint8_t> sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
         void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);
 
+        void sync_udp_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
         // implemented. todo: try splitting into a "receiving" and "enqueuing" part that bind to each other.
         void async_udp_receive_to_uplink_buffer();
         

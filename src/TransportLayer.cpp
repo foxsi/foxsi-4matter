@@ -150,7 +150,7 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
             return true;
         }
     } else {
-        utilities::debug_print("checking for frame read of an unimplemented system!\n");
+        utilities::debug_print("\tcommand is not for frame read\n");
     }
     return false;
 }
@@ -478,8 +478,24 @@ size_t TransportLayerMachine::read_some(boost::asio::ip::tcp::socket &socket, st
     return 0;
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms)
-{
+size_t TransportLayerMachine::read_udp(boost::asio::ip::udp::socket &socket, std::vector<uint8_t> &buffer, SystemManager &sys_man) {
+    size_t retry_count = 0;
+    bool did_read = false;
+    while (retry_count < sys_man.timing->retry_max_count && !did_read) {
+        std::vector<uint8_t> reply = TransportLayerMachine::sync_udp_read(socket, buffer.size(), std::chrono::milliseconds(sys_man.timing->timeout_millis));
+        if (reply.size() == 0) {
+            // utilities::error_print("TransportLayerMachine::read_udp() attempt "  + std::to_string(retry_count) + " failed.\n");
+        } else {
+            buffer = reply;
+            return buffer.size();
+        }
+        ++retry_count;
+    }
+    // utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    return 0;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, std::chrono::milliseconds timeout_ms) {
     tcp_local_receive_swap.resize(receive_size);
     boost::system::error_code ec;
 
@@ -564,17 +580,62 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
     }
 }
 
-void TransportLayerMachine::sync_tcp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length) {
+std::vector<uint8_t> TransportLayerMachine::sync_udp_read(boost::asio::ip::udp::socket &socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
+    boost::system::error_code err;
+    udp_local_receive_swap.resize(receive_size);
+
+    socket.async_receive_from(
+        boost::asio::buffer(udp_local_receive_swap),
+        remote_udp_endpoint,
+        boost::bind(
+            // &TransportLayerMachine::sync_udp_read_handler,
+            &TransportLayerMachine::sync_tcp_read_handler,
+            boost::placeholders::_1, 
+            boost::placeholders::_2, 
+            &err, 
+            &receive_size
+        )
+    );
+    bool timed_out = TransportLayerMachine::run_udp_context(timeout_ms);
+
+    if (timed_out) {
+        return {};
+    } else {
+        utilities::debug_print("udp received!\n");
+        std::vector<uint8_t> swap_copy(udp_local_receive_swap);
+        swap_copy.resize(receive_size);
+        udp_local_receive_swap.resize(0);
+        return swap_copy;
+    }
+}
+
+void TransportLayerMachine::sync_tcp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length)
+{
     *out_ec = ec;
     *out_length = length;
 }
 
-void TransportLayerMachine::sync_udp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length) {
-    *out_ec = ec;
-    *out_length = length;
+// void TransportLayerMachine::sync_udp_read_handler(const boost::system::error_code &ec, std::size_t length, boost::system::error_code *out_ec, std::size_t *out_length) {
+//     *out_ec = ec;
+//     *out_length = length;
+// }
+
+bool TransportLayerMachine::run_udp_context(std::chrono::milliseconds timeout_ms)
+{
+    io_context.restart();
+    io_context.run_for(timeout_ms);
+    if (!io_context.stopped()) {
+        // utilities::error_print("context timed out in TransportLayerMachine!\n");
+        local_udp_sock.cancel();
+        io_context.run();
+        return true;
+    }
+    // io_context.run();
+    return false;
 }
 
-bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms) {
+bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms)
+{
     io_context.restart();
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
@@ -768,29 +829,10 @@ void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManage
     System system;
     std::vector<uint8_t> varargs;
 
-    // // try to find the buffer in the System-wise buffer map
-    // try{
-    //     // if the buffer is there, and nonempty, remove an element and send.
-        // if ((uplink_buffer->at(sys_man.system)).size() > 0) {
-    //         UplinkBufferElement element((uplink_buffer->at(sys_man.system)).front());
-    //         command = *element.get_command();
-    //         system = *element.get_system();
-    //         varargs = element.get_varargs();
-            
-    //         // remove the element from the buffer
-    //         uplink_buffer->at(sys_man.system).pop();
-    //     }
-    // } catch (std::out_of_range& e) {
-    //     // todo: log the error.
-    //     utilities::debug_print("no commands in queue\n");
-    // }
-
     bool uplink_available;
     bool system_unavailable;
     UplinkBufferElement element;
     moodycamel::ConcurrentQueue<UplinkBufferElement> this_system_queue;
-    
-    // async_udp_receive_to_uplink_buffer();
 
     try {
         // uplink_available = (uplink_buffer->at(sys_man.system)).try_dequeue(element);
@@ -852,10 +894,40 @@ void TransportLayerMachine::sync_tcp_housekeeping_send(std::vector<uint8_t> data
     local_tcp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
 }
 
+void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
+    utilities::debug_print("in sync_udp_receive_to_uplink_buffer()\n");
+
+    std::vector<uint8_t> reply(2);
+    for (size_t count = 0; count < 8; ++count) {
+        size_t reply_size = TransportLayerMachine::read_udp(local_udp_sock, reply, uplink_sys_man);
+        if (reply_size == 0) {
+            // utilities::error_print("got no uplink command\n");
+            return;
+        } else {
+            utilities::debug_print("received uplink: ");
+            utilities::hex_print(reply);
+            utilities::debug_print("\n");
+            // try to find queue for command
+            uint8_t sys_code = reply.at(0);
+            try{
+                UplinkBufferElement new_uplink(reply, *commands);
+
+                (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
+            } catch (std::out_of_range& e) {
+                // todo: log the error.
+                utilities::error_print("could not add uplink command to queue!\n"); 
+                return;
+            }
+            utilities::debug_print("\tstored uplink commands\n");
+        }
+    }
+}
+
 // todo: see if this works.
 void TransportLayerMachine::async_udp_receive_to_uplink_buffer() {
     utilities::debug_print("in async_udp_receive_to_uplink_buffer()\n");
     uplink_swap.resize(config::buffer::RECV_BUFF_LEN);
+    uplink_swap.resize(2);
     // std::vector<uint8_t> local_buffer(config::buffer::RECV_BUFF_LEN);
     local_udp_sock.async_receive_from(
         boost::asio::buffer(uplink_swap),
@@ -867,24 +939,6 @@ void TransportLayerMachine::async_udp_receive_to_uplink_buffer() {
             boost::asio::placeholders::bytes_transferred
         )
     );
-
-    // utilities::debug_print("handling UDP uplink command:\t");
-    // utilities::hex_print(local_buffer);
-    // uint8_t sys_code = local_buffer[0];
-    // if (commands->get_sys_name_for_code(sys_code) == "formatter") {
-    //     // don't queue command, act on it immediately.
-        
-    // } else {
-    //     // try to find queue for command
-    //     try{
-    //         UplinkBufferElement new_uplink(local_buffer, commands);
-    //         uplink_buffer->at(commands.get_sys_for_code(sys_code)).enqueue(new_uplink);
-    //     } catch (std::out_of_range& e) {
-    //         // todo: log the error.
-    //         utilities::error_print("could not add uplink command to queue!\n");
-    //     }
-    // }
-    // utilities::debug_print("\n");
 }
 
 void TransportLayerMachine::async_udp_send_downlink_buffer() {
@@ -905,23 +959,8 @@ void TransportLayerMachine::async_udp_send_downlink_buffer() {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-    // DownlinkBufferElement dbe;
-    // bool has_data = downlink_buffer->try_dequeue(dbe);
 
-    // if (has_data) {
-    //     utilities::debug_print("sending to gse\n");
-    //     std::vector<uint8_t> packet = dbe.get_packet();
-    //     local_udp_sock.async_send_to(
-    //         boost::asio::buffer(packet), 
-    //         remote_udp_endpoint,
-    //         boost::bind(
-    //             &TransportLayerMachine::async_udp_send_downlink_buffer, 
-    //             this
-    //         )
-    //     );
-
-    // todo: something more sophisticated to limit the send rate.
-    // std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // todo: something to limit datarate
 }
 
 bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
@@ -973,6 +1012,8 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
         utilities::debug_print("waiting for response\n");
         // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
         std::chrono::milliseconds timeout(500);
+        
+        // todo: change this to TransportLayerMachine::read() call and deprecate 2-arg sync_tcp_read.
         reply = sync_tcp_read(cmd.get_spw_reply_length(), timeout);
         utilities::debug_print("got response!!: ");
         utilities::hex_print(reply);
@@ -1048,7 +1089,7 @@ void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost:
     }
     utilities::debug_print("\n");
 
-    // async_udp_receive_to_uplink_buffer();
+    async_udp_receive_to_uplink_buffer();
 }
 
 void TransportLayerMachine::await_loop_begin() {
@@ -1075,9 +1116,9 @@ std::vector<uint8_t> TransportLayerMachine::get_reply_data(std::vector<uint8_t> 
     size_t ether_prefix_length = 12; // using SPMU-001, this is always true
     size_t target_path_address_length = 0; // path address is removed by the time we receive reply.
 
-    utilities::debug_print("\tpulling reply from ");
-    utilities::hex_print(spw_reply);
-    utilities::debug_print("\n");
+    // utilities::debug_print("\tpulling reply from ");
+    // utilities::hex_print(spw_reply);
+    // utilities::debug_print("\n");
 
     // size_t target_path_address_length = sys.target_path_address.size() - 1;
     /**

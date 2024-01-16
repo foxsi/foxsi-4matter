@@ -66,6 +66,7 @@ class Circle {
         uint32_t slowmo_gain;
     
     private:
+        void record_uplink();
         void manage_cdte_state();
         void manage_housekeeping_state();
         boost::asio::chrono::milliseconds get_state_time();

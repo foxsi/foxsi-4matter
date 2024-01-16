@@ -156,10 +156,12 @@ void Circle::init_cdte() {
 
     // Apply HV 60V for all canister    0x08 0x14
     // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
+    // utilities::debug_print("waiting 30 seconds...\n");
     // std::this_thread::sleep_for(delay_60to200v);
 
     // Apply HV 200V for all canister    0x08 0x16
     // transport->sync_tcp_send_command_for_sys(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x16));
+    // utilities::debug_print("waiting 5 minutes...\n");
     // std::this_thread::sleep_for(delay_post200v);
 
     // Set full readout for all canister    0x08 0x19
@@ -180,10 +182,10 @@ void Circle::init_cmos() {
     utilities::debug_print("initializing cmos system\n");
 
 // debug cdte:
-    // utilities::debug_print("removing all cmos, isolating cdte\n");
-    // Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
-    // Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
-    // return;
+    utilities::debug_print("removing all cmos, isolating cdte\n");
+    Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
+    Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
+    return;
 
     SystemManager* cmos1 = Circle::get_sys_man_for_name("cmos1");
     SystemManager* cmos2 = Circle::get_sys_man_for_name("cmos2");
@@ -262,13 +264,17 @@ void Circle::init_timepix() {
 }
 
 void Circle::manage_systems() {
+
+    record_uplink();    // trying to implement uplink without blocking everything
+    
+    utilities::debug_print("\n");
     std::chrono::milliseconds delay_inter_cdte_ms(2000);
     std::chrono::milliseconds delay_inter_cmos_ms(1000);
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order[current_system]->system_state == SYSTEM_STATE::ABANDON) {
-            utilities::error_print("current system " + system_order[current_system]->system.name + " was abandoned! Continuing.\n");
-            return;
-        }
+        utilities::error_print("current system " + system_order[current_system]->system.name + " was abandoned! Continuing.\n");
+        return;
+    }
 
     if (system_order[current_system]->system == deck->get_sys_for_name("cdte1")) {
         utilities::debug_print("managing cdte1 system\n");
@@ -418,7 +424,13 @@ void Circle::normalize_times_to_period() {
     }
 }
 
-boost::asio::chrono::milliseconds Circle::get_state_time() {
+// todo: make this work.
+void Circle::record_uplink() {
+    transport->sync_udp_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
+}
+
+boost::asio::chrono::milliseconds Circle::get_state_time()
+{
     uint32_t state_time_millis = 0;
 
     // std::cout << system_order[current_system]->timing->to_string();

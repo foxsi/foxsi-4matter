@@ -32,6 +32,7 @@ int main(int argc, char** argv) {
     System& cdte4 = deck->get_sys_for_name("cdte4");
     System& cmos1 = deck->get_sys_for_name("cmos1");
     System& cmos2 = deck->get_sys_for_name("cmos2");
+    System& uplink = deck->get_sys_for_name("uplink");
 
     // test:
     // std::unordered_map<System, uint8_t> test;
@@ -63,6 +64,8 @@ int main(int argc, char** argv) {
     std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
     std::queue<UplinkBufferElement> cmos2_uplink_queue;
+    
+    std::queue<UplinkBufferElement> global_uplink_queue;
 
     auto housekeeping_manager = std::make_shared<SystemManager>(housekeeping, housekeeping_uplink_queue);
     auto cdtede_manager = std::make_shared<SystemManager>(cdtede, cdtede_uplink_queue);
@@ -72,6 +75,7 @@ int main(int argc, char** argv) {
     auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
     auto cmos2_manager = std::make_shared<SystemManager>(cmos2, cmos2_uplink_queue);
+    auto uplink_manager = std::make_shared<SystemManager>(uplink, global_uplink_queue);
 
     housekeeping_manager->add_timing(&lif.lookup_timing[housekeeping]);
     cdtede_manager->add_timing(&lif.lookup_timing[cdtede]);
@@ -81,6 +85,8 @@ int main(int argc, char** argv) {
     cdte4_manager->add_timing(&lif.lookup_timing[cdte4]);
     cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
     cmos2_manager->add_timing(&lif.lookup_timing[cmos2]);
+    
+    uplink_manager->add_timing(&lif.lookup_timing[uplink]);
 
     std::cout << "Timing for cdtede: " << cdtede_manager->timing->to_string() << "\n";
 
@@ -117,6 +123,7 @@ int main(int argc, char** argv) {
     order.emplace_back(std::move(cmos1_manager));
     order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(housekeeping_manager));
+    order.emplace_back(std::move(uplink_manager));      // added uplink_manager to the loop order so it is accessible inside Circle.
     // order.emplace_back(std::move(cmos1_manager));
 
     std::cout << "endpoints: \n";
@@ -158,6 +165,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
+    // note: uplink system itself is not in the uplink buffer. Just there to manage access.
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 
@@ -176,6 +184,9 @@ int main(int argc, char** argv) {
             context
         );
         machine->add_commands(deck);
+
+        // machine->async_udp_receive_to_uplink_buffer();
+        // context.poll();
 
         std::cout << "loop: \n";
         Circle loop(
@@ -199,6 +210,7 @@ int main(int argc, char** argv) {
 
         std::cout <<"setup done\n";
         context.poll();
+        // context.run();
         circle_timer_context.run();
     } catch (std::exception& e) {
         std::cout << e.what() << "\n";

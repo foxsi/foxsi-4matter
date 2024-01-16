@@ -669,9 +669,9 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
         uint8_t data_crc = sys.spacewire->crc(data);
         data.push_back(data_crc);
 
-        std::cout << "rmap write data lookup:\t"; 
-        utilities::hex_print(data);
-        std::cout << "\n";
+        // std::cout << "rmap write data lookup:\t"; 
+        // utilities::hex_print(data);
+        // std::cout << "\n";
 
         // rmap_packet.insert(rmap_packet.end(), target_path_address.begin(), target_path_address.end());
         rmap_packet.insert(rmap_packet.end(), header.begin(), header.end());

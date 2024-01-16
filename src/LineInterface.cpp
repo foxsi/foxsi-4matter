@@ -435,31 +435,31 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         // }
 
         // now add more command-specific info to this_system_object
-        if(is_command) {
-            try {
-                auto& time_data = this_system.value()["timing"];
-                Timing* this_times = new Timing();
-                this_times->add_times_seconds(
-                    time_data.at("total_allocation").get<double>()/1000.0,
-                    time_data.at("command").get<double>()/1000.0,
-                    time_data.at("request").get<double>()/1000.0,
-                    time_data.at("reply").get<double>()/1000.0,
-                    time_data.at("idle").get<double>()/1000.0
-                );
+        // if(is_command) {
+        try {
+            auto& time_data = this_system.value()["timing"];
+            Timing* this_times = new Timing();
+            this_times->add_times_seconds(
+                time_data.at("total_allocation").get<double>()/1000.0,
+                time_data.at("command").get<double>()/1000.0,
+                time_data.at("request").get<double>()/1000.0,
+                time_data.at("reply").get<double>()/1000.0,
+                time_data.at("idle").get<double>()/1000.0
+            );
 
-                this_times->timeout_millis = time_data.at("receive_timeout_millis").get<double>();
-                this_times->retry_max_count = time_data.at("retry_max_count").get<uint32_t>();
-                this_times->intercommand_space_millis = time_data.at("intercommand_spacing_millis").get<double>();
+            this_times->timeout_millis = time_data.at("receive_timeout_millis").get<double>();
+            this_times->retry_max_count = time_data.at("retry_max_count").get<uint32_t>();
+            this_times->intercommand_space_millis = time_data.at("intercommand_spacing_millis").get<double>();
 
-                lookup_timing.insert(std::make_pair(this_system_object, *this_times));
+            lookup_timing.insert(std::make_pair(this_system_object, *this_times));
 
-                // do stuff with the time info
-            } catch(std::exception& e) {
-                std::cout << "\tno timing info provided for commanded system " << this_name << "\n";
+            // do stuff with the time info
+        } catch(std::exception& e) {
+            std::cout << "\tno timing info provided for commanded system " << this_name << "\n";
 
-                // TODO: ACTUALLY REMOVE IT? OR JUST ADD EVERYTHING DOWN BELOW
-            }
+            // TODO: ACTUALLY REMOVE IT? OR JUST ADD EVERYTHING DOWN BELOW
         }
+        // }
 
         systems.push_back(this_system_object);
         lookup_system.insert(std::make_pair(this_hex, this_system_object));
