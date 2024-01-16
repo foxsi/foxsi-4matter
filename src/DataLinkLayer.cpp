@@ -394,6 +394,7 @@ namespace utilities {
 }
 
 UART::UART(): DataLinkLayer() {
+    tty_path = "";
     baud_rate = 9600;
     parity = 1;
     stop_bits = 1;
@@ -402,6 +403,7 @@ UART::UART(): DataLinkLayer() {
 
 UART::UART(const UART &other):
     DataLinkLayer(other),
+    tty_path(other.tty_path),
     baud_rate(other.baud_rate),
     parity(other.parity),
     stop_bits(other.stop_bits),
@@ -411,13 +413,15 @@ UART::UART(const UART &other):
 
 UART::UART(const DataLinkLayer &link_layer):
     DataLinkLayer(link_layer) {
+    tty_path = "";
     baud_rate = 9600;
     parity = 1;
     stop_bits = 1;
     data_bits = 8;
 }
 
-UART::UART(uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, uint8_t new_data_bits, uint32_t new_mean_speed_bps, size_t new_max_payload_size, size_t new_frame_size, size_t new_static_header_size, size_t new_static_footer_size) {
+UART::UART(std::string new_tty_path, uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, uint8_t new_data_bits, uint32_t new_mean_speed_bps, size_t new_max_payload_size, size_t new_frame_size, size_t new_static_header_size, size_t new_static_footer_size) {
+    tty_path = new_tty_path;
     baud_rate = new_baud_rate;
     parity = new_parity;
     stop_bits = new_stop_bits;
@@ -433,7 +437,8 @@ UART::UART(uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, ui
     subsequent_footer_size = 0;
 }
 
-UART::UART(uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, uint8_t new_data_bits, uint32_t new_mean_speed_bps, size_t new_max_payload_size, size_t new_frame_size, size_t new_static_header_size, size_t new_initial_header_size, size_t new_subsequent_header_size, size_t new_static_footer_size, size_t new_initial_footer_size, size_t new_subsequent_footer_size) {
+UART::UART(std::string new_tty_path, uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, uint8_t new_data_bits, uint32_t new_mean_speed_bps, size_t new_max_payload_size, size_t new_frame_size, size_t new_static_header_size, size_t new_initial_header_size, size_t new_subsequent_header_size, size_t new_static_footer_size, size_t new_initial_footer_size, size_t new_subsequent_footer_size) {
+    tty_path = new_tty_path;
     baud_rate = new_baud_rate;
     parity = new_parity;
     stop_bits = new_stop_bits;
@@ -452,7 +457,8 @@ UART::UART(uint32_t new_baud_rate, uint8_t new_parity, uint8_t new_stop_bits, ui
 bool UART::operator==(UART &other)
 {
     if (
-        baud_rate == other.baud_rate 
+        tty_path == other.tty_path
+        && baud_rate == other.baud_rate 
         && parity == other.parity
         && stop_bits == other.stop_bits
         && data_bits == other.data_bits
@@ -470,4 +476,17 @@ bool UART::operator==(UART &other)
     } else {
         return false;
     }
+}
+
+std::string UART::to_string() {
+    std::string result;
+    result.append("UART::");
+    result.append("\n\ttty_path \t= " + tty_path);
+    result.append("\n\tbaud_rate \t= " + std::to_string(baud_rate));
+    result.append("\n\tparity \t\t= " + std::to_string(parity));
+    result.append("\n\tstop_bits \t= " + std::to_string(stop_bits));
+    result.append("\n\tdata_bits \t= " + std::to_string(data_bits));
+    result.append("\n");
+
+    return result;
 }

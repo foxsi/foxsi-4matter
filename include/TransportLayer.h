@@ -48,9 +48,14 @@ class TransportLayerMachine {
         boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
 
         /**
-         * @brief the local machine's UART port object
+         * @brief the local machine's UART port object;
          */
-        UARTPort uart;
+        boost::asio::serial_port local_uart_port;
+
+        /**
+         * @brief the local machine's UART port, reserved for uplink use.
+         */
+        boost::asio::serial_port uplink_uart_port;
 
         /**
          * @brief a rudimentary buffer for data to downlink (send to UDP endpoint).
@@ -144,6 +149,35 @@ class TransportLayerMachine {
             boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+            boost::asio::io_context& context
+        );
+
+        /**
+         * @brief Construct a new Transport Layer Machine object from predefined `boost::asio` endpoint objects and `UART` interfaces.
+         * 
+         * @param local_udp_end 
+         * @param local_tcp_end 
+         * @param local_tcp_housekeeping_end 
+         * @param remote_udp_end 
+         * @param remote_tcp_end 
+         * @param remote_tcp_housekeeping_end 
+         * @param new_uplink_buffer 
+         * @param new_downlink_buffer 
+         * @param local_uart 
+         * @param uplink_uart 
+         * @param context 
+         */
+        TransportLayerMachine(
+            boost::asio::ip::udp::endpoint local_udp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_end,
+            boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint remote_udp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_end,
+            boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
+            std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
+            std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
+            std::shared_ptr<UART> local_uart,
+            std::shared_ptr<UART> uplink_uart,
             boost::asio::io_context& context
         );
 
@@ -278,6 +312,8 @@ class TransportLayerMachine {
          */
         size_t read_udp(boost::asio::ip::udp::socket& socket, std::vector<uint8_t>& buffer, SystemManager& sys_man);
 
+        size_t read(boost::asio::serial_port& port, std::vector<uint8_t>& buffer, SystemManager& sys_man);
+        
         /**
          * @brief receive (blocking) on `local_tcp_sock` until `timeout_ms` expires.
          * 
@@ -314,6 +350,8 @@ class TransportLayerMachine {
          */
         std::vector<uint8_t> sync_udp_read(boost::asio::ip::udp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms);
 
+        std::vector<uint8_t> sync_uart_read(boost::asio::serial_port& port, size_t receive_size, std::chrono::milliseconds timeout_ms);
+
         /**
          * @brief handler for `sync_tcp_receive(...)`.
          * 
@@ -324,12 +362,14 @@ class TransportLayerMachine {
          */
         static void sync_tcp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
         // static void sync_udp_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
+        static void sync_uart_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_udp_context(std::chrono::milliseconds timeout_ms);
         bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        bool run_uart_context(std::chrono::milliseconds timeout_ms);
 
         /**
-         * @brief A fool's daydream. Maybe someday I will implement.
+         * @warning A fool's daydream. Not implemented. Maybe someday I will.
          * 
          * @param sys_man 
          */
@@ -363,13 +403,23 @@ class TransportLayerMachine {
         bool sync_udp_send_all_downlink_buffer();
 
         /**
-         * @brief Synchronously send command `cmd` to remote `sys`.
+         * @brief Synchronously send command `cmd` to remote `sys` over `local_tcp` interface.
          * 
          * @param sys 
          * @param cmd 
          * @return std::vector<uint8_t> any response data to the command.
          */
         std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
+
+        /**
+         * @brief Synchronously send command `cmd` to remote `sys` over `local_uart` interface.
+         * 
+         * @param sys 
+         * @param cmd 
+         * @return std::vector<uint8_t> 
+         */
+        std::vector<uint8_t> sync_uart_send_command_for_sys(System sys, Command cmd);
+
         /**
          * @brief Synchronously send command `cmd` to remote `sys_man`.
          * 
@@ -412,11 +462,16 @@ class TransportLayerMachine {
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
 
     private:
+        bool do_uart;
+        
         std::vector<uint8_t> uplink_swap;
         std::vector<uint8_t> tcp_local_receive_swap;
         std::vector<uint8_t> udp_local_receive_swap;
+        std::vector<uint8_t> uart_local_receive_swap;
 
         void set_socket_options();
+        void set_local_serial_options(std::shared_ptr<UART> port);
+        void set_uplink_serial_options(std::shared_ptr<UART> port);
 
         boost::asio::io_context& io_context;
 };
