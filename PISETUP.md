@@ -39,10 +39,20 @@
 	$ sudo raspi-config
 ```
 3. Enter the `Localisation Options` menu, and select your location and language.
-4. 
-.
-.
-.
+4. Enter the `Interface Options` menu:
+   1. Select `SSH` and enable `SSH` login.
+   2. Select `Serial Port` and enable serial interface, but disable login shell from serial port.
+
+## Setting up UARTs
+We need to enable UARTs to communicate with Timepix and the command uplink system. Inside the Pi, edit the `/boot/config.txt`:
+```bash
+sudo nano /boot/config.txt
+```
+At the very bottom, add two lines: 
+```
+dtoverlay=uart2
+dtoverlay=uart5
+```
 
 ## Setting up `eduroam` WiFi
 This is necessary to download packages at, e.g. the University of Minnesota, where network sharing from the host laptop to the Raspberry Pi is disallowed.
@@ -67,4 +77,9 @@ network={
 }
 ```
 3. Note that the file lists your login and password information verbatim. This is very insecure.
-4. You can check the network connection with...
+4. You can check the network connection by `ping foxsi.umn.edu` at the terminal.
+
+Now reboot the Pi to implement your changes:
+```bash
+sudo reboot
+```
