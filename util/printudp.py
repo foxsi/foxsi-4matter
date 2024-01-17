@@ -1,19 +1,15 @@
 import socket, struct
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
 
 # multicast group address and port
-mcast_grp = '224.1.1.0'
-mcast_port = 3000
+local_addr = '192.168.1.118'
+local_port = 9999
 
 # bind socket to mcast_grp on mcast_port
-sock.bind((mcast_grp, mcast_port))
-# convert multicast address to binary form, INADDR_ANY means any interface
-mreq = struct.pack("4sl", socket.inet_aton(mcast_grp), socket.INADDR_ANY)
-# join the multicast group (adding membership)
-sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+sock.bind((local_addr, local_port))
 
 while True:
 	data, sender_endpoint = sock.recvfrom(1500)  #receive data
-	print(str(sender_endpoint[0]) + ":" + str(sender_endpoint[1]) + " sent" + data.hex())
+	print(str(sender_endpoint[0]) + ":" + str(sender_endpoint[1]) + " sent " + data.hex())
