@@ -246,6 +246,15 @@ namespace utilities{
         }
     }
 
+    std::string bytes_to_string(std::vector<uint8_t> data) {
+        std::stringstream result;
+        result << "0x";
+        for (uint8_t byte: data) {
+            result << std::hex << byte + 0;
+        }
+        return result.str();
+    }
+
     int inc_mod(int i, int n) {
         return i = (i + 1 == n ? 0: i + 1);
     }

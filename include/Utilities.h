@@ -48,6 +48,7 @@ namespace utilities{
     void hex_print(uint8_t data);
     // through here in a new namespace `log`
 
+    std::string bytes_to_string(std::vector<uint8_t> data);
 
     // increment i mod n (loop through enum?)
     int inc_mod(int i, int n);
