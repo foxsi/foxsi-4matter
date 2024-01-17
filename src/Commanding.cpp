@@ -114,6 +114,7 @@ Command::Command(const Command& other):
     spw_reply_length(other.get_spw_reply_length()),
     full_command(other.get_full_command()),
     uart_instruction(other.get_uart_instruction()),
+    uart_reply_length(other.get_uart_reply_length()),
     spi_address(other.get_spi_address()),
     spi_write_data(other.get_spi_write_data()),
     spi_reply_length(other.get_spi_reply_length()),
@@ -132,6 +133,7 @@ Command& Command::operator=(const Command& other) {
     spw_reply_length = other.get_spw_reply_length();
     full_command = other.get_full_command();
     uart_instruction = other.get_uart_instruction();
+    uart_reply_length = other.get_uart_reply_length();
     spi_address = other.get_spi_address();
     spi_write_data = other.get_spi_write_data();
     spi_reply_length = other.get_spi_reply_length();
@@ -142,93 +144,44 @@ Command& Command::operator=(const Command& other) {
 }
 
 Command::Command() {}
-/*
-System::System(std::string new_name, uint8_t new_hex): name(new_name), hex(new_hex) {}
 
-System::System(
-    std::string new_name,
-    uint8_t new_hex,
-    COMMAND_TYPE_OPTIONS new_type,
-    unsigned short new_max_ethernet_payload,
-    std::vector<uint8_t> new_target_path_address,
-    std::vector<uint8_t> new_reply_path_address,
-    uint8_t new_target_logical_address,
-    uint8_t new_source_logical_address,
-    uint8_t new_key,
-    std::string new_crc_version,
-    std::string new_hardware_name
-) {
-    name = new_name;
-    hex = new_hex;
-    set_type(new_type);
-    max_ethernet_payload = new_max_ethernet_payload,
-    target_path_address = new_target_path_address;
-    reply_path_address = new_reply_path_address;
-    target_logical_address = new_target_logical_address;
-    source_logical_address = new_source_logical_address;
-    key = new_key;
-    crc_version = new_crc_version;
-    hardware_name = new_hardware_name;
-}
+const std::string Command::to_string() {
+    std::string result;
+    result.append("Command::");
+    result.append("\n\tname \t\t= " + name);
+    result.append("\n\thex \t\t= " + std::to_string(hex));
 
-System::System(const System& other): 
-    name(other.name), 
-    hex(other.hex), 
-    type(other.type),
-    max_ethernet_payload(other.max_ethernet_payload),
-    target_path_address(other.target_path_address),
-    reply_path_address(other.reply_path_address),
-    target_logical_address(other.target_logical_address),
-    source_logical_address(other.source_logical_address),
-    key(other.key),
-    crc_version(other.crc_version),
-    hardware_name(other.hardware_name) 
-{}
+    
+    if (type == COMMAND_TYPE_OPTIONS::SPW) {
+        result.append("\n\ttype \t\t= spw");
+        result.append("\n\tinstruction \t= " + std::to_string(get_spw_instruction()));
+        result.append("\n\twrite_data \t= " + utilities::bytes_to_string(get_spw_write_data()));
+        result.append("\n\taddress \t= " + utilities::bytes_to_string(get_spw_address()));
+        result.append("\n\treply_length \t= " + std::to_string(get_spw_reply_length()));
+    
+    } else if (type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+        result.append("\n\ttype \t\t= ethernet");
+        result.append("\n\tpacket \t= " + utilities::bytes_to_string(get_eth_packet()));
+        result.append("\n\treply_length \t= " + std::to_string(get_eth_reply_length()));
+    
+    } else if (type == COMMAND_TYPE_OPTIONS::UART) {
+        result.append("\n\ttype \t\t= uart");
+        result.append("\n\tinstruction \t= " + utilities::bytes_to_string(get_uart_instruction()));
+        result.append("\n\treply_length \t= " + std::to_string(get_uart_reply_length()));
 
-System::System() {
-    name = "";
-    hex = 0xff;
-    set_type(COMMAND_TYPE_OPTIONS::NONE);
-    max_ethernet_payload = 1;
-    target_path_address = {};
-    reply_path_address = {};
-    target_logical_address = 0x00;
-    source_logical_address = 0x00;
-    key = 0x00;
-    crc_version = "f";
-    hardware_name = "";
-}
+    } else if (type == COMMAND_TYPE_OPTIONS::SPI) {
+        result.append("\n\ttype \t\t= spi");
 
-System& System::operator=(const System& other) {
-    name = other.name;
-    hex = other.hex;
-    return *this;
-}
+    } else if (type == COMMAND_TYPE_OPTIONS::NONE) {
+        result.append("\n\ttype \t\t= none");
 
-void System::set_type(COMMAND_TYPE_OPTIONS new_type) {
-    type = new_type;
-    switch(type) {
-        case COMMAND_TYPE_OPTIONS::SPW:
-            // require set_spw_options()?
-            break;
-        case COMMAND_TYPE_OPTIONS::SPI:
-            // require set_spi_options()?
-            break;
-        case COMMAND_TYPE_OPTIONS::UART:
-            // require set_uart_options?
-            break;
-        case COMMAND_TYPE_OPTIONS::ETHERNET:
-            // require set_uart_options?
-            break;
-        case COMMAND_TYPE_OPTIONS::NONE:
-            // require set_uart_options?
-            break;
-        default:
-            std::cerr << "switch/case in Command::set_type fell through\n";
+    } else {
+        result.append("\n\ttype \t\t= unknown!");
     }
-}
+    result.append("\n");
 
-*/
+    return result;
+}
 
 CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<System, std::string> command_paths) {
 
@@ -286,15 +239,19 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
 
                 unsigned long this_uart_reply_length = 0;
                 if(this_read) {
-                    // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
                     this_uart_reply_length = strtoul(this_uart_reply_len_str.c_str(), NULL, 16);
                 }
                 
                 this_command.set_uart_options(this_uart_write_data, this_uart_reply_length);
-
+                
                 // add the command to the deck for this subsystem
-                commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
-            
+                auto placed = commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
+                
+                if (!placed.second) {
+                    utilities::error_print("failed to add command!\n");
+                    continue;
+                }
+
             } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPW) {
                 // handle commands for CDTE or CMOS (over SPW)
 
@@ -720,6 +677,15 @@ std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys
     return response;
 }
 
+std::vector<uint8_t> CommandDeck::make_uart_packet_for_sys_for_command(System sys, Command cmd) {
+    if (sys != get_sys_for_name("timepix")) {
+        utilities::error_print("UART commanding only implemented for timepix system!");
+        return {0x00};
+    }
+
+    return cmd.get_uart_instruction();
+}
+
 std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys, uint8_t code) {
     Command command = CommandDeck::get_command_for_sys_for_code(sys, code);
     System system = CommandDeck::get_sys_for_code(sys);
@@ -737,9 +703,7 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             return CommandDeck::make_eth_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::UART:
-            std::cout << "UART COMMAND TYPE NOT IMPLEMENTED\n";
-            // return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
-            return {0x00};
+            return CommandDeck::make_uart_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::NONE:
             std::cout << "NONE COMMAND TYPE NOT IMPLEMENTED\n";

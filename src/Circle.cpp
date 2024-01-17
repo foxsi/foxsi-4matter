@@ -87,7 +87,7 @@ void Circle::init_systems() {
 }
 
 void Circle::init_housekeeping() {
-    utilities::debug_print("initializing housekeeping system\n");
+    utilities::debug_print("\ninitializing housekeeping system\n");
     // setup both sensors
     transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x06));
     transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x07));
@@ -99,7 +99,7 @@ void Circle::init_housekeeping() {
     transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x05));
 }
 void Circle::init_cdte() {
-    utilities::debug_print("initializing cdte system\n");
+    utilities::debug_print("\ninitializing cdte system\n");
     SystemManager* cdtede = Circle::get_sys_man_for_name("cdtede");
     System& cdte1 = deck->get_sys_for_name("cdte1");
     System& cdte2 = deck->get_sys_for_name("cdte2");
@@ -129,10 +129,18 @@ void Circle::init_cdte() {
 
     for (uint8_t i = 0; i < 4; ++i) {
         std::string this_name = "cdte" + std::to_string(i+1);
-        if(can_status[i] != 0x00) {
-            Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
+        if (can_status.size() < 4) {
+            utilities::error_print("got too-short canister status reply! Abandoning CdTe.\n");
+            Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
+            Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
         } else {
-            Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
+            if(can_status.at(i) != 0x00) {
+                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
+            } else {
+                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
+            }
         }
     }
 
@@ -183,7 +191,7 @@ void Circle::init_cdte() {
     // later, will need to end observe and lower bias for all.
 }
 void Circle::init_cmos() {
-    utilities::debug_print("initializing cmos system\n");
+    utilities::debug_print("\ninitializing cmos system\n");
 
 // debug cdte:
     // utilities::debug_print("removing all cmos, isolating cdte\n");
@@ -267,28 +275,32 @@ void Circle::init_cmos() {
 }
 
 void Circle::init_timepix() {
-    utilities::debug_print("initializing timepix system\n");
+    utilities::debug_print("\ninitializing timepix system\n");
     SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
 
     // check that serial port opened correctly. 
     // todo: figure out why `.is_open()` segfaults if port is not open.
     // a better implementation (soon) is to store port status in a global state and check it in this `if`.
     if (!transport->local_uart_port.is_open()) {
-        utilities::error_print("timepix uart port failed to open! ABANDONing.");
-        timepix->system_state = SYSTEM_STATE::ABANDON;
+        utilities::error_print("timepix uart port failed to open! Will try to talk to it anyway.");
+        // utilities::error_print("timepix uart port failed to open! ABANDONing.");
+        // timepix->system_state = SYSTEM_STATE::ABANDON;
         return;
     }
 
-    std::vector<uint8_t> response(1);
-    response = transport->sync_uart_send_command_for_sys(*timepix, deck->get_command_for_sys_for_code(timepix->system.hex, 0x80));
+    utilities::debug_print("\tsending ping...\n");
+    // std::vector<uint8_t> response(1);
+    Command& ping_ask = deck->get_command_for_sys_for_code(timepix->system.hex, 0x80);
+    std::vector<uint8_t> response = transport->sync_uart_send_command_for_sys(*timepix, ping_ask);
 
     if (response.size() > 0) {
         utilities::debug_print("got response from timepix: ");
         utilities::hex_print(response);
         timepix->system_state = SYSTEM_STATE::LOOP;
     } else {
-        utilities::error_print("got no response from timepix. ABANDONing!");
-        timepix->system_state = SYSTEM_STATE::ABANDON;
+        utilities::error_print("got no response from timepix. Will try to talk to it anyway.");
+        // utilities::error_print("got no response from timepix. ABANDONing!");
+        // timepix->system_state = SYSTEM_STATE::ABANDON;
     }
 }
 
@@ -403,6 +415,10 @@ void Circle::manage_systems() {
         Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
         Command hk_req_cmd     = deck->get_command_for_sys_for_code(timepix->system.hex, 0x88);
         Command rates_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x81);
+
+        utilities::debug_print("\tsending " + utilities::bytes_to_string(flags_req_cmd.get_uart_instruction()) + "\n");
+        utilities::debug_print("\tsending " + utilities::bytes_to_string(hk_req_cmd.get_uart_instruction()) + "\n");
+        utilities::debug_print("\tsending " + utilities::bytes_to_string(rates_req_cmd.get_uart_instruction()) + "\n");
         
         std::vector<uint8_t> flags_response(flags_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> hk_response(hk_req_cmd.get_uart_reply_length());
@@ -412,12 +428,16 @@ void Circle::manage_systems() {
 
         flags_response = transport->sync_uart_send_command_for_sys(*timepix, flags_req_cmd);
         hk_response = transport->sync_uart_send_command_for_sys(*timepix, hk_req_cmd);
-        flags_response = transport->sync_uart_send_command_for_sys(*timepix, rates_req_cmd);
+        rates_response = transport->sync_uart_send_command_for_sys(*timepix, rates_req_cmd);
+
+        utilities::debug_print("\tsent all\n");
         
         // if got no response, resize these so they are full of zero and correct length:
         flags_response.resize(flags_req_cmd.get_uart_reply_length());
         hk_response.resize(hk_req_cmd.get_uart_reply_length());
         rates_response.resize(rates_req_cmd.get_uart_reply_length());
+
+        utilities::debug_print("\tresized all\n");
 
         // build the downlink packet:
         std::vector<uint8_t> downlink;
@@ -427,15 +447,21 @@ void Circle::manage_systems() {
         downlink.insert(downlink.end(), flags_response.begin(), flags_response.end());
         downlink.insert(downlink.end(), hk_response.begin(), hk_response.end());
         downlink.insert(downlink.end(), rates_response.begin(), rates_response.end());
+        
+        utilities::debug_print("\tresized all\n");
 
         // create element for downlink buffer:
         DownlinkBufferElement dbe(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
         RING_BUFFER_TYPE_OPTIONS::TPX);
         dbe.set_payload(downlink);
 
+        utilities::debug_print("\tbuffered downlink\n");
+
         // queue and send the downlink buffer:
         transport->downlink_buffer->enqueue(dbe);
+        utilities::debug_print("\tqueued downlink\n");
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+        utilities::debug_print("\tsent downlink\n");
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");

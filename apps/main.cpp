@@ -33,6 +33,7 @@ int main(int argc, char** argv) {
     System& cdte4 = deck->get_sys_for_name("cdte4");
     System& cmos1 = deck->get_sys_for_name("cmos1");
     System& cmos2 = deck->get_sys_for_name("cmos2");
+    System& timepix = deck->get_sys_for_name("timepix");
     System& uplink = deck->get_sys_for_name("uplink");
 
     // test:
@@ -65,6 +66,7 @@ int main(int argc, char** argv) {
     std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
     std::queue<UplinkBufferElement> cmos2_uplink_queue;
+    std::queue<UplinkBufferElement> timepix_uplink_queue;
     
     std::queue<UplinkBufferElement> global_uplink_queue;
 
@@ -76,6 +78,7 @@ int main(int argc, char** argv) {
     auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
     auto cmos2_manager = std::make_shared<SystemManager>(cmos2, cmos2_uplink_queue);
+    auto timepix_manager = std::make_shared<SystemManager>(timepix, timepix_uplink_queue);
     auto uplink_manager = std::make_shared<SystemManager>(uplink, global_uplink_queue);
 
     housekeeping_manager->add_timing(&lif.lookup_timing[housekeeping]);
@@ -86,10 +89,11 @@ int main(int argc, char** argv) {
     cdte4_manager->add_timing(&lif.lookup_timing[cdte4]);
     cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
     cmos2_manager->add_timing(&lif.lookup_timing[cmos2]);
+    timepix_manager->add_timing(&lif.lookup_timing[timepix]);
     
     uplink_manager->add_timing(&lif.lookup_timing[uplink]);
 
-    std::cout << "Timing for cdtede: " << cdtede_manager->timing->to_string() << "\n";
+    std::cout << "Timing for uplink: " << uplink_manager->timing->to_string() << "\n";
 
     cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte1);
     cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte1);
@@ -124,6 +128,7 @@ int main(int argc, char** argv) {
     order.emplace_back(std::move(cmos1_manager));
     order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(housekeeping_manager));
+    order.emplace_back(std::move(timepix_manager));
     order.emplace_back(std::move(uplink_manager));      // added uplink_manager to the loop order so it is accessible inside Circle.
     // order.emplace_back(std::move(cmos1_manager));
 
@@ -189,9 +194,7 @@ int main(int argc, char** argv) {
 
     std::cout << "machine: \n";
     try {
-        std::cout << "did something\n";
         UART timepix_uart_pre = *(deck->get_sys_for_name("timepix").uart);
-        std::cout << "did something else\n";
         auto timepix_uart = std::make_shared<UART>(*(deck->get_sys_for_name("timepix").uart));
         auto uplink_uart = std::make_shared<UART>(*(deck->get_sys_for_name("uplink").uart));
 
