@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos2")];
+    (*new_uplink_buffer)[deck->get_sys_for_name("timepix")];
     // note: uplink system itself is not in the uplink buffer. Just there to manage access.
 
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();

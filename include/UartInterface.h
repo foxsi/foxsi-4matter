@@ -25,7 +25,7 @@ int print_bl(int, uint8_t*);
 class UARTPort {
 	public:
         // open the default UART0/1 port
-		UARTPort(const char* port_file="/dev/ttyS0", uint32_t baud_rate=B9600, int vtime=10, int vmin=0, std::string parity="clear", int stop_bits=1, int bits_in_byte=CS8);
+		UARTPort(const char* port_file="/dev/ttyAMA1", uint32_t baud_rate=B9600, int vtime=10, int vmin=0, std::string parity="clear", int stop_bits=1, int bits_in_byte=CS8);
 
         //unsigned int baud_rate, unsigned short parity_bits, unsigned short data_bits, unsigned short stop_bits …
         struct termios tty; // create TERMIOS structure
