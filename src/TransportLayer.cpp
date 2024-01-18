@@ -1176,66 +1176,6 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
     return has_data;
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System sys, Command cmd) {
-    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys.hex, cmd.hex);
-
-    std::vector<uint8_t> reply(4096);
-
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sending ");
-    if (sys.type == COMMAND_TYPE_OPTIONS::SPW) {
-        utilities::spw_print(packet, sys.spacewire);
-    } else {
-        utilities::hex_print(packet);
-    }
-
-    local_tcp_sock.send(boost::asio::buffer(packet));
-    utilities::debug_print("in sync_tcp_send_command_for_sys(), sent request\n");
-
-    if (cmd.read) {
-        utilities::debug_print("waiting for response\n");
-        // size_t reply_len = local_tcp_sock.read_some(boost::asio::buffer(reply));
-        std::chrono::milliseconds timeout(500);
-        
-        // todo: change this to TransportLayerMachine::read() call and deprecate 2-arg sync_tcp_read.
-        reply = sync_tcp_read(cmd.get_spw_reply_length(), timeout);
-        utilities::debug_print("got response!!: ");
-        utilities::hex_print(reply);
-        // reply.resize(reply_len);
-    } else {
-        reply.resize(0);
-    }
-    return reply;
-}
-
-std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(System sys, Command cmd) {
-    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys.hex, cmd.hex);
-
-    std::vector<uint8_t> reply(256);
-
-    utilities::debug_print("in sync_uart_send_command_for_sys(), sending ");
-    utilities::hex_print(packet);
-
-    // for Timepix, `packet` should always be 1B:
-    local_uart_port.write_some(boost::asio::buffer(packet));
-
-    utilities::debug_print("in sync_uart_send_command_for_sys(), sent request\n");
-
-    if (cmd.read) {
-        utilities::debug_print("waiting for response\n");
-        std::chrono::milliseconds timeout(500);
-        reply = sync_uart_read(local_uart_port, cmd.get_uart_reply_length(), timeout);
-        if (reply.size() != cmd.get_uart_reply_length()) {
-            utilities::error_print("got wrong uart reply length!\n");
-        }
-        utilities::debug_print("got response!!: ");
-        utilities::hex_print(reply);
-        // reply.resize(reply_len);
-    } else {
-        reply.resize(0);
-    }
-    return reply;
-}
-
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd) {
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 

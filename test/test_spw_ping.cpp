@@ -138,6 +138,8 @@ int main(int argc, char* argv[]) {
 
     // testing:
     System test_system = deck->get_sys_for_name(lif.get_test_system_name());
+    std::queue<UplinkBufferElement> q;
+    SystemManager test_system_manager(test_system, q);
 
     uint8_t test_command = 0x00;
     if (lif.get_test_system_name().find("cmos") != std::string::npos) {
@@ -154,7 +156,7 @@ int main(int argc, char* argv[]) {
     Command send_command(deck->get_command_for_sys_for_code(test_system.hex, test_command));
     std::cout << "\tsending request...\n";
 
-    std::vector<uint8_t> reply = machine->sync_tcp_send_command_for_sys(test_system, send_command);
+    std::vector<uint8_t> reply = machine->sync_tcp_send_command_for_sys(test_system_manager, send_command);
     
     std::vector<uint8_t> reply_data = machine->get_reply_data(reply, test_system.hex);
     

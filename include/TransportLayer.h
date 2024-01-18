@@ -403,28 +403,6 @@ class TransportLayerMachine {
         bool sync_udp_send_all_downlink_buffer();
 
         /**
-         * @brief Synchronously send command `cmd` to remote `sys` over `local_tcp` interface.
-         * 
-         * @todo: DEPRECATE
-         * 
-         * @param sys 
-         * @param cmd 
-         * @return std::vector<uint8_t> any response data to the command.
-         */
-        std::vector<uint8_t> sync_tcp_send_command_for_sys(System sys, Command cmd);
-
-        /**
-         * @brief Synchronously send command `cmd` to remote `sys` over `local_uart` interface.
-         *
-         * @todo: DEPRECATE
-         * 
-         * @param sys 
-         * @param cmd 
-         * @return std::vector<uint8_t> 
-         */
-        std::vector<uint8_t> sync_uart_send_command_for_sys(System sys, Command cmd);
-
-        /**
          * @brief Synchronously send command `cmd` to remote `sys_man`.
          * 
          * @param sys_man
