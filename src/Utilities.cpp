@@ -250,7 +250,7 @@ namespace utilities{
         std::stringstream result;
         result << "0x";
         for (uint8_t byte: data) {
-            result << std::hex << byte + 0;
+            result << std::setw(2) << std::setfill('0') << std::hex << byte + 0;
         }
         return result.str();
     }
