@@ -88,16 +88,18 @@ void Circle::init_systems() {
 
 void Circle::init_housekeeping() {
     utilities::debug_print("\ninitializing housekeeping system\n");
+    SystemManager* housekeeping = Circle::get_sys_man_for_name("housekeeping");
     // setup both sensors
-    transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x06));
-    transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x07));
+    transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x06));
+    transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x07));
     // sleep to give LTC2983s time to set up:
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // start conversion
-    transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x04));
-    transport->sync_tcp_housekeeping_send(deck->get_command_bytes_for_sys_for_code(deck->get_sys_for_name("housekeeping").hex, 0x05));
+    transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
+    transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
 }
+
 void Circle::init_cdte() {
     utilities::debug_print("\ninitializing cdte system\n");
     SystemManager* cdtede = Circle::get_sys_man_for_name("cdtede");
@@ -465,22 +467,19 @@ void Circle::manage_systems() {
 
     } else if (system_order[current_system]->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");
+        SystemManager* housekeeping = Circle::get_sys_man_for_name("housekeeping");
         // read out both sensors (0x01 0xf2, then 0x02 0xf2)
         // then start a new conversion (0x01 0xf0, then 0x02 0xf0)
 
         // transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
 
-        transport->sync_tcp_housekeeping_send({0x01, 0xf0});
-        transport->sync_tcp_housekeeping_send({0x02, 0xf0});
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
         // todo: no more magic numbers.
 
-        std::vector<uint8_t> reply1 = transport->sync_tcp_housekeeping_transaction({0x01, 0xf2});
+        std::vector<uint8_t> reply1 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
         std::vector<uint8_t> reply1_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
         
         
-        std::vector<uint8_t> reply2 = transport->sync_tcp_housekeeping_transaction({0x02, 0xf2});
+        std::vector<uint8_t> reply2 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
         std::vector<uint8_t> reply2_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
 
         std::vector<uint8_t> head1 = {0x01, 0x00};
@@ -490,10 +489,8 @@ void Circle::manage_systems() {
         reply2_time.insert(reply2_time.begin(), head2.begin(),  head2.end());
         reply2_time.insert(reply2_time.end(),   reply2.begin(), reply2.end());
 
-        DownlinkBufferElement dbe1(&(deck->get_sys_for_name("housekeeping")), &(deck->get_sys_for_name("gse")), 
-        RING_BUFFER_TYPE_OPTIONS::HK);
-        DownlinkBufferElement dbe2(&(deck->get_sys_for_name("housekeeping")), &(deck->get_sys_for_name("gse")), 
-        RING_BUFFER_TYPE_OPTIONS::HK);
+        DownlinkBufferElement dbe1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+        DownlinkBufferElement dbe2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
 
         dbe1.set_payload(reply1_time);
         dbe2.set_payload(reply2_time);
@@ -502,6 +499,9 @@ void Circle::manage_systems() {
         transport->downlink_buffer->enqueue(dbe2);
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
+        transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
+        transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
         
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order[current_system]->system.name +  "\n");

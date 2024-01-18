@@ -412,6 +412,15 @@ class TransportLayerMachine {
         std::vector<uint8_t> sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd);
         
         /**
+         * @brief Synchronously send command `cmd` to remote housekeeping system `hk_man` over `local_tcp_housekeeping_socket`.
+         * 
+         * @param sys_man
+         * @param cmd 
+         * @return std::vector<uint8_t> any response data to the command.
+         */
+        std::vector<uint8_t> sync_tcp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd);
+
+        /**
          * @brief Synchronously send command `cmd` to remote `sys_man`.
          * 
          * @param sys_man
@@ -419,8 +428,6 @@ class TransportLayerMachine {
          * @return std::vector<uint8_t> any response data to the command.
          */
         std::vector<uint8_t> sync_uart_send_command_for_sys(SystemManager sys_man, Command cmd);
-        
-        std::vector<uint8_t> sync_tcp_command_transaction(std::vector<uint8_t> data_to_send);
 
         void async_udp_receive_push_to_uplink_buffer(const boost::system::error_code& err, std::size_t byte_count);
 

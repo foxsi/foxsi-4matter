@@ -161,7 +161,7 @@ const std::string Command::to_string() {
     
     } else if (type == COMMAND_TYPE_OPTIONS::ETHERNET) {
         result.append("\n\ttype \t\t= ethernet");
-        result.append("\n\tpacket \t= " + utilities::bytes_to_string(get_eth_packet()));
+        result.append("\n\tpacket \t\t= " + utilities::bytes_to_string(get_eth_packet()));
         result.append("\n\treply_length \t= " + std::to_string(get_eth_reply_length()));
     
     } else if (type == COMMAND_TYPE_OPTIONS::UART) {
@@ -304,12 +304,19 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 this_eth_packet.push_back(this_eth_instr);
                 this_eth_packet.push_back(this_eth_addr);
 
-                if (this_eth_instr == 0x03) {
-                    // only power switch subsystem is guaranteed to take 3-byte commands.
+                if (this_eth_instr == 0x03 && !this_read) {
+                    // handle power on/off commands
                     this_eth_packet.push_back(this_eth_write);
-                } else if (this_eth_instr == 0x07) {
-                    // some introspection subsystem commands (set flight state, etc) get 2 B or 1 B extra args.
-                    // todo: splat_to_nbytes from raw value, per instruction address field.
+                } else if (this_eth_instr == 0x07 && !this_read) {
+                    // handle introspection commands
+                    if (this_eth_addr == 0xe0) {
+                        // error reset command:
+                        this_eth_packet.push_back(0x00);
+                        this_eth_packet.push_back(0x00);
+                    } else if (this_eth_addr == 0xf0) {
+                        // flight state setting commands:
+                        this_eth_packet.push_back(this_eth_write);
+                    }
                     utilities::debug_print("found housekeeping introspection command, but not handled!\n");
                 }
 
@@ -670,9 +677,9 @@ std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys
     }
 
     std::vector<uint8_t> response = cmd.get_eth_packet();
-    utilities::debug_print("got ethernet packet: ");
-    utilities::hex_print(response);
-    utilities::debug_print("\n");
+    // utilities::debug_print("got ethernet packet: ");
+    // utilities::hex_print(response);
+    // utilities::debug_print("\n");
 
     return response;
 }

@@ -1050,6 +1050,7 @@ void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManage
         utilities::debug_print("got command for system. Sending...\n");
         // utilities::hex_print(send_packet);
         utilities::spw_print(send_packet, sys_man.system.spacewire);
+        // todo: make this work for housekeeping
         local_tcp_sock.send(boost::asio::buffer(send_packet));
     }
 }
@@ -1165,14 +1166,6 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
 
         has_data = downlink_buffer->try_dequeue(dbe);
     }
-    // if (has_data && dbe.get_payload().size() > 0) {
-    //     utilities::debug_print("sending to gse\n");
-    //     std::vector<uint8_t> packet = dbe.get_packet();
-    //     local_udp_sock.send_to(
-    //         boost::asio::buffer(packet), 
-    //         remote_udp_endpoint
-    //     );
-    // }
     return has_data;
 }
 
@@ -1195,12 +1188,45 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
         utilities::debug_print("waiting for response\n");
         size_t expected_size = cmd.get_spw_reply_length();
         reply.resize(expected_size);
+        // todo: determine if ::read_some is correct here. 
         // size_t reply_len = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
         size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, reply, sys_man);
         if (reply_len == expected_size) {
             utilities::debug_print("got response: ");
         } else {
-            utilities::error_print("got wrong reply size!\n");
+            utilities::error_print("got wrong reply size! Expected " + std::to_string(expected_size) + " and received " + std::to_string(reply_len) + "\n");
+        }
+        utilities::hex_print(reply);
+        reply.resize(reply_len);
+    } else {
+        reply.resize(0);
+    }
+    return reply;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd) {
+    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(hk_man.system.hex, cmd.hex);
+
+    std::vector<uint8_t> reply(4096);
+
+    utilities::debug_print("in sync_tcp_send_command_for_housekeeping_sys(), sending ");
+    if (hk_man.system.type != COMMAND_TYPE_OPTIONS::ETHERNET) {
+        utilities::error_print("cannot send non-Ethernet command!");
+    }
+
+    local_tcp_housekeeping_sock.send(boost::asio::buffer(packet));
+    utilities::debug_print("in sync_tcp_send_command_for_housekeeping_sys(), sent request\n");
+
+    if (cmd.read) {
+        utilities::debug_print("waiting for response\n");
+        size_t expected_size = cmd.get_eth_reply_length();
+        reply.resize(expected_size);
+        // size_t reply_len = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, hk_man);
+        size_t reply_len = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, hk_man);
+        if (reply_len == expected_size) {
+            utilities::debug_print("got response: ");
+        } else {
+            utilities::error_print("got wrong reply size! Expected " + std::to_string(expected_size) + " and received " + std::to_string(reply_len) + "\n");
         }
         utilities::hex_print(reply);
         reply.resize(reply_len);
@@ -1237,12 +1263,6 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_send_command_for_sys(Syste
         reply.resize(0);
     }
     return reply;
-}
-
-// todo: implement this if needed?
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_command_transaction(std::vector<uint8_t> data_to_send) {
-    utilities::debug_print("in sync_tcp_command_transaction\n");
-    return std::vector<uint8_t>();
 }
 
 void TransportLayerMachine::async_udp_receive_push_to_uplink_buffer(const boost::system::error_code& err, std::size_t byte_count) {
