@@ -117,6 +117,9 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     QL                  = 0x01,
     TPX                 = 0x02,
     HK                  = 0x10,
+    HK_POW              = 0x11,
+    HK_RTD              = 0x12,
+    HK_INTRO            = 0x13,
     NONE                = 0xff
 };
 
@@ -125,6 +128,9 @@ static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFF
     {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
     {RING_BUFFER_TYPE_OPTIONS::TPX,     "timepix"},
     {RING_BUFFER_TYPE_OPTIONS::HK,      "hk"},
+    {RING_BUFFER_TYPE_OPTIONS::HK_POW,  "hk-power"},
+    {RING_BUFFER_TYPE_OPTIONS::HK_RTD,  "hk-rtds"},
+    {RING_BUFFER_TYPE_OPTIONS::HK_INTRO,"hk-introspection"},
     {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
 };
 

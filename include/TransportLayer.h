@@ -389,8 +389,14 @@ class TransportLayerMachine {
          */
         size_t sync_remote_buffer_transaction(SystemManager& sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer);
 
-        // implemented.
-        void sync_tcp_send_buffer_commands_to_system(SystemManager& sys_man);
+        /**
+         * @brief Search the uplink buffer map for commands for `sys_man` and send them.
+         * 
+         * Includes hard-coded port map: if `sys_man.system.name` is "housekeeping", will send from `local_tcp_housekeeping_sock`. If `sys_man.system.name` is "timepix", will send from `local_uart_port`. Else, will use `local_tcp_sock` and assume a SpaceWire command.
+         * 
+         * @param sys_man description of the remote system being commanded.
+        */
+        void sync_send_buffer_commands_to_system(SystemManager& sys_man);
 
         std::vector<uint8_t> sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
         void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);

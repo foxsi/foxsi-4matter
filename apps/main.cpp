@@ -132,6 +132,15 @@ int main(int argc, char** argv) {
     order.emplace_back(std::move(uplink_manager));      // added uplink_manager to the loop order so it is accessible inside Circle.
     // order.emplace_back(std::move(cmos1_manager));
 
+    DownlinkBufferElement pcdbe(&cdte1, &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::PC);
+    std::cout << pcdbe.to_string() << "\n";
+    std::vector<uint8_t> fake(2000);
+    fp_cdte1.set_frame( fake);
+    std::cout << "set frame\n";
+    DownlinkBufferElement othcdbe(fp_cdte1.pop_buffer_element());
+    std::cout << othcdbe.to_string() << "\n";
+
+
     std::cout << "endpoints: \n";
     boost::asio::ip::udp::endpoint local_udp_end(
         boost::asio::ip::make_address(lif.local_address),

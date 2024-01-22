@@ -12,8 +12,8 @@ DownlinkBufferElement::DownlinkBufferElement(System* new_system, size_t new_max_
     max_packet_size = new_max_packet_size;
 
     // set these these to default for now:
-    DownlinkBufferElement::set_packets_per_frame(0);
-    DownlinkBufferElement::set_this_packet_index(0);
+    DownlinkBufferElement::set_packets_per_frame(1);
+    DownlinkBufferElement::set_this_packet_index(1);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     type = RING_BUFFER_TYPE_OPTIONS::NONE;
@@ -46,7 +46,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     size_t last_packet_size = source_frame_size % max_packet_size;
     packets_per_frame = source_frame_size / max_packet_size + std::min(last_packet_size, (size_t)1);
 
-    this_packet_index = 0;
+    this_packet_index = 1;
     payload.reserve(max_packet_size - 8);
     payload.resize(0);
     type = new_type;
@@ -75,8 +75,8 @@ DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other)
 DownlinkBufferElement::DownlinkBufferElement() {
     system = nullptr;
     max_packet_size = 0;
-    DownlinkBufferElement::set_packets_per_frame(0);
-    DownlinkBufferElement::set_this_packet_index(0);
+    DownlinkBufferElement::set_packets_per_frame(1);
+    DownlinkBufferElement::set_this_packet_index(1);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS::NONE);
@@ -170,11 +170,11 @@ UplinkBufferElement::UplinkBufferElement(System *new_system, Command *new_comman
     varargs = new_varargs;
 }
 
-UplinkBufferElement::UplinkBufferElement(std::vector<uint8_t> raw_data, CommandDeck &deck): system(&deck.get_sys_for_code(raw_data[0])), command(&deck.get_command_for_sys_for_code(raw_data[0], raw_data[1])) {
+UplinkBufferElement::UplinkBufferElement(std::vector<uint8_t> raw_data, CommandDeck &deck): system(&deck.get_sys_for_code(raw_data.at(0))), command(&deck.get_command_for_sys_for_code(raw_data.at(0), raw_data.at(1))) {
     // varargs is all the raw data except the first two bytes.
     varargs.resize(raw_data.size() - 2);
     for (int i = 2; i < raw_data.size(); ++i) {
-        varargs.push_back(raw_data[i]);
+        varargs.push_back(raw_data.at(i));
     }
 }
 
@@ -380,7 +380,7 @@ std::vector<uint8_t> PacketFramer::pop_from_frame(size_t block_size) {
     size_t start_size = frame.size();
     for (int i = 0; i < block_size; --i) {
         // todo: verify this is not off-by-one
-        result[i] = frame[i + start_size - block_size - 1];
+        result.at(i) = frame.at(i + start_size - block_size - 1);
         frame.pop_back();
         --packet_counter;
     }

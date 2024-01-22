@@ -89,7 +89,7 @@ void Circle::init_systems() {
 void Circle::init_housekeeping() {
     utilities::debug_print("\ninitializing housekeeping system\n");
     SystemManager* housekeeping = Circle::get_sys_man_for_name("housekeeping");
-    // setup both sensors
+    // setup both temperature sensors
     transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x06));
     transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x07));
     // sleep to give LTC2983s time to set up:
@@ -98,6 +98,9 @@ void Circle::init_housekeeping() {
     // start conversion
     transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
     transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
+
+    // setup power ADC
+    transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x28));
 }
 
 void Circle::init_cdte() {
@@ -322,8 +325,8 @@ void Circle::manage_systems() {
     if (system_order[current_system]->system == deck->get_sys_for_name("cdte1")) {
         utilities::debug_print("managing cdte1 system\n");
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte1"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte1"));
         Circle::get_sys_man_for_name("cdte1")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte1"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte1")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC]);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
@@ -333,8 +336,8 @@ void Circle::manage_systems() {
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte2")) {
         utilities::debug_print("managing cdte2 system\n");
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte2"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte2"));
         Circle::get_sys_man_for_name("cdte2")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte2"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte2")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC]);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
@@ -344,8 +347,8 @@ void Circle::manage_systems() {
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte3")) {
         utilities::debug_print("managing cdte3 system\n");
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte3"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte3"));
         Circle::get_sys_man_for_name("cdte3")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte3"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte3")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC]);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
@@ -355,8 +358,8 @@ void Circle::manage_systems() {
     } else if (system_order[current_system]->system == deck->get_sys_for_name("cdte4")) {
         utilities::debug_print("managing cdte4 system\n");
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte4"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte4"));
         Circle::get_sys_man_for_name("cdte4")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte4"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte4")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC]);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
@@ -369,7 +372,7 @@ void Circle::manage_systems() {
         // utilities::debug_print("\tskipping");
         // return;
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cmos1"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cmos1"));
         
         // move this state inside SystemManager
         if (Circle::get_sys_man_for_name("cmos1")->active_type == RING_BUFFER_TYPE_OPTIONS::PC) {
@@ -391,7 +394,7 @@ void Circle::manage_systems() {
         // utilities::debug_print("\tskipping");
         // return;
 
-        transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cmos2"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cmos2"));
         
         // move this state inside SystemManager
         if (Circle::get_sys_man_for_name("cmos2")->active_type == RING_BUFFER_TYPE_OPTIONS::PC) {
@@ -411,7 +414,7 @@ void Circle::manage_systems() {
         utilities::debug_print("managing timepix system\n");
 
         // todo: write this to implement command forwarding for Timepix:
-        // transport->sync_uart_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("timepix"));
+        // transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("timepix"));
 
         SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
         Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
@@ -471,35 +474,67 @@ void Circle::manage_systems() {
         // read out both sensors (0x01 0xf2, then 0x02 0xf2)
         // then start a new conversion (0x01 0xf0, then 0x02 0xf0)
 
-        // transport->sync_tcp_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
 
-        // todo: no more magic numbers.
+        // todo: resolve this packet structure
 
-        std::vector<uint8_t> reply1 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
-        std::vector<uint8_t> reply1_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
-        
-        
-        std::vector<uint8_t> reply2 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
-        std::vector<uint8_t> reply2_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
+        // unix timestamp
+        std::vector<uint8_t> reply_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
 
-        std::vector<uint8_t> head1 = {0x01, 0x00};
-        std::vector<uint8_t> head2 = {0x02, 0x00};
-        reply1_time.insert(reply1_time.begin(), head1.begin(),  head1.end());
-        reply1_time.insert(reply1_time.end(),   reply1.begin(), reply1.end());
-        reply2_time.insert(reply2_time.begin(), head2.begin(),  head2.end());
-        reply2_time.insert(reply2_time.end(),   reply2.begin(), reply2.end());
+        // rtd readings:
+        std::vector<uint8_t> reply_temp1 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
+        std::vector<uint8_t> reply_temp2 = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
 
-        DownlinkBufferElement dbe1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-        DownlinkBufferElement dbe2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+        // power adc reading:
+        std::vector<uint8_t> adc_reply = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xa0));
+        // microcontroller clock counter reading:
+        std::vector<uint8_t> clock_reply = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8e));
+        // flight state reading:
+        std::vector<uint8_t> state_reply = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xf0));
+        // microcontroller error state reading:
+        std::vector<uint8_t> error_reply = transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8f));
 
-        dbe1.set_payload(reply1_time);
-        dbe2.set_payload(reply2_time);
+        utilities::debug_print("adc:\t" + utilities::bytes_to_string(adc_reply) + "\n");
+        utilities::debug_print("stt:\t" + utilities::bytes_to_string(state_reply) + "\n");
+        utilities::debug_print("clk:\t" + utilities::bytes_to_string(clock_reply) + "\n");
+        utilities::debug_print("err:\t" + utilities::bytes_to_string(error_reply) + "\n");
 
-        transport->downlink_buffer->enqueue(dbe1);
-        transport->downlink_buffer->enqueue(dbe2);
+        std::vector<uint8_t> packet_temp1 = {0x01, 0x00};
+        std::vector<uint8_t> packet_temp2 = {0x02, 0x00};
+        std::vector<uint8_t> packet_power = {0x04, 0x00};
+        std::vector<uint8_t> packet_intro = {0x07, 0x00};
+
+        packet_temp1.insert(packet_temp1.end(), reply_time.begin(), reply_time.end());
+        packet_temp1.insert(packet_temp1.end(), reply_temp1.begin(), reply_temp1.end());
+        packet_temp2.insert(packet_temp2.end(), reply_time.begin(), reply_time.end());
+        packet_temp2.insert(packet_temp2.end(), reply_temp2.begin(), reply_temp2.end());
+
+        packet_power.insert(packet_power.end(), reply_time.begin(), reply_time.end());
+        packet_power.insert(packet_power.end(), adc_reply.begin(), adc_reply.end());
+
+        packet_intro.insert(packet_intro.end(), reply_time.begin(), reply_time.end());      // 4 B
+        packet_intro.insert(packet_intro.end(), clock_reply.begin(), clock_reply.end());    // 2 B
+        packet_intro.insert(packet_intro.end(), state_reply.begin(), state_reply.end());    // 2 B
+        packet_intro.insert(packet_intro.end(), error_reply.begin(), error_reply.end());    // 2 B
+
+        DownlinkBufferElement dbe_temp1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK_RTD);
+        DownlinkBufferElement dbe_temp2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK_RTD);
+        DownlinkBufferElement dbe_power(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK_POW);
+        DownlinkBufferElement dbe_intro(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK_INTRO);
+
+        dbe_temp1.set_payload(packet_temp1);
+        dbe_temp2.set_payload(packet_temp2);
+        dbe_power.set_payload(packet_power);
+        dbe_intro.set_payload(packet_intro);
+
+        transport->downlink_buffer->enqueue(dbe_temp1);
+        transport->downlink_buffer->enqueue(dbe_temp2);
+        transport->downlink_buffer->enqueue(dbe_power);
+        transport->downlink_buffer->enqueue(dbe_intro);
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
+        // start new temperature conversion
         transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
         transport->sync_tcp_send_command_for_housekeeping_sys(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
         

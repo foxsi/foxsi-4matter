@@ -1006,7 +1006,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     return last_write_pointer;
 }
 
-void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManager &sys_man) {
+void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &sys_man) {
     utilities::debug_print("in sync_tcp_send_buffer_commands_to_system()\n");
     Command command;
     System system;
@@ -1043,16 +1043,49 @@ void TransportLayerMachine::sync_tcp_send_buffer_commands_to_system(SystemManage
 
     if (check_frame_read_cmd(system.hex, command.hex)) {
         utilities::debug_print("got frame read command. Not implemented yet\n");
+        return;
         // todo: call sync_remote_buffer_transaction().
-    } else {
+    }
+    try {
         // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
         std::vector<uint8_t> send_packet(commands->get_command_bytes_for_sys_for_code(system.hex, command.hex));
         utilities::debug_print("got command for system. Sending...\n");
         // utilities::hex_print(send_packet);
-        utilities::spw_print(send_packet, sys_man.system.spacewire);
+        
         // todo: make this work for housekeeping
-        local_tcp_sock.send(boost::asio::buffer(send_packet));
+        if (sys_man.system.name == "formatter") {
+            // todo: handle
+        } else if (sys_man.system.name == "housekeeping") {
+            if (command.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+                utilities::hex_print(send_packet);
+                local_tcp_housekeeping_sock.send(boost::asio::buffer(send_packet));
+            } else {
+                utilities::error_print("can't send non-ethernet command to " + sys_man.system.name + "\n");
+            }
+        } else if (sys_man.system.name == "timepix") {
+            if (command.type == COMMAND_TYPE_OPTIONS::UART) {
+                utilities::hex_print(send_packet);
+                local_uart_port.write_some(boost::asio::buffer(send_packet));
+            } else {
+                utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
+            }
+        } else {
+            if (command.type == COMMAND_TYPE_OPTIONS::SPW) {
+                utilities::spw_print(send_packet, sys_man.system.spacewire);
+                // todo: replace with verifiable write command
+                local_tcp_sock.send(boost::asio::buffer(send_packet));
+            } else {
+                utilities::error_print("can't send non-spacewire command to " + sys_man.system.name + "\n");
+            }
+        }
+        // check receive size, compare to downlink max payload size. Then do:
+        // DownlinkBufferElement reply_dbe(reply);
+        // downlink_buffer->enqueue(reply_dbe);
+        
+    } catch (std::exception& e) {
+        utilities::error_print("could not execute uplink command\n");
     }
+
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send) {
