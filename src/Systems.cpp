@@ -151,16 +151,16 @@ size_t System::get_frame_size() {
 size_t System::get_frame_size(RING_BUFFER_TYPE_OPTIONS buffer_type) {
     size_t result = 0;
 
-    if (spacewire) {
-        try {
-            result = ring_params.at(buffer_type).frame_size_bytes;
-        } catch(std::exception& e) {
-            utilities::error_print("System does not contain requested buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + "!\n");
-            result = 0;
-        }
-    } else {
-        utilities::error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
+    // if (spacewire) {
+    try {
+        result = ring_params.at(buffer_type).frame_size_bytes;
+    } catch(std::exception& e) {
+        utilities::error_print("System does not contain requested buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + "!\n");
+        result = 0;
     }
+    // } else {
+        // utilities::error_print("System frame size lookup for ring buffer, but no SpaceWire* interface present!\n");
+    // }
 
     // if (spacewire) {
     //     try {

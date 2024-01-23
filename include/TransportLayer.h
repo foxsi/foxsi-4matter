@@ -398,6 +398,12 @@ class TransportLayerMachine {
         */
         void sync_send_buffer_commands_to_system(SystemManager& sys_man);
 
+        /**
+         * @brief Send the command `cmd` to the system `sys_man`.
+         * 
+        */
+        std::vector<uint8_t> sync_send_command_to_system(SystemManager& sys_man, Command cmd);
+
         std::vector<uint8_t> sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
         void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);
 

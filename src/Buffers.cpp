@@ -45,7 +45,11 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     }
     size_t last_packet_size = source_frame_size % max_packet_size;
     packets_per_frame = source_frame_size / max_packet_size + std::min(last_packet_size, (size_t)1);
-
+    utilities::debug_print("creating DBE:");
+    utilities::debug_print("\n\tlast_packet_size:\t" + std::to_string(last_packet_size));
+    utilities::debug_print("\n\tsource_frame_size:\t" + std::to_string(source_frame_size));
+    utilities::debug_print("\n\tmax_packet_size:\t" + std::to_string(max_packet_size));
+    utilities::debug_print("\n\tpackets_per_frame:\t" + std::to_string(packets_per_frame) + "\n");
     this_packet_index = 1;
     payload.reserve(max_packet_size - 8);
     payload.resize(0);

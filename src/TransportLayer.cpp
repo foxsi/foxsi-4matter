@@ -594,14 +594,14 @@ size_t TransportLayerMachine::read_some(boost::asio::ip::tcp::socket &socket, st
     while (retry_count < sys_man.timing->retry_max_count && !did_read) {
         std::vector<uint8_t> reply = TransportLayerMachine::sync_tcp_read_some(socket, std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (reply.size() == 0) {
-            utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+            utilities::error_print("TransportLayerMachine::read_some() attempt "  + std::to_string(retry_count) + " failed.\n");
         } else {
             buffer = reply;
             return buffer.size();
         }
         ++retry_count;
     }
-    utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    utilities::error_print("All TransportLayerMachine::read_some() attempts failed!\n");
     return 0;
 }
 
@@ -726,10 +726,10 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
 
 std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_port &port, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
-    utilities::debug_print("will resize uart buffer to " + std::to_string(receive_size) + "\n");
+    // utilities::debug_print("will resize uart buffer to " + std::to_string(receive_size) + "\n");
     uart_local_receive_swap.resize(receive_size);
 
-    utilities::debug_print("starting async uart read\n");
+    // utilities::debug_print("starting async uart read\n");
 
     boost::asio::async_read(
         port,
@@ -857,7 +857,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     }
     
     // select the ring buffer parameter object to use for this interaction
-    RingBufferParameters ring_params(sys_man.system.ring_params[buffer_type]);
+    RingBufferParameters ring_params(sys_man.system.ring_params.at(buffer_type));
     utilities::debug_print("\tcan access ring buffer parameters\n");
 
     // get write address width
@@ -969,9 +969,6 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         trace_vec.resize(remaining_size);
         utilities::trace_prelog(trace_vec);
 
-        // log RTT timer to logger file for debug
-        utilities::debug_log("rtt read time (ms): ");
-        utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - rtt_start_time).count()));
 
         // push that response onto the frame:
         pf->push_to_frame(last_buffer_reply);
@@ -1007,7 +1004,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
 }
 
 void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &sys_man) {
-    utilities::debug_print("in sync_tcp_send_buffer_commands_to_system()\n");
+    utilities::debug_print("in sync_send_buffer_commands_to_system()\n");
     Command command;
     System system;
     std::vector<uint8_t> varargs;
@@ -1088,7 +1085,106 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
 
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send) {
+std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemManager &sys_man, Command cmd) {
+    utilities::debug_print("in sync_send_command_to_system(), ");
+    std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
+	std::vector<uint8_t> reply;
+    size_t expected_size = 0;
+
+    size_t try_counter = 0;
+    bool write_again = true;
+
+	if (cmd.type == COMMAND_TYPE_OPTIONS::SPW) {
+        while (try_counter < 8) {
+            if (write_again) {
+                utilities::debug_print("sending ");
+                utilities::spw_print(packet, sys_man.system.spacewire);
+                local_tcp_sock.send(boost::asio::buffer(packet));
+            }
+
+            // case for a write
+            if (!cmd.read) {
+                // if reply is expected
+                if (cmd.check_spw_replies()) {
+                    // bad magic number! todo: add ethernet header size explicitly to 
+                    size_t expected_size = 12 + cmd.get_spw_reply_length();
+                    reply.resize(expected_size);
+                    utilities::debug_print("\texpecting reply of length " + std::to_string(expected_size) + " B...\n");
+                    size_t reply_size = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+                    reply.resize(reply_size);
+
+                    // got bad size reply
+                    if (reply.size() != expected_size) {
+                        utilities::error_print("got wrong reply size (" + std::to_string(reply_size) + " B) on try " + std::to_string(try_counter) + "!\n");
+                        ++try_counter;
+                        // if bad reply length, recommand. If no reply, just wait.
+                        write_again = (reply_size != 0);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        continue;
+                    } else {
+                        utilities::hex_print(reply);
+                        uint8_t status = reply.at(reply.size() - 5);
+                        uint8_t protocol_id = reply.at(reply.size() - 7);
+                        if (status == 0x00) {
+                            // utilities::debug_print("\tstatus byte == 0x00!\n");
+                            break;
+                        } else {
+                            utilities::error_print("SpaceWire status not confirmed (status == " + std::to_string(status) + ")! Retrying write.\n");
+                            // try again:
+                            ++try_counter;
+                            continue;
+                        }
+                    }
+                } else {
+                    reply.resize(0);
+                    break;
+                }
+            // case for a read command
+            } else {
+                size_t expected_size = sys_man.system.spacewire->static_header_size + sys_man.system.spacewire->static_footer_size + cmd.get_spw_reply_length();
+                reply.resize(expected_size);
+                size_t reply_size = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
+                reply.resize(reply_size);
+
+                if (reply_size != expected_size) {
+                    utilities::error_print("got wrong reply size!\n");
+                }
+                break;
+            }
+        }
+	} else if (cmd.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
+        utilities::debug_print("sending ");
+        utilities::hex_print(packet);
+		local_tcp_housekeeping_sock.send(boost::asio::buffer(packet));
+		if (cmd.read) {
+			size_t expected_size = cmd.get_eth_reply_length();
+            reply.resize(expected_size);
+			size_t reply_size = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, sys_man);
+            reply.resize(reply_size);
+		}
+	} else if (cmd.type == COMMAND_TYPE_OPTIONS::UART) {
+        utilities::debug_print("sending ");
+        utilities::hex_print(packet);
+		local_uart_port.write_some(boost::asio::buffer(packet));
+		if (cmd.read) {
+            size_t expected_size = cmd.get_uart_reply_length();
+            utilities::debug_print("waiting for " + std::to_string(expected_size) + " B response\n");
+            reply.resize(expected_size);
+			size_t reply_size = TransportLayerMachine::read(local_uart_port, reply, sys_man);
+            reply.resize(reply_size);
+            if (reply_size > 0) {
+                utilities::debug_print("reply: " + utilities::bytes_to_string(reply) + "\n");
+            }
+		}
+	} else {
+        utilities::error_print("uncommandable type!\n");
+    }
+
+    return reply;
+}
+
+std::vector<uint8_t> TransportLayerMachine::sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send)
+{
     utilities::debug_print("sending " + std::to_string(data_to_send.size()) + " bytes: ");
     utilities::hex_print(data_to_send);
     std::vector<uint8_t> reply;
@@ -1203,6 +1299,7 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(SystemManager sys_man, Command cmd) {
+    std::cout << "in sync_tcp_send_command_for_sys()\n";
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 
     std::vector<uint8_t> reply(4096);

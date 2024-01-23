@@ -101,7 +101,13 @@ uint8_t* Command::get_command_bytes_raw() {
     return std::copy(command_bytes.begin(), command_bytes.end(), out_buff);
 }
 
-
+bool Command::check_spw_replies() {
+    if (get_spw_instruction() & 0x08) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 Command::Command(const Command& other): 
     name(other.name),
@@ -266,19 +272,19 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
 
                 // uint8_t this_spw_instr = strtol(this_spw_instr_str.c_str(), NULL, 16);
                 uint8_t this_spw_instr = utilities::string_to_byte(this_spw_instr_str);
-                // TODO: add reply length explicitly to JSON file field.
 
                 std::vector<uint8_t> this_spw_write_data;
                 std::vector<uint8_t> this_spw_addr;
 
                 unsigned long this_spw_reply_length = 0;
-                if(this_read) {
+                if(!this_read) {
                     // this_spw_reply_length = strtol(this_spw_write_data_str.c_str(), NULL, 16);
                     this_spw_reply_length = strtoul(this_spw_reply_len_str.c_str(), NULL, 16);
-                } else {
                     this_spw_write_data = utilities::string_to_chars(this_spw_write_data_str);
                 }
                 
+                this_spw_reply_length = strtoul(this_spw_reply_len_str.c_str(), NULL, 16);
+
                 this_spw_addr = utilities::string_to_chars(this_spw_addr_str);
 
                 this_command.set_spw_options(this_spw_instr, this_spw_addr, this_spw_write_data, this_spw_reply_length);
@@ -317,7 +323,6 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                         // flight state setting commands:
                         this_eth_packet.push_back(this_eth_write);
                     }
-                    utilities::debug_print("found housekeeping introspection command, but not handled!\n");
                 }
 
                 this_command.set_eth_options(this_eth_packet,this_reply_len);
@@ -514,7 +519,7 @@ void CommandDeck::add_commands(std::unordered_map<std::string, std::string> name
 System& CommandDeck::get_sys_for_name(std::string name) {
     // search for System with name in systems
     for(int i=0; i < systems.size(); i++) {
-        if(name.compare(systems[i].name) == 0) {
+        if(name.compare(systems.at(i).name) == 0) {
             return systems[i];
         }
     }
@@ -529,7 +534,7 @@ System& CommandDeck::get_sys_for_name(std::string name) {
 System& CommandDeck::get_sys_for_code(uint8_t code) {
     // search for System with name in systems
     for(int i=0; i < systems.size(); i++) {
-        if(code == systems[i].hex) {
+        if(code == systems.at(i).hex) {
             return systems[i];
         }
     }
@@ -743,14 +748,14 @@ std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, ui
     size_t ether_header_len = 12;
 
     // assume no extended address.
-    command_template[template_len - ext_addr_bindex] = 0x00;
+    command_template.at(template_len - ext_addr_bindex) = 0x00;
     // modify memory address:
     for(int i = 0; i < addr_field_len; ++i) {
-        command_template[template_len - addr_bindex + i] = addr[i];
+        command_template.at(template_len - addr_bindex + i) = addr.at(i);
     }
     // modify data length:
     for(int i = 0; i < data_field_len; ++i) {
-        command_template[template_len - data_bindex + i] = data_length[i];
+        command_template.at(template_len - data_bindex + i) = data_length.at(i);
     }
 
     // extract eclairs from oven
@@ -760,7 +765,7 @@ std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, ui
     new_header.push_back(crc_header);
     // pipe full and chill
     for(int i = 0; i < new_header.size(); ++i) {
-        command_template[i + ether_header_len + target_path_addr_len] = new_header[i];
+        command_template.at(i + ether_header_len + target_path_addr_len) = new_header.at(i);
     }
 
     return command_template;

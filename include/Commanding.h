@@ -48,6 +48,8 @@ class Command {
         uint8_t* get_command_bytes_raw();
         std::vector<uint8_t> get_command_bytes(uint8_t arg);
 
+        bool check_spw_replies();
+
         // getter methods for private variables
         const uint8_t get_spw_instruction() const {return spw_instruction;}
         const std::vector<uint8_t> get_spw_write_data() const {return spw_write_data;}

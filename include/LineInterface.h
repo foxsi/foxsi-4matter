@@ -6,6 +6,7 @@
 #include "Buffers.h"
 #include "Timing.h"
 #include <boost/program_options.hpp>
+#include <nlohmann/json.hpp>
 #include <boost/asio.hpp>
 #include <string>
 #include <queue>
@@ -99,6 +100,7 @@ class LineInterface {
         std::string test_system_name;
 
     private:
+        bool add_ring_buffers_to_system(System& system, nlohmann::json interface_map);
         void collapse_endpoints();
         void build_local_endpoints();
         void verbose_print(std::string msg);

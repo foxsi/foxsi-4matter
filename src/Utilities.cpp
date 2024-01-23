@@ -286,10 +286,10 @@ namespace utilities{
 
     std::vector<uint8_t> swap_endian4(std::vector<uint8_t> data) {
         std::vector<uint8_t> out;
-        out.push_back(data[3]);
-        out.push_back(data[2]);
-        out.push_back(data[1]);
-        out.push_back(data[0]);
+        out.push_back(data.at(3));
+        out.push_back(data.at(2));
+        out.push_back(data.at(1));
+        out.push_back(data.at(0));
 
         return out;
     }
@@ -310,7 +310,7 @@ namespace utilities{
             return 0;
         }
         for(int i=0; i < 4; ++i) {
-            result |= (data[i] << (3-i)*8);
+            result |= (data.at(i) << (3-i)*8);
         }
         return result;
     }

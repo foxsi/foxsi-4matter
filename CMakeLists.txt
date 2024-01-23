@@ -144,6 +144,13 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_executable(test_spw_reply ${CMAKE_CURRENT_SOURCE_DIR}/test/test_spw_reply.cpp)
+target_include_directories(
+    test_spw_reply
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # Build the target "test_loop" using source files
 add_executable(test_loop ${CMAKE_CURRENT_SOURCE_DIR}/test/test_loop.cpp)
 target_include_directories(
@@ -195,6 +202,7 @@ if(UNIX AND NOT APPLE)
     # target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     target_link_libraries(test_spw_ping PRIVATE Threads::Threads)
+    target_link_libraries(test_spw_reply PRIVATE Threads::Threads)
     target_link_libraries(test_loop PRIVATE Threads::Threads)
     target_link_libraries(test_buffers PRIVATE Threads::Threads)
     target_link_libraries(test PRIVATE Threads::Threads)
@@ -266,6 +274,7 @@ if(Boost_FOUND)
     # target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_ping PUBLIC Boost::filesystem libcom libsubsys libutil)
+    target_link_libraries(test_spw_reply PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_loop PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_buffers PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test PUBLIC Boost::filesystem libcom libsubsys libutil)

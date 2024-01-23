@@ -40,21 +40,25 @@ int main(int argc, char** argv) {
     // std::unordered_map<System, uint8_t> test;
     // test.insert(std::make_pair(cdte1, 0x02));
 
-    PacketFramer pf_cdte1(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
+    PacketFramer pf_cdte1_pc(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
+    PacketFramer pf_cdte1_hk(cdte1, RING_BUFFER_TYPE_OPTIONS::HK);
     PacketFramer pf_cdte2(cdte2, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cdte3(cdte3, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cdte4(cdte4, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cmos1_ql(cmos1, RING_BUFFER_TYPE_OPTIONS::QL);
     PacketFramer pf_cmos1_pc(cmos1, RING_BUFFER_TYPE_OPTIONS::PC);
+    PacketFramer pf_cmos1_hk(cmos1, RING_BUFFER_TYPE_OPTIONS::HK);
     PacketFramer pf_cmos2_ql(cmos2, RING_BUFFER_TYPE_OPTIONS::QL);
     PacketFramer pf_cmos2_pc(cmos2, RING_BUFFER_TYPE_OPTIONS::PC);
 
-    FramePacketizer fp_cdte1(cdte1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cdte1_pc(cdte1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cdte1_hk(cdte1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::HK);
     FramePacketizer fp_cdte2(cdte2, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cdte3(cdte3, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cdte4(cdte4, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cmos1_ql(cmos1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::QL);
     FramePacketizer fp_cmos1_pc(cmos1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cmos1_hk(cmos1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::HK);
     FramePacketizer fp_cmos2_ql(cmos2, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::QL);
     FramePacketizer fp_cmos2_pc(cmos2, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
 
@@ -95,8 +99,10 @@ int main(int argc, char** argv) {
 
     std::cout << "Timing for uplink: " << uplink_manager->timing->to_string() << "\n";
 
-    cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte1);
-    cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte1);
+    cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte1_pc);
+    cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte1_pc);
+    cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::HK, &fp_cdte1_hk);
+    cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::HK, &pf_cdte1_hk);
     cdte1_manager->add_timing(&lif.lookup_timing[cdte1]);
     cdte2_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte2);
     cdte2_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte2);
@@ -110,8 +116,10 @@ int main(int argc, char** argv) {
 
     cmos1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cmos1_pc);
     cmos1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::QL, &fp_cmos1_ql);
+    cmos1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::HK, &fp_cmos1_hk);
     cmos1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cmos1_pc);
     cmos1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::QL, &pf_cmos1_ql);
+    cmos1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::HK, &pf_cmos1_hk);
     cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
     cmos2_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cmos2_pc);
     cmos2_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::QL, &fp_cmos2_ql);
@@ -135,9 +143,9 @@ int main(int argc, char** argv) {
     DownlinkBufferElement pcdbe(&cdte1, &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::PC);
     std::cout << pcdbe.to_string() << "\n";
     std::vector<uint8_t> fake(2000);
-    fp_cdte1.set_frame( fake);
+    fp_cdte1_pc.set_frame( fake);
     std::cout << "set frame\n";
-    DownlinkBufferElement othcdbe(fp_cdte1.pop_buffer_element());
+    DownlinkBufferElement othcdbe(fp_cdte1_pc.pop_buffer_element());
     std::cout << othcdbe.to_string() << "\n";
 
 
@@ -224,9 +232,6 @@ int main(int argc, char** argv) {
         );
         machine->add_commands(deck);
 
-        // machine->async_udp_receive_to_uplink_buffer();
-        // context.poll();
-
         std::cout << "loop: \n";
         Circle loop(
             2.0,
@@ -237,15 +242,6 @@ int main(int argc, char** argv) {
         );
 
         loop.slowmo_gain = 1;
-
-        // std::cout << "async udp listen: \n";
-
-        // machine->async_udp_receive_to_uplink_buffer();
-        // machine->async_udp_send_downlink_buffer();
-        
-        // debug:
-        // machine->recv_udp_fwd_tcp_cmd();
-        // machine->recv_tcp_fwd_udp();
 
         std::cout <<"setup done\n";
         context.poll();

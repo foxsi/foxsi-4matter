@@ -209,6 +209,9 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     verbose_print("local endpoint: " + local_address);
                 }
             }
+
+            add_ring_buffers_to_system(this_system_object, ethif);
+
         } catch(std::exception& e) {}
 
         // check for spacewire
@@ -236,67 +239,104 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
                     this_system_object.spacewire = spw;
 
-                    // try to get ring_buffer_interface.
-                    try{
-                        auto& rbif = spwif.at("ring_buffer_interface");
-                        try{
-                            auto& this_dma = rbif.at("pc");
+                    // // try to get ring_buffer_interface.
+                    // try{
+                    //     auto& rbif = spwif.at("ring_buffer_interface");
+                    //     // todo: better to loop over all keys in "ring_buffer_interface", storing each. Test it.
+                    //     for (auto& rbif_detail: rbif.items()) {
+                    //         std::string rbif_type_name = rbif_detail.key();
+                    //         utilities::debug_print("found item: " + rbif_type_name + "\n");
 
-                            std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
-                            std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
-                            std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
-                            std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
-                            std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
+                    //         std::string this_frame_size_bytes_str = rbif_detail.value().at("ring_frame_size_bytes").get<std::string>();
 
-                            size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
-                            uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
-                            size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
-                            uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
-                            size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+                    //         std::string this_start_address_str = rbif_detail.value().at("ring_start_address").get<std::string>();
+                    //         std::string this_frames_per_ring_str = rbif_detail.value().at("frames_per_ring").get<std::string>();
+                    //         std::string this_write_pointer_address_str = rbif_detail.value().at("ring_write_pointer_address").get<std::string>();
+                    //         std::string this_write_pointer_width_bytes_str = rbif_detail.value().at("ring_write_pointer_width").get<std::string>();
 
-                            RingBufferParameters* this_rbp = new RingBufferParameters(
-                                this_frame_size_bytes,
-                                this_start_address,
-                                this_frames_per_ring,
-                                this_write_pointer_address,
-                                this_write_pointer_width_bytes,
-                                RING_BUFFER_TYPE_OPTIONS::PC
-                            );
+                    //         size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+                    //         uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+                    //         size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+                    //         uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+                    //         size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+                    //         // add switch/case for getting RING_BUFFER_TYPE_OPTIONS.
 
-                            this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
+                    //         RING_BUFFER_TYPE_OPTIONS this_rbp_type = RING_BUFFER_TYPE_OPTIONS_INV_NAMES.at(rbif_type_name);
 
-                        } catch(std::exception& e) {}
+                    //         // if (RING_BUFFER_TYPE_OPTIONS_INV_NAMES.contains(rbif_type_name)) {
+                    //         //     utilities::debug_print("found rbif type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(RING_BUFFER_TYPE_OPTIONS_INV_NAMES.at(rbif_type_name)) + "\n");
+                    //         // }
 
-                        try{
-                            auto& this_dma = rbif.at("ql");
+                    //         RingBufferParameters* this_rbp = new RingBufferParameters(
+                    //             this_frame_size_bytes,
+                    //             this_start_address,
+                    //             this_frames_per_ring,
+                    //             this_write_pointer_address,
+                    //             this_write_pointer_width_bytes,
+                    //             this_rbp_type
+                    //         );
 
-                            std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
-                            std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
-                            std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
-                            std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
-                            std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
+                    //         this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
 
-                            size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
-                            uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
-                            size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
-                            uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
-                            size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+                    //     }
+                        // try{
+                        //     auto& this_dma = rbif.at("pc");
 
-                            RingBufferParameters* this_rbp = new RingBufferParameters(
-                                this_frame_size_bytes,
-                                this_start_address,
-                                this_frames_per_ring,
-                                this_write_pointer_address,
-                                this_write_pointer_width_bytes,
-                                RING_BUFFER_TYPE_OPTIONS::QL
-                            );
+                        //     std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
+                        //     std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
+                        //     std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
+                        //     std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
+                        //     std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
 
-                            this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
+                        //     size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+                        //     uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+                        //     size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+                        //     uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+                        //     size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+
+                        //     RingBufferParameters* this_rbp = new RingBufferParameters(
+                        //         this_frame_size_bytes,
+                        //         this_start_address,
+                        //         this_frames_per_ring,
+                        //         this_write_pointer_address,
+                        //         this_write_pointer_width_bytes,
+                        //         RING_BUFFER_TYPE_OPTIONS::PC
+                        //     );
+
+                        //     this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
+
+                        // } catch(std::exception& e) {}
+
+                        // try{
+                        //     auto& this_dma = rbif.at("ql");
+
+                        //     std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
+                        //     std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
+                        //     std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
+                        //     std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
+                        //     std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
+
+                        //     size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+                        //     uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+                        //     size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+                        //     uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+                        //     size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+
+                        //     RingBufferParameters* this_rbp = new RingBufferParameters(
+                        //         this_frame_size_bytes,
+                        //         this_start_address,
+                        //         this_frames_per_ring,
+                        //         this_write_pointer_address,
+                        //         this_write_pointer_width_bytes,
+                        //         RING_BUFFER_TYPE_OPTIONS::QL
+                        //     );
+
+                        //     this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
 
 
-                        } catch(std::exception& e) {}
+                        // } catch(std::exception& e) {}
                         
-                    } catch (std::exception& e) {}
+                    // } catch (std::exception& e) {}
                     
                 } else {
                     SpaceWire* spw = new SpaceWire(
@@ -316,7 +356,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     this_system_object.spacewire = spw;
                 }
 
-
+                add_ring_buffers_to_system(this_system_object, spwif);
                 // System command file should be identified and mapped a ways up ^^^
                 // lookup_command_file.insert(std::make_pair(this_system_object, spwif.at("commands").get<std::string>()));
 
@@ -384,12 +424,14 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
                     } catch (std::exception& e) {}
                 }
+
+                add_ring_buffers_to_system(this_system_object, uartif);
             }
 
         } catch(std::exception& e) {
             utilities::debug_print("exception while adding a UART interface\n");
         }
-        
+
         // now add more command-specific info to this_system_object
         // if(is_command) {
         try {
@@ -432,7 +474,50 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
     command_deck = CommandDeck(systems, lookup_command_file);
 }
 
-void LineInterface::collapse_endpoints() {
+bool LineInterface::add_ring_buffers_to_system(System &system, nlohmann::json interface_map) {
+    // try to get ring_buffer_interface.
+    try {
+        auto& rbif = interface_map.at("ring_buffer_interface");
+        // todo: better to loop over all keys in "ring_buffer_interface", storing each. Test it.
+        for (auto& rbif_detail: rbif.items()) {
+            std::string rbif_type_name = rbif_detail.key();
+            utilities::debug_print("found item: " + rbif_type_name + "\n");
+
+            std::string this_frame_size_bytes_str = rbif_detail.value().at("ring_frame_size_bytes").get<std::string>();
+
+            std::string this_start_address_str = rbif_detail.value().at("ring_start_address").get<std::string>();
+            std::string this_frames_per_ring_str = rbif_detail.value().at("frames_per_ring").get<std::string>();
+            std::string this_write_pointer_address_str = rbif_detail.value().at("ring_write_pointer_address").get<std::string>();
+            std::string this_write_pointer_width_bytes_str = rbif_detail.value().at("ring_write_pointer_width").get<std::string>();
+
+            size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
+            uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
+            size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
+            uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
+            size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
+
+            RING_BUFFER_TYPE_OPTIONS this_rbp_type = RING_BUFFER_TYPE_OPTIONS_INV_NAMES.at(rbif_type_name);
+
+            RingBufferParameters* this_rbp = new RingBufferParameters(
+                this_frame_size_bytes,
+                this_start_address,
+                this_frames_per_ring,
+                this_write_pointer_address,
+                this_write_pointer_width_bytes,
+                this_rbp_type
+            );
+
+            system.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
+        }
+        return true;
+    } catch (std::exception& e) {
+        // utilities::debug_print("exception while adding a ring buffer interface: " + std::string(e.what()) + "\n");
+    }
+    return false;
+}
+
+void LineInterface::collapse_endpoints()
+{
     for (auto& sys: systems) {
         if (sys.ethernet) { // not all systems have an ethernet interface
             if (unique_endpoints.size() > 0) {

@@ -117,21 +117,32 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     QL                  = 0x01,
     TPX                 = 0x02,
     HK                  = 0x10,
-    HK_POW              = 0x11,
-    HK_RTD              = 0x12,
-    HK_INTRO            = 0x13,
+    POW                 = 0x11,
+    RTD                 = 0x12,
+    INTRO               = 0x13,
     NONE                = 0xff
 };
 
 static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFFER_TYPE_OPTIONS_NAMES = {
     {RING_BUFFER_TYPE_OPTIONS::PC,      "pc"},
     {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
-    {RING_BUFFER_TYPE_OPTIONS::TPX,     "timepix"},
+    {RING_BUFFER_TYPE_OPTIONS::TPX,     "tpx"},
     {RING_BUFFER_TYPE_OPTIONS::HK,      "hk"},
-    {RING_BUFFER_TYPE_OPTIONS::HK_POW,  "hk-power"},
-    {RING_BUFFER_TYPE_OPTIONS::HK_RTD,  "hk-rtds"},
-    {RING_BUFFER_TYPE_OPTIONS::HK_INTRO,"hk-introspection"},
+    {RING_BUFFER_TYPE_OPTIONS::POW,     "pow"},
+    {RING_BUFFER_TYPE_OPTIONS::RTD,     "rtd"},
+    {RING_BUFFER_TYPE_OPTIONS::INTRO,   "intro"},
     {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
+};
+
+static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFFER_TYPE_OPTIONS_INV_NAMES = {
+    {"pc",      RING_BUFFER_TYPE_OPTIONS::PC},
+    {"ql",      RING_BUFFER_TYPE_OPTIONS::QL},
+    {"tpx",     RING_BUFFER_TYPE_OPTIONS::TPX},
+    {"hk",      RING_BUFFER_TYPE_OPTIONS::HK},
+    {"pow",     RING_BUFFER_TYPE_OPTIONS::POW},
+    {"rtd",     RING_BUFFER_TYPE_OPTIONS::RTD},
+    {"intro",   RING_BUFFER_TYPE_OPTIONS::INTRO},
+    {"none",    RING_BUFFER_TYPE_OPTIONS::NONE},
 };
 
 enum class SPACEWIRE_END_OPTIONS: uint8_t {

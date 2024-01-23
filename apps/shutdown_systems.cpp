@@ -75,34 +75,34 @@ int main(int argc, char** argv) {
     auto cmos2_manager = std::make_shared<SystemManager>(cmos2, placeholder_queue);
 
     std::cout << "broadcasting CdTe observation end...\n";
-    machine.sync_tcp_send_command_for_sys(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x12));
+    machine.sync_send_command_to_system(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x12));
     std::this_thread::sleep_for(delay);
 
     // std::cout << "broadcasting CdTe canisters bias voltage 60 V...\n";
-    // machine.sync_tcp_send_command_for_sys(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x14));
+    // machine.sync_send_command_to_system(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x14));
     // std::cout << "\twaiting 30 seconds...\n";
     // std::this_thread::sleep_for(std::chrono::seconds(30));
 
     // std::cout << "broadcasting CdTe canisters bias voltage 0 V...\n";
-    // machine.sync_tcp_send_command_for_sys(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
+    // machine.sync_send_command_to_system(*cdtede_manager, deck->get_command_for_sys_for_code(cdtede.hex, 0x13));
     // std::this_thread::sleep_for(delay);
 
     std::cout << "sending CMOS stop to both detectors...\n";
-    machine.sync_tcp_send_command_for_sys(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x13));
+    machine.sync_send_command_to_system(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x13));
     std::this_thread::sleep_for(delay);
-    machine.sync_tcp_send_command_for_sys(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x13));
+    machine.sync_send_command_to_system(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x13));
     std::this_thread::sleep_for(delay);
 
     std::cout << "enabling CMOS double commands...\n";
-    machine.sync_tcp_send_command_for_sys(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x0f));
+    machine.sync_send_command_to_system(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x0f));
     std::this_thread::sleep_for(delay);
-    machine.sync_tcp_send_command_for_sys(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x0f));
+    machine.sync_send_command_to_system(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x0f));
     std::this_thread::sleep_for(delay);
 
     std::cout << "shutting down CMOS...\n";
-    machine.sync_tcp_send_command_for_sys(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x0c));
+    machine.sync_send_command_to_system(*cmos1_manager, deck->get_command_for_sys_for_code(cmos1.hex, 0x0c));
     std::this_thread::sleep_for(delay);
-    machine.sync_tcp_send_command_for_sys(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x0c));
+    machine.sync_send_command_to_system(*cmos2_manager, deck->get_command_for_sys_for_code(cmos2.hex, 0x0c));
     std::this_thread::sleep_for(delay);
     
     std::cout << "closing sockets...\n";
