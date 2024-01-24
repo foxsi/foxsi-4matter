@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<uint8_t> reply = machine->sync_send_command_to_system(test_system_manager, send_command);
     
-    std::vector<uint8_t> reply_data = machine->get_reply_data(reply, test_system.hex);
+    std::vector<uint8_t> reply_data = machine->get_reply_data(reply, test_system);
     
     std::cout << "\tgot reply: ";
     utilities::spw_print(reply, nullptr);
