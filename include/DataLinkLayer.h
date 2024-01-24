@@ -151,6 +151,8 @@ class SpaceWire: public DataLinkLayer {
 
         uint8_t crc(std::vector<uint8_t> data);
 
+        std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply);
+
         std::vector<uint8_t> target_path_address;
         std::vector<uint8_t> reply_path_address;
         uint8_t target_logical_address;

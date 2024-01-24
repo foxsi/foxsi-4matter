@@ -231,19 +231,9 @@ class TransportLayerMachine {
          */
         void recv_udp_fwd_tcp();
         /**
-         * @brief Parses and acts on a command string received over UDP.
-         * 
-         * A command string is at least a pair of bytes `<system><command code>` where both the `system` and `command code` values are defined in [foxsi4-commands](https://github.com/foxsi/foxsi4-commands). This method checks a received UDP packet is a valid command string, then delegates handling of the command to `TransportLayerMachine::handle_cmd()`.
-         */
-        void recv_udp_fwd_tcp_cmd();
-        /**
          * @brief Asynchronously sends data stored in `TransportLayerMachine::uplink_buffer` to  `TransportLayerMachine::remote_tcp_endpoint`.
          */
         void send_tcp();
-        /**
-         * @brief Asynchronously filters, then sends data stored in `TransportLayerMachine::downlink_buffer` to  `TransportLayerMachine::remote_udp_endpoint`.
-         */
-        void send_udp(const boost::system::error_code& err, std::size_t byte_count);
 
         /**
          * @brief Sending UART message
@@ -258,17 +248,6 @@ class TransportLayerMachine {
          * @brief Convenience method to receive and print UDP packets.
          */
         void print_udp_basic();
-
-        /**
-         * @brief Parses and acts on or sends a command string in `TransportLayerMachine::uplink_buff`. 
-         * 
-         * The uplinked command string will be checked against `TransportLayerMachine::commands`. If it is generic, it will be sent asynchronously to the appropriate system. If it is a frame read command (remote ring buffer access), a synchronous remote read-loop is executed and full remote ring buffer data is **printed**. Frame read command status is decided by `TransportLayerMachine::check_frame_read_cmd`.
-         * 
-         * @todo don't just print remote ring buffer data. Put it in a downlink queue somewhere.
-         * @todo support uplink commands with arguments.
-         * @todo correctly identify remote read cases where the remote ring buffer will wrap around. Then do multiple reads.
-         */
-        void handle_cmd();
 
         /**
          * @brief Receive data from `socket` into appropriately-sized `buffer`, with timeout and retry attempts taken from `sys_man`.
@@ -453,14 +432,6 @@ class TransportLayerMachine {
          * @return std::vector<uint8_t> 
          */
         std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply, System& sys);
-        /**
-         * @brief Extract the data field from a SpaceWire reply sent by `sys`.
-         * @todo specify name to SpaceWire e.g. `get_spw_reply_data` or something.
-         * @param spw_reply the full, raw reply data (presumed via an SPMU-001).
-         * @param sys the hex code for the system sending the reply.
-         * @return std::vector<uint8_t> 
-         */
-        std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply, uint8_t sys);
 
         /**
          * @brief checks if a provided command (lookup in `TransportLayerMachine::commands`) will try to query a remote ring buffer.
