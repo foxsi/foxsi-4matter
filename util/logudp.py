@@ -132,13 +132,14 @@ while True:
 			print("wrote " + str(len(data[8:])) + " bytes to log file")
 
 			if (data[0] == 0x02):
-				for i in range(6,42,4):
-					error_state = data[i]
-					# if error_state == 1:
-					temp_bin = data[i+1:i+4]
-					temp_long = (temp_bin[0] << 16) | (temp_bin[1] << 8) | (temp_bin[2])
-					temp_float = temp_long / 1024.0
-					print("\tch" + str(int((i - 6)/4)) + "\terror: " + str(error_state) + "\ttemp: " + str(temp_float))
+				pass
+				# for i in range(6,42,4):
+				# 	error_state = data[i]
+				# 	# if error_state == 1:
+				# 	temp_bin = data[i+1:i+4]
+				# 	temp_long = (temp_bin[0] << 16) | (temp_bin[1] << 8) | (temp_bin[2])
+				# 	temp_float = temp_long / 1024.0
+				# 	print("\tch" + str(int((i - 6)/4)) + "\terror: " + str(error_state) + "\ttemp: " + str(temp_float))
 
 		elif data[0] == 0x09:
 			# cdte1 system

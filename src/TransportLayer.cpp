@@ -1061,8 +1061,10 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
             }
         } else if (sys_man.system.name == "timepix") {
             if (command.type == COMMAND_TYPE_OPTIONS::UART) {
+                utilities::debug_print(std::to_string(send_packet.size()) + " B:\n");
                 utilities::hex_print(send_packet);
                 local_uart_port.write_some(boost::asio::buffer(send_packet));
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } else {
                 utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
             }

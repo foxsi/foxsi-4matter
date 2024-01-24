@@ -50,13 +50,13 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
 
 void Circle::update_state() {
 
-    utilities::debug_print("update time: " + std::to_string(std::time(nullptr)) + " [s]\n");
-    utilities::debug_print("current system: " + system_order.at(current_system)->system.name + "\n");
-    utilities::debug_print("current state: " + std::to_string(static_cast<uint8_t>(current_state)) + "\n");
+    // utilities::debug_print("update time: " + std::to_string(std::time(nullptr)) + " [s]\n");
+    // utilities::debug_print("current system: " + system_order.at(current_system)->system.name + "\n");
+    // utilities::debug_print("current state: " + std::to_string(static_cast<uint8_t>(current_state)) + "\n");
 
     if (current_state == STATE_ORDER::CMD_SEND) {
         if (system_order.at(current_system)->system.name.find("cmos") != std::string::npos) {
-            utilities::debug_print("current cmos PC state: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(Circle::get_sys_man_for_name("cmos1")->active_type) + "\n");
+            // utilities::debug_print("current cmos PC state: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(Circle::get_sys_man_for_name("cmos1")->active_type) + "\n");
         }
         manage_systems();
     }
@@ -326,8 +326,8 @@ void Circle::manage_systems() {
     auto cmos2 = *Circle::get_sys_man_for_name("cmos2");
     
     utilities::debug_print("\n");
-    std::chrono::milliseconds delay_inter_cdte_ms(2000);
-    std::chrono::milliseconds delay_inter_cmos_ms(1000);
+    std::chrono::milliseconds delay_inter_cdte_ms(10);
+    std::chrono::milliseconds delay_inter_cmos_ms(10);
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order.at(current_system)->system_state == SYSTEM_STATE::ABANDON) {
         utilities::error_print("current system " + system_order.at(current_system)->system.name + " was abandoned! Continuing.\n");
@@ -444,6 +444,7 @@ void Circle::manage_systems() {
 
         // todo: write this to implement command forwarding for Timepix:
         // transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("timepix"));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("timepix"));
 
         SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
         Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
