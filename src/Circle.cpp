@@ -111,7 +111,8 @@ void Circle::init_cdte() {
     System& cdte3 = deck->get_sys_for_name("cdte3");
     System& cdte4 = deck->get_sys_for_name("cdte4");
 
-    auto delay = std::chrono::milliseconds(2000);
+    auto delay = std::chrono::milliseconds(5000);
+    auto delay_init = std::chrono::seconds(10);
     auto delay_60to200v = std::chrono::seconds(30);
     auto delay_post200v = std::chrono::seconds(300);
 
@@ -153,7 +154,7 @@ void Circle::init_cdte() {
 
     // DE init                          0x08 0x09
     transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x09));
-    std::this_thread::sleep_for(delay);
+    std::this_thread::sleep_for(delay_init);
 
     utilities::debug_print("trying new write...\n");
     // DE standby                       0x08 0x0a
@@ -221,8 +222,9 @@ void Circle::init_cmos() {
     utilities::debug_print("checking cmos1 status...\n");
     std::vector<uint8_t> cmos1_status = transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0xa0));
     if (cmos1_status.size() < 4) {
-        utilities::error_print("could not receive from cmos1: ABANDONing\n");
-        cmos1->system_state = SYSTEM_STATE::ABANDON;
+        // utilities::error_print("could not receive from cmos1: ABANDONing\n");
+        // cmos1->system_state = SYSTEM_STATE::ABANDON;
+        utilities::error_print("could not receive from cmos1.\n");
     } else {
         cmos1_status = transport->get_reply_data(cmos1_status, cmos1->system.hex);
         utilities::debug_print("cmos1 linetime: ");
@@ -251,8 +253,9 @@ void Circle::init_cmos() {
     utilities::debug_print("checking cmos2 status...\n");
     std::vector<uint8_t> cmos2_status = transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0xa0));
     if (cmos2_status.size() < 4) {
-        utilities::error_print("could not receive from cmos2: ABANDONing\n");
-        cmos2->system_state = SYSTEM_STATE::ABANDON;
+        // utilities::error_print("could not receive from cmos2: ABANDONing\n");
+        // cmos2->system_state = SYSTEM_STATE::ABANDON;
+        utilities::error_print("could not receive from cmos2.\n");
     } else {
         cmos2_status = transport->get_reply_data(cmos2_status, cmos2->system.hex);
         utilities::debug_print("cmos2 linetime: ");
