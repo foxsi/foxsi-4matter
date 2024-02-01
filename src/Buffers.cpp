@@ -312,6 +312,10 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + subsequent_strip_footer_size
             + static_strip_header_size
             + subsequent_strip_header_size;
+
+            if (frame.size() + new_packet.size() < heads_and_feet_size) {
+                utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+            }
         
         if (frame.size() + new_packet.size() - heads_and_feet_size > frame_size) {
             // std::cout << "future exception in PacketFramer::push_to_frame()\n";
@@ -356,7 +360,11 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
         
         if (new_packet.size() - heads_and_feet_size > frame_size) {
             // todo: throw
-            std::cout << "future exception in PacketFramer::push_to_frame()\n";
+            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
+            utilities::error_print("PacketFramer::push_to_frame() overflow\n");
+        }
+        if (new_packet.size() < heads_and_feet_size) {
+            utilities::error_print("PacketFramer::push_to_frame() underflow\n");
         }
 
         // erase static and initial headers and footers

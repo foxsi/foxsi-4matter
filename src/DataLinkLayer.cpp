@@ -316,6 +316,63 @@ uint8_t SpaceWire::crc(std::vector<uint8_t> data)
     }
 }
 
+std::vector<uint8_t> SpaceWire::get_reply_data(std::vector<uint8_t> spw_reply) {
+    size_t ether_prefix_length = 12; // using SPMU-001, this is always true
+    size_t target_path_address_length = 0; // path address is removed by the time we receive reply.
+
+    // now extract data based on data length field
+    size_t data_length_start_offset = 9;
+    size_t data_length_length = 3;
+
+    if (ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + 1 > spw_reply.size()) {
+        utilities::error_print("message too short to parse!\n");
+        return {};
+    }
+
+    std::vector<uint8_t> data_length_vec(
+        spw_reply.begin() 
+            + ether_prefix_length 
+            + target_path_address_length 
+            + data_length_start_offset
+            - 1, 
+        spw_reply.begin() 
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length
+            - 1
+    );
+
+    // pre-pad `data_length_vec` with zero to use with `unsplat_from_4bytes()`
+    std::vector<uint8_t> zero_prefix(1); 
+    zero_prefix[0] = 0x00;
+    data_length_vec.insert(data_length_vec.begin(), zero_prefix.begin(), zero_prefix.end());
+
+    uint32_t data_length = utilities::unsplat_from_4bytes(data_length_vec);
+
+    if (spw_reply.size() < ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + data_length) {
+        utilities::error_print("can't read past end of reply!\n");
+        return {};
+    }
+
+    // now read rest of spw_reply based on data_length
+    std::vector<uint8_t> reply_data(
+        spw_reply.begin()
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length,
+        spw_reply.begin()
+            + ether_prefix_length
+            + target_path_address_length
+            + data_length_start_offset
+            + data_length_length
+            + data_length
+    );
+
+    return reply_data;
+}
+
 namespace utilities {
     void spw_print(std::vector<uint8_t> data, SpaceWire* spw) {
         // assumes a 12-B Ethernet header (SPMU-001) is prepended

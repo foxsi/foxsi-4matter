@@ -129,7 +129,7 @@ void Circle::init_cdte() {
     // Check canister ping status       0x08 0x8a
     utilities::debug_print("checking canister status...\n");
     std::vector<uint8_t> can_status = transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x8a));
-    can_status = transport->get_reply_data(can_status, cdtede->system.hex);
+    can_status = transport->get_reply_data(can_status, cdtede->system);
     utilities::debug_print("canisters status: ");
     utilities::hex_print(can_status);
 
@@ -226,7 +226,7 @@ void Circle::init_cmos() {
         // cmos1->system_state = SYSTEM_STATE::ABANDON;
         utilities::error_print("could not receive from cmos1.\n");
     } else {
-        cmos1_status = transport->get_reply_data(cmos1_status, cmos1->system.hex);
+        cmos1_status = transport->get_reply_data(cmos1_status, cmos1->system);
         utilities::debug_print("cmos1 linetime: ");
         utilities::hex_print(cmos1_status);
     }
@@ -257,7 +257,7 @@ void Circle::init_cmos() {
         // cmos2->system_state = SYSTEM_STATE::ABANDON;
         utilities::error_print("could not receive from cmos2.\n");
     } else {
-        cmos2_status = transport->get_reply_data(cmos2_status, cmos2->system.hex);
+        cmos2_status = transport->get_reply_data(cmos2_status, cmos2->system);
         utilities::debug_print("cmos2 linetime: ");
         utilities::hex_print(cmos2_status);
         std::this_thread::sleep_for(delay);

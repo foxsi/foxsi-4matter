@@ -759,6 +759,9 @@ std::vector<uint8_t> CommandDeck::get_read_command_from_template(uint8_t sys, ui
     }
 
     // extract eclairs from oven
+    if (command_template.begin() + ether_header_len + target_path_addr_len >= command_template.end() - 1) {
+        return {};
+    }
     std::vector<uint8_t> new_header(command_template.begin() + ether_header_len + target_path_addr_len, command_template.end() - 1);
     // ganache them
     uint8_t crc_header = config::spw::spw_calculate_crc_uint_F(new_header);

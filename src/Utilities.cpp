@@ -134,8 +134,12 @@ namespace config::spw{
     }
 
     bool check_packet_complete(std::vector<uint8_t> &data) {
+        if (data.size() < 12) {
+            return false;
+        }
+
         uint64_t length_remain = utilities::unsplat_from_4bytes(std::vector<uint8_t>(data.begin() + 8, data.begin() + 12));
-        std::vector<uint8_t> remain(data.begin()+12, data.end());
+        std::vector<uint8_t> remain(data.begin() + 12, data.end());
 
         if (length_remain < remain.size()) {
             return false;
