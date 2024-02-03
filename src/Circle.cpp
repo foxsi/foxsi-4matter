@@ -137,15 +137,15 @@ void Circle::init_cdte() {
         std::string this_name = "cdte" + std::to_string(i+1);
         if (can_status.size() < 4) {
             utilities::error_print("got too-short canister status reply! Abandoning CdTe.\n");
-            Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
-            Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
-            Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
-            Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
+            // Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
+            // Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+            // Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
+            // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
         } else {
             if(can_status.at(i) != 0x00) {
                 Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
             } else {
-                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
+                // Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
             }
         }
     }
@@ -232,20 +232,20 @@ void Circle::init_cmos() {
     }
 
     // send start_cmos_init         0x0f 0x18
-    transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x18));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x18));
+    // std::this_thread::sleep_for(delay);
 	
     // send start_cmos_training     0x0f 0x1f
-    transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x1f));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x1f));
+    // std::this_thread::sleep_for(delay);
 	
     // send set_cmos_params         0x0f 0x10
-    transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x10));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x10));
+    // std::this_thread::sleep_for(delay);
 	
     // send start_cmos_exposure     0x0f 0x12
-    transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x12));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0x12));
+    // std::this_thread::sleep_for(delay);
 
     /*----------------------- for cmos2 -----------------------*/
 
@@ -264,20 +264,20 @@ void Circle::init_cmos() {
     }
 
      // send start_cmos_init         0x0f 0x18
-    transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x18));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x18));
+    // std::this_thread::sleep_for(delay);
 	
     // send start_cmos_training     0x0f 0x1f
-    transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x1f));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x1f));
+    // std::this_thread::sleep_for(delay);
 	
     // send set_cmos_params         0x0f 0x10
-    transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x10));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x10));
+    // std::this_thread::sleep_for(delay);
 	
     // send start_cmos_exposure     0x0f 0x12
-    transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x12));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x12));
+    // std::this_thread::sleep_for(delay);
 
     // then can read ring buffer
 

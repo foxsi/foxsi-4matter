@@ -664,6 +664,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     std::vector<uint8_t> last_write_pointer_bytes(get_reply_data(last_reply, sys_man.system));
     if(last_write_pointer_bytes.size() != 4) {
         utilities::error_print("got bad write pointer length!\n");
+        return prior_write_pointer;
     }
     utilities::debug_print("\textracted write pointer from reply: ");
     utilities::hex_print(last_write_pointer_bytes);
