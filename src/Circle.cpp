@@ -170,8 +170,8 @@ void Circle::init_cdte() {
     // std::this_thread::sleep_for(delay);
 
     // Apply HV 0V for all canister     0x08 0x13
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x13));
+    // std::this_thread::sleep_for(delay);
 
     // Apply HV 60V for all canister    0x08 0x14
     // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x14));
@@ -344,13 +344,13 @@ void Circle::manage_systems() {
         transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte1"));
         Circle::get_sys_man_for_name("cdte1")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC) = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte1"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte1")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC));
 
-        std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte1, deck->get_command_for_sys_for_code(cdte1.system.hex, 0xbf));
-        if (hk.size() > 0) {
-            DownlinkBufferElement dbe(&(cdte1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
-            // queue and send the downlink buffer:
-            transport->downlink_buffer->enqueue(dbe);
-        }
+        // std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte1, deck->get_command_for_sys_for_code(cdte1.system.hex, 0xbf));
+        // if (hk.size() > 0) {
+        //     DownlinkBufferElement dbe(&(cdte1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+        //     dbe.set_payload(hk);
+        //     // queue and send the downlink buffer:
+        //     transport->downlink_buffer->enqueue(dbe);
+        // }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
@@ -409,13 +409,13 @@ void Circle::manage_systems() {
             Circle::get_sys_man_for_name("cmos1")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
         }
 
-        std::vector<uint8_t> hk = transport->sync_send_command_to_system(cmos1, deck->get_command_for_sys_for_code(cmos1.system.hex, 0x88));
-        if (hk.size() > 0) {
-            DownlinkBufferElement dbe(&(cmos1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
-            // queue and send the downlink buffer:
-            transport->downlink_buffer->enqueue(dbe);
-        }
+        // std::vector<uint8_t> hk = transport->sync_send_command_to_system(cmos1, deck->get_command_for_sys_for_code(cmos1.system.hex, 0x88));
+        // if (hk.size() > 0) {
+        //     DownlinkBufferElement dbe(&(cmos1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+        //     dbe.set_payload(hk);
+        //     // queue and send the downlink buffer:
+        //     transport->downlink_buffer->enqueue(dbe);
+        // }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
         std::this_thread::sleep_for(delay_inter_cmos_ms);

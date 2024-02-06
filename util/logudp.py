@@ -142,12 +142,13 @@ while True:
 				# 	print("\tch" + str(int((i - 6)/4)) + "\terror: " + str(error_state) + "\ttemp: " + str(temp_float))
 
 		elif data[0] == 0x09:
-			# cdte1 system
-			done = reframe(data, cdte1_payload_len, cdte1_queue, cdte1_queued)
-			if try_write(cdte1_queue, done, cdte1_file):
-				cdte1_queue = bytearray(cdte1_queue_len)
-				cdte1_queued = [0]*len(cdte1_queued)
-				done = False
+			if data[5] == 0x00:
+				# cdte1 system
+				done = reframe(data, cdte1_payload_len, cdte1_queue, cdte1_queued)
+				if try_write(cdte1_queue, done, cdte1_file):
+					cdte1_queue = bytearray(cdte1_queue_len)
+					cdte1_queued = [0]*len(cdte1_queued)
+					done = False
 		elif data[0] == 0x0a:
 			# cdte1 system
 			done = reframe(data, cdte2_payload_len, cdte2_queue, cdte2_queued)
