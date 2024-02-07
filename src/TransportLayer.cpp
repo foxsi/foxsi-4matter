@@ -591,6 +591,7 @@ bool TransportLayerMachine::run_uart_context(std::chrono::milliseconds timeout_m
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
         local_uart_port.cancel();
+        uplink_uart_port.cancel();
         io_context.run();
         return true;
     }
@@ -811,39 +812,6 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
         // todo: call sync_remote_buffer_transaction().
     }
     try {
-        // // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
-        // std::vector<uint8_t> send_packet(commands->get_command_bytes_for_sys_for_code(system.hex, command.hex));
-        // utilities::debug_print("got command for system. Sending...\n");
-        // // utilities::hex_print(send_packet);
-        
-        // // todo: make this work for housekeeping
-        // if (sys_man.system.name == "formatter") {
-        //     // todo: handle
-        // } else if (sys_man.system.name == "housekeeping") {
-        //     if (command.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-        //         utilities::hex_print(send_packet);
-        //         local_tcp_housekeeping_sock.send(boost::asio::buffer(send_packet));
-        //     } else {
-        //         utilities::error_print("can't send non-ethernet command to " + sys_man.system.name + "\n");
-        //     }
-        // } else if (sys_man.system.name == "timepix") {
-        //     if (command.type == COMMAND_TYPE_OPTIONS::UART) {
-        //         utilities::debug_print(std::to_string(send_packet.size()) + " B:\n");
-        //         utilities::hex_print(send_packet);
-        //         local_uart_port.write_some(boost::asio::buffer(send_packet));
-        //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        //     } else {
-        //         utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
-        //     }
-        // } else {
-        //     if (command.type == COMMAND_TYPE_OPTIONS::SPW) {
-        //         utilities::spw_print(send_packet, sys_man.system.spacewire);
-        //         // todo: replace with verifiable write command
-        //         local_tcp_sock.send(boost::asio::buffer(send_packet));
-        //     } else {
-        //         utilities::error_print("can't send non-spacewire command to " + sys_man.system.name + "\n");
-        //     }
-        // }
         utilities::debug_print("got command for system. Sending...\n");
         std::vector<uint8_t> reply = TransportLayerMachine::sync_send_command_to_system(sys_man, command);
         
@@ -862,7 +830,7 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemManager &sys_man, Command cmd) {
-    utilities::debug_print("in sync_send_command_to_system(), ");
+    utilities::debug_print("in sync_send_command_to_system() " + sys_man.system.name + "\n");
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 	std::vector<uint8_t> reply;
     size_t expected_size = 0;
@@ -989,6 +957,35 @@ void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &upl
     std::vector<uint8_t> reply(2);
     for (size_t count = 0; count < 8; ++count) {
         size_t reply_size = TransportLayerMachine::read_udp(local_udp_sock, reply, uplink_sys_man);
+        if (reply_size == 0) {
+            // utilities::error_print("got no uplink command\n");
+            return;
+        } else {
+            utilities::debug_print("received uplink: ");
+            utilities::hex_print(reply);
+            utilities::debug_print("\n");
+            // try to find queue for command
+            uint8_t sys_code = reply.at(0);
+            try{
+                UplinkBufferElement new_uplink(reply, *commands);
+
+                (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
+            } catch (std::out_of_range& e) {
+                // todo: log the error.
+                utilities::error_print("could not add uplink command to queue!\n"); 
+                return;
+            }
+            utilities::debug_print("\tstored uplink commands\n");
+        }
+    }
+}
+
+void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
+    utilities::debug_print("in sync_uart_receive_to_uplink_buffer()\n");
+
+    std::vector<uint8_t> reply(2);
+    for (size_t count = 0; count < 8; ++count) {
+        size_t reply_size = TransportLayerMachine::read(uplink_uart_port, reply, uplink_sys_man);
         if (reply_size == 0) {
             // utilities::error_print("got no uplink command\n");
             return;
