@@ -423,7 +423,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, s
         );
 
         // Run the operation until it completes, or until the timeout.
-        bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+        bool timed_out = TransportLayerMachine::run_tcp_context(local_tcp_sock, timeout_ms);
         if (!timed_out) {
             break;
         } else {
@@ -440,10 +440,12 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, s
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
     tcp_local_receive_swap.resize(receive_size);
+    std::vector<uint8_t> receive_data(receive_size);
 
     boost::asio::async_read(
         socket,
-        boost::asio::buffer(tcp_local_receive_swap),
+        // boost::asio::buffer(tcp_local_receive_swap),
+        boost::asio::buffer(receive_data),
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
             boost::placeholders::_1, 
@@ -452,15 +454,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::
             &receive_size
         )
     );
-    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+    bool timed_out = TransportLayerMachine::run_tcp_context(socket, timeout_ms);
 
     if (timed_out) {
         return {};
     } else {
-        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
-        swap_copy.resize(receive_size);
-        tcp_local_receive_swap.resize(0);
-        return swap_copy;
+        // std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        // swap_copy.resize(receive_size);
+        // tcp_local_receive_swap.resize(0);
+        // return swap_copy;
+        receive_data.resize(receive_size);
+        return receive_data;
     }
 }
 
@@ -468,9 +472,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
     boost::system::error_code err;
     tcp_local_receive_swap.resize(4096);
     size_t receive_size;
+    std::vector<uint8_t> receive_data(4096);
 
     socket.async_read_some(
-        boost::asio::buffer(tcp_local_receive_swap),
+        // boost::asio::buffer(tcp_local_receive_swap),
+        boost::asio::buffer(receive_data),
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
             boost::placeholders::_1, 
@@ -479,15 +485,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
             &receive_size
         )
     );
-    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+    bool timed_out = TransportLayerMachine::run_tcp_context(socket, timeout_ms);
 
     if (timed_out) {
         return {};
     } else {
-        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
-        swap_copy.resize(receive_size);
-        tcp_local_receive_swap.resize(0);
-        return swap_copy;
+        // std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        // swap_copy.resize(receive_size);
+        // tcp_local_receive_swap.resize(0);
+        // return swap_copy;
+        receive_data.resize(receive_size);
+        return receive_data;
     }
 }
 
@@ -573,13 +581,12 @@ bool TransportLayerMachine::run_udp_context(std::chrono::milliseconds timeout_ms
     return false;
 }
 
-bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms)
+bool TransportLayerMachine::run_tcp_context(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms)
 {
     io_context.restart();
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
-        local_tcp_sock.cancel();
-        local_tcp_housekeeping_sock.cancel();
+        socket.cancel();
         io_context.run();
         return true;
     }

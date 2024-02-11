@@ -344,7 +344,7 @@ class TransportLayerMachine {
         static void sync_uart_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_udp_context(std::chrono::milliseconds timeout_ms);
-        bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        bool run_tcp_context(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
         bool run_uart_context(std::chrono::milliseconds timeout_ms);
 
         /**
