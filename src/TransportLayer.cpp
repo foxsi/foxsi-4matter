@@ -254,14 +254,18 @@ bool TransportLayerMachine::handle_intercept_cmd(SystemManager& sys_man, Command
 
     if (sys_man.system.name == "housekeeping") {
         // note here we are directly using the command hex code, not the content of the command.
-        if (0x30 == cmd.hex) {
-            // clear reading
-            sys_man.enable = 0x00;
-        } else if (0x31 <= cmd.hex && cmd.hex <= 0x33 ) {
-            // enable read of the last 
-            sys_man.enable |= cmd.hex & 0x0f;
+        if (sys_man.system_state != SYSTEM_STATE::DISCONNECT && sys_man.system_state != SYSTEM_STATE::ABANDON) {
+            if (0x30 == cmd.hex) {
+                // clear reading
+                sys_man.enable = 0x00;
+            } else if (0x31 <= cmd.hex && cmd.hex <= 0x34) {
+                // enable read of the last 
+                sys_man.enable |= cmd.hex & 0x0f;
+            }
+            utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\tset housekeeping enable to " + std::to_string(sys_man.enable) + ".");
+        } else {
+            utilities::error_log("TransportLayerMachine::handle_intercept_cmd()\tcannot change housekeeping state due to ::system_state.");
         }
-        utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\tset housekeeping enable to " + std::to_string(sys_man.enable) + ".");
     }
 
     return true;
@@ -857,6 +861,8 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
             utilities::debug_print("got reply to command: " + utilities::bytes_to_string(reply) + "\n");
 
             DownlinkBufferElement reply_dbe(&(sys_man.system), &(commands->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::REPLY);
+            reply_dbe.set_packets_per_frame(1);
+            reply_dbe.set_this_packet_index(1);
             reply_dbe.set_payload(reply);
             downlink_buffer->enqueue(reply_dbe);
         }

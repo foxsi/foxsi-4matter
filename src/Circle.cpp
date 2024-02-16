@@ -143,27 +143,27 @@ void Circle::init_cdte() {
             // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
         } else {
             if(can_status.at(i) != 0x00) {
-                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::AWAIT;
+                Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::LOOP;
             } else {
                 // Circle::get_sys_man_for_name(this_name)->system_state = SYSTEM_STATE::ABANDON;
             }
         }
     }
 
-    std::this_thread::sleep_for(delay);
+    // std::this_thread::sleep_for(delay);
 
     // DE init                          0x08 0x09
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x09));
-    std::this_thread::sleep_for(delay_init);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x09));
+    // std::this_thread::sleep_for(delay_init);
 
-    utilities::debug_print("trying new write...\n");
+    // utilities::debug_print("trying new write...\n");
     // DE standby                       0x08 0x0a
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x0a));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x0a));
+    // std::this_thread::sleep_for(delay);
 
     // DE observe                       0x08 0x0b
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x0b));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x0b));
+    // std::this_thread::sleep_for(delay);
 
     // Canister 1 start                 0x09 0x11
     // transport->sync_send_command_to_system(*cdte1, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x11));
@@ -184,16 +184,16 @@ void Circle::init_cdte() {
     // std::this_thread::sleep_for(delay_post200v);
 
     // Set full readout for all canister    0x08 0x19
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x19));
+    // std::this_thread::sleep_for(delay);
 
     // Set sparse readout for all canister    0x08 0x18
     // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x18));
     // std::this_thread::sleep_for(delay);
 
     // Start observe for all canister   0x08 0x11
-    transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x11));
-    std::this_thread::sleep_for(delay);
+    // transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x11));
+    // std::this_thread::sleep_for(delay);
 
     // later, will need to end observe and lower bias for all.
 }
@@ -348,8 +348,9 @@ void Circle::manage_systems() {
 
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte1, deck->get_command_for_sys_for_code(cdte1.system.hex, 0xbf));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte1.system);
             DownlinkBufferElement dbe(&(cdte1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -368,8 +369,9 @@ void Circle::manage_systems() {
         
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte2, deck->get_command_for_sys_for_code(cdte2.system.hex, 0xbf));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte2.system);
             DownlinkBufferElement dbe(&(cdte2.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -388,8 +390,9 @@ void Circle::manage_systems() {
         
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte3, deck->get_command_for_sys_for_code(cdte3.system.hex, 0xbf));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte3.system);
             DownlinkBufferElement dbe(&(cdte3.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -408,8 +411,9 @@ void Circle::manage_systems() {
         
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte4, deck->get_command_for_sys_for_code(cdte4.system.hex, 0xbf));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte4.system);
             DownlinkBufferElement dbe(&(cdte4.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -440,8 +444,9 @@ void Circle::manage_systems() {
 
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cmos1, deck->get_command_for_sys_for_code(cmos1.system.hex, 0x88));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cmos1.system);
             DownlinkBufferElement dbe(&(cmos1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -470,8 +475,9 @@ void Circle::manage_systems() {
 
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cmos2, deck->get_command_for_sys_for_code(cmos2.system.hex, 0x88));
         if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cmos2.system);
             DownlinkBufferElement dbe(&(cmos2.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
-            dbe.set_payload(hk);
+            dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
         }
@@ -533,21 +539,28 @@ void Circle::manage_systems() {
         // create element for downlink buffer:
         DownlinkBufferElement dbe(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
         RING_BUFFER_TYPE_OPTIONS::TPX);
+        dbe.set_packets_per_frame(1);
+        dbe.set_this_packet_index(1);
         dbe.set_payload(downlink);
 
         utilities::debug_print("\tbuffered downlink\n");
 
         // queue and send the downlink buffer:
         transport->downlink_buffer->enqueue(dbe);
-        utilities::debug_print("\tqueued downlink\n");
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-        utilities::debug_print("\tsent downlink\n");
 
     } else if (system_order.at(current_system)->system == deck->get_sys_for_name("housekeeping")) {
         utilities::debug_print("managing housekeeping system\n");
         SystemManager* housekeeping = Circle::get_sys_man_for_name("housekeeping");
         // read out both sensors (0x01 0xf2, then 0x02 0xf2)
         // then start a new conversion (0x01 0xf0, then 0x02 0xf0)
+
+        // return Formatter-only HK data here.
+
+        if (housekeeping->system_state == SYSTEM_STATE::DISCONNECT) {
+            utilities::error_log("Circle::manage_systems()\thousekeeping\thas been DISCONNECTed.");
+            return;
+        }
 
         transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
 
@@ -633,10 +646,20 @@ void Circle::manage_systems() {
                     DownlinkBufferElement dbe_intro(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::INTRO);
                     dbe_intro.set_payload(packet_intro);
                     transport->downlink_buffer->enqueue(dbe_intro);
-                } else {
-                    // abandon this one.
                 }
             }
+        }
+
+        if (zero_finder == 0) {
+            utilities::error_print("Housekeeping failed to respond!\n");
+            utilities::error_print("\tcanceling socket operations...\n");
+            transport->local_tcp_housekeeping_sock.cancel();
+            utilities::error_print("\tclosing socket...\n");
+            transport->local_tcp_housekeeping_sock.close();
+            housekeeping->enable = 0x00;
+            utilities::error_print("\tDISCONNECTing housekeeping!\n");
+            Circle::get_sys_man_for_name("housekeeping")->system_state = SYSTEM_STATE::DISCONNECT;
+            return;
         }
 
         housekeeping->counter += 1;
