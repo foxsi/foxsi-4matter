@@ -14,7 +14,7 @@
 
 
 int main(int argc, char** argv) {
-    utilities::setup_logs_nowtime("log/");
+    utilities::setup_logs_nowtime("/home/foxsi/foxsi-4matter/log/");
 
     utilities::debug_log("main check debug log");
     utilities::error_log("main check error log");
