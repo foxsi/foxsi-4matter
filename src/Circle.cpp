@@ -452,7 +452,7 @@ void Circle::manage_systems() {
         }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-        std::this_thread::sleep_for(delay_inter_cmos_ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     } else if (system_order.at(current_system)->system == deck->get_sys_for_name("cmos2")) {
         utilities::debug_print("managing cmos2\n");
