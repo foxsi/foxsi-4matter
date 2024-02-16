@@ -619,6 +619,9 @@ std::vector<uint8_t> FramePacketizer::get_header() {
 SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>& new_uplink_buffer): system(new_system), uplink_buffer(new_uplink_buffer) {
     flight_state = FLIGHT_STATE::AWAIT;
     system_state = SYSTEM_STATE::OFF;
+
+    counter = 0;
+    enable = 0;
 }
 
 // SystemManager::SystemManager(SystemManager& other):

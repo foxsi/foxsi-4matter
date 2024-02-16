@@ -51,6 +51,8 @@ class Circle {
          */
         void manage_systems();
 
+        void flush();
+
         void normalize_times_to_period();
 
         std::vector<std::shared_ptr<SystemManager>> system_order;

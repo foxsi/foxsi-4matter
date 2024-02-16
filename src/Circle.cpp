@@ -319,6 +319,7 @@ void Circle::init_timepix() {
 void Circle::manage_systems() {
 
     record_uplink();    // trying to implement uplink without blocking everything
+    flush();
 
     auto cdtede = *Circle::get_sys_man_for_name("cdtede");
     auto cdte1 = *Circle::get_sys_man_for_name("cdte1");
@@ -331,6 +332,7 @@ void Circle::manage_systems() {
     utilities::debug_print("\n");
     std::chrono::milliseconds delay_inter_cdte_ms(10);
     std::chrono::milliseconds delay_inter_cmos_ms(10);
+    
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order.at(current_system)->system_state == SYSTEM_STATE::ABANDON) {
         utilities::error_print("current system " + system_order.at(current_system)->system.name + " was abandoned! Continuing.\n");
@@ -506,11 +508,16 @@ void Circle::manage_systems() {
         utilities::debug_print("\tsent all\n");
         
         // if got no response, resize these so they are full of zero and correct length:
+        if (flags_response.size() + hk_response.size() + rates_response.size() == 0) {
+            utilities::error_log("Circle::manage_systems\ttimepix\tgot no replies.");
+            return;
+        }
+
         flags_response.resize(flags_req_cmd.get_uart_reply_length());
         hk_response.resize(hk_req_cmd.get_uart_reply_length());
         rates_response.resize(rates_req_cmd.get_uart_reply_length());
 
-        utilities::debug_print("\tresized all\n");
+        // utilities::debug_print("\tresized all\n");
 
         // build the downlink packet:
         std::vector<uint8_t> downlink;
@@ -544,24 +551,95 @@ void Circle::manage_systems() {
 
         transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
 
-        // todo: resolve this packet structure
+        size_t zero_finder = 1;
+        if (housekeeping->counter % 5 == 0) {
+            utilities::debug_log("Circle::manage_systems()\thousekeeping\ttrying read.");
+            // unix timestamp
+            std::vector<uint8_t> reply_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
+            if (housekeeping->enable & 0x01) {
+                utilities::debug_log("Circle::manage_systems()\thousekeeping\treading power.");
+                // do read power ADC
+                std::vector<uint8_t> adc_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xa0));
+                
+                zero_finder *= adc_reply.size();
 
-        // unix timestamp
-        // std::vector<uint8_t> reply_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
+                utilities::debug_print("adc:\t" + utilities::bytes_to_string(adc_reply) + "\n");
+                
+                if (adc_reply.size() > 0) {
+                    std::vector<uint8_t> packet_power = {0x04, 0x00};
+                    packet_power.insert(packet_power.end(), reply_time.begin(), reply_time.end());
+                    packet_power.insert(packet_power.end(), adc_reply.begin(), adc_reply.end());
+                    DownlinkBufferElement dbe_power(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::POW);
+                    dbe_power.set_payload(packet_power);
+                    transport->downlink_buffer->enqueue(dbe_power);
+                }
+            }
+            if (housekeeping->enable & 0x02) {
+                // do read RTD data
+                std::vector<uint8_t> temp1_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
+                std::vector<uint8_t> temp2_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
+                
+                zero_finder *= temp1_reply.size();
+                zero_finder *= temp2_reply.size();
 
-        // rtd readings:
-        // std::vector<uint8_t> temp1_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
-        // std::vector<uint8_t> temp2_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
-        // power adc reading:
-        // std::vector<uint8_t> adc_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xa0));
-        // // microcontroller clock counter reading:
-        // std::vector<uint8_t> clock_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8e));
-        // // flight state reading:
-        // std::vector<uint8_t> state_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xf0));
-        // // microcontroller error state reading:
-        // std::vector<uint8_t> error_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8f));
+                utilities::debug_print("temp1:\t" + utilities::bytes_to_string(temp1_reply) + "\n");
+                utilities::debug_print("temp2:\t" + utilities::bytes_to_string(temp2_reply) + "\n");
 
-        // size_t any_zero = temp1_reply.size() * temp2_reply.size();// * adc_reply.size() * clock_reply.size() * state_reply.size() * error_reply.size();
+                if (temp1_reply.size() > 0) {
+                    std::vector<uint8_t> packet_temp1 = {0x01, 0x00};
+                    packet_temp1.insert(packet_temp1.end(), reply_time.begin(), reply_time.end());
+                    packet_temp1.insert(packet_temp1.end(), temp1_reply.begin(), temp1_reply.end());
+                    DownlinkBufferElement dbe_temp1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
+                    dbe_temp1.set_payload(packet_temp1);
+                    transport->downlink_buffer->enqueue(dbe_temp1);
+                    // start a new conversion
+                    transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
+                }
+                
+                if (temp2_reply.size() > 0) {
+                    std::vector<uint8_t> packet_temp2 = {0x02, 0x00};
+                    packet_temp2.insert(packet_temp2.end(), reply_time.begin(), reply_time.end());
+                    packet_temp2.insert(packet_temp2.end(), temp2_reply.begin(), temp2_reply.end());
+                    DownlinkBufferElement dbe_temp2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
+                    dbe_temp2.set_payload(packet_temp2);
+                    transport->downlink_buffer->enqueue(dbe_temp2);
+                    // start a new conversion
+                    transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
+                }
+            }
+            if (housekeeping->enable & 0x04) {
+                // do read introspection
+                // // microcontroller clock counter reading:
+                std::vector<uint8_t> clock_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8e));
+                // flight state reading:
+                std::vector<uint8_t> state_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0xf0));
+                // microcontroller error state reading:
+                std::vector<uint8_t> error_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8f));
+
+                zero_finder *= clock_reply.size();
+                zero_finder *= state_reply.size();
+                zero_finder *= error_reply.size();
+
+                utilities::debug_print("stt:\t" + utilities::bytes_to_string(state_reply) + "\n");
+                utilities::debug_print("clk:\t" + utilities::bytes_to_string(clock_reply) + "\n");
+                utilities::debug_print("err:\t" + utilities::bytes_to_string(error_reply) + "\n");
+
+                if (clock_reply.size() * state_reply.size() * error_reply.size() != 0) {
+                    std::vector<uint8_t> packet_intro = {0x07, 0x00};
+                    packet_intro.insert(packet_intro.end(), reply_time.begin(), reply_time.end());      // 4 B
+                    packet_intro.insert(packet_intro.end(), clock_reply.begin(), clock_reply.end());    // 2 B
+                    packet_intro.insert(packet_intro.end(), state_reply.begin(), state_reply.end());    // 2 B
+                    packet_intro.insert(packet_intro.end(), error_reply.begin(), error_reply.end());    // 2 B
+                    DownlinkBufferElement dbe_intro(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::INTRO);
+                    dbe_intro.set_payload(packet_intro);
+                    transport->downlink_buffer->enqueue(dbe_intro);
+                } else {
+                    // abandon this one.
+                }
+            }
+        }
+
+        housekeeping->counter += 1;
 
         // if (any_zero == 0) {
         //     utilities::error_print("Housekeeping failed to respond!\n");
@@ -577,51 +655,7 @@ void Circle::manage_systems() {
         //     // transport->local_tcp_housekeeping_sock.connect(transport->remote_tcp_housekeeping_endpoint);
         // }
 
-        // utilities::debug_print("temp1:\t" + utilities::bytes_to_string(temp1_reply) + "\n");
-        // utilities::debug_print("temp2:\t" + utilities::bytes_to_string(temp2_reply) + "\n");
-        // // utilities::debug_print("adc:\t" + utilities::bytes_to_string(adc_reply) + "\n");
-        // // utilities::debug_print("stt:\t" + utilities::bytes_to_string(state_reply) + "\n");
-        // // utilities::debug_print("clk:\t" + utilities::bytes_to_string(clock_reply) + "\n");
-        // // utilities::debug_print("err:\t" + utilities::bytes_to_string(error_reply) + "\n");
-
-        // std::vector<uint8_t> packet_temp1 = {0x01, 0x00};
-        // std::vector<uint8_t> packet_temp2 = {0x02, 0x00};
-        // std::vector<uint8_t> packet_power = {0x04, 0x00};
-        // std::vector<uint8_t> packet_intro = {0x07, 0x00};
-
-        // packet_temp1.insert(packet_temp1.end(), reply_time.begin(), reply_time.end());
-        // packet_temp1.insert(packet_temp1.end(), temp1_reply.begin(), temp1_reply.end());
-        // packet_temp2.insert(packet_temp2.end(), reply_time.begin(), reply_time.end());
-        // packet_temp2.insert(packet_temp2.end(), temp2_reply.begin(), temp2_reply.end());
-
-        // packet_power.insert(packet_power.end(), reply_time.begin(), reply_time.end());
-        // // packet_power.insert(packet_power.end(), adc_reply.begin(), adc_reply.end());
-
-        // packet_intro.insert(packet_intro.end(), reply_time.begin(), reply_time.end());      // 4 B
-        // // packet_intro.insert(packet_intro.end(), clock_reply.begin(), clock_reply.end());    // 2 B
-        // // packet_intro.insert(packet_intro.end(), state_reply.begin(), state_reply.end());    // 2 B
-        // // packet_intro.insert(packet_intro.end(), error_reply.begin(), error_reply.end());    // 2 B
-
-        // DownlinkBufferElement dbe_temp1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
-        // DownlinkBufferElement dbe_temp2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
-        // // DownlinkBufferElement dbe_power(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::POW);
-        // // DownlinkBufferElement dbe_intro(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::INTRO);
-
-        // dbe_temp1.set_payload(packet_temp1);
-        // dbe_temp2.set_payload(packet_temp2);
-        // // dbe_power.set_payload(packet_power);
-        // // dbe_intro.set_payload(packet_intro);
-
-        // transport->downlink_buffer->enqueue(dbe_temp1);
-        // transport->downlink_buffer->enqueue(dbe_temp2);
-        // // transport->downlink_buffer->enqueue(dbe_power);
-        // // transport->downlink_buffer->enqueue(dbe_intro);
-
-        // bool has_data = transport->sync_udp_send_all_downlink_buffer();
-
-        // // start new temperature conversion
-        // transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
-        // transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
+        bool has_data = transport->sync_udp_send_all_downlink_buffer();
         
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
@@ -645,6 +679,12 @@ void Circle::normalize_times_to_period() {
 void Circle::record_uplink() {
     // transport->sync_udp_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
     transport->sync_uart_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
+}
+
+void Circle::flush() {
+    transport->sync_tcp_read_some(transport->local_tcp_sock, std::chrono::milliseconds(1));
+    transport->sync_tcp_read_some(transport->local_tcp_housekeeping_sock, std::chrono::milliseconds(1));
+    utilities::debug_log("Circle::flush()\tflushed.");
 }
 
 boost::asio::chrono::milliseconds Circle::get_state_time()

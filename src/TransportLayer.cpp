@@ -236,6 +236,37 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
     return false;
 }
 
+bool TransportLayerMachine::check_formatter_intercept_cmd(uint8_t sys, uint8_t cmd) {
+    if (sys == 0x02) {
+        if ((cmd >> 4) == 0x03) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TransportLayerMachine::handle_intercept_cmd(SystemManager& sys_man, Command cmd) {
+    if (!check_formatter_intercept_cmd(sys_man.system.hex, cmd.hex)) {
+        return false;
+    }
+
+    utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\thandling intercept command " + std::to_string(cmd.hex) + " for system " + std::to_string(sys_man.system.hex));
+
+    if (sys_man.system.name == "housekeeping") {
+        // note here we are directly using the command hex code, not the content of the command.
+        if (0x30 == cmd.hex) {
+            // clear reading
+            sys_man.enable = 0x00;
+        } else if (0x31 <= cmd.hex && cmd.hex <= 0x33 ) {
+            // enable read of the last 
+            sys_man.enable |= cmd.hex & 0x0f;
+        }
+        utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\tset housekeeping enable to " + std::to_string(sys_man.enable) + ".");
+    }
+
+    return true;
+}
+
 void TransportLayerMachine::set_socket_options() {
     boost::asio::socket_base::reuse_address reuse_addr_option(true);
     std::cout << "trying to set ::reuse_address\n";
@@ -824,6 +855,10 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
         
         if (reply.size() > 0) {
             utilities::debug_print("got reply to command: " + utilities::bytes_to_string(reply) + "\n");
+
+            DownlinkBufferElement reply_dbe(&(sys_man.system), &(commands->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::REPLY);
+            reply_dbe.set_payload(reply);
+            downlink_buffer->enqueue(reply_dbe);
         }
 
         // check receive size, compare to downlink max payload size. Then do:
@@ -838,6 +873,11 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
 
 std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemManager &sys_man, Command cmd) {
     utilities::debug_print("in sync_send_command_to_system() " + sys_man.system.name + "\n");
+    
+    if (TransportLayerMachine::handle_intercept_cmd(sys_man, cmd)) {
+        return {};
+    }
+    
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 	std::vector<uint8_t> reply;
     size_t expected_size = 0;

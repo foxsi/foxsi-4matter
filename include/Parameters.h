@@ -120,6 +120,7 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     POW                 = 0x11,
     RTD                 = 0x12,
     INTRO               = 0x13,
+    REPLY               = 0x30,
     NONE                = 0xff
 };
 

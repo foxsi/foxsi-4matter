@@ -445,6 +445,15 @@ class TransportLayerMachine {
          */
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
 
+        bool check_formatter_intercept_cmd(uint8_t sys, uint8_t cmd);
+        
+        /**
+         * @brief implements response to commands that should be intercepted by Formatter and handled.
+         * @return true if the command should be handled by Formatter (regardless of success).
+         * @return false if the command should be handled directly by the `sys_man`.
+        */
+        bool handle_intercept_cmd(SystemManager& sys_man, Command cmd);
+
     private:
         bool do_uart;
         
