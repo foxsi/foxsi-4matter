@@ -131,10 +131,10 @@ int main(int argc, char** argv) {
     order.emplace_back(std::move(cdte1_manager));
     order.emplace_back(std::move(cdte2_manager));
     order.emplace_back(std::move(cmos1_manager));
+    order.emplace_back(std::move(cdtede_manager));
     order.emplace_back(std::move(housekeeping_manager));
     order.emplace_back(std::move(cdte3_manager));
     order.emplace_back(std::move(cdte4_manager));
-    order.emplace_back(std::move(cdtede_manager));
     order.emplace_back(std::move(cmos2_manager));
     order.emplace_back(std::move(timepix_manager));
     order.emplace_back(std::move(uplink_manager));      // added uplink_manager to the loop order so it is accessible inside Circle.

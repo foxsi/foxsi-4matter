@@ -413,6 +413,8 @@ void Circle::manage_systems() {
         if (hk.size() > 0) {
             std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte4.system);
             DownlinkBufferElement dbe(&(cdte4.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+            dbe.set_packets_per_frame(1);
+            dbe.set_this_packet_index(1);
             dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);
@@ -422,6 +424,19 @@ void Circle::manage_systems() {
 
         // delay before reading again to avoid duplicate 
         std::this_thread::sleep_for(delay_inter_cdte_ms);
+
+    } else if (system_order.at(current_system)->system == deck->get_sys_for_name("cdtede")) {
+        utilities::debug_print("managing cdtede system\n");
+
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
+        std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdtede, deck->get_command_for_sys_for_code(cdtede.system.hex, 0xaf));
+        if (hk.size() > 0) {
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdtede.system);
+            DownlinkBufferElement dbe(&(cdtede.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+            dbe.set_payload(hk_data);
+            // queue and send the downlink buffer:
+            transport->downlink_buffer->enqueue(dbe);
+        }
 
     } else if (system_order.at(current_system)->system == deck->get_sys_for_name("cmos1")) {
         utilities::debug_print("managing cmos1\n");
