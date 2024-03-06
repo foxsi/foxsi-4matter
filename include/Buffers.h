@@ -461,6 +461,8 @@ class SystemManager {
             std::queue<UplinkBufferElement>& new_uplink_buffer
         );
 
+        void clear_errors();
+
         void add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer);
         void add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketFramer* new_packet_framer);
 
@@ -475,6 +477,8 @@ class SystemManager {
 
         FLIGHT_STATE flight_state;
         SYSTEM_STATE system_state;
+
+        uint16_t errors;
 
         /**
          * @brief Track which type of remote memory this `System` is currently reading.

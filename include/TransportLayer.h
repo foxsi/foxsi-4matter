@@ -388,6 +388,9 @@ class TransportLayerMachine {
 
         void sync_udp_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
         // implemented. todo: try splitting into a "receiving" and "enqueuing" part that bind to each other.
+        
+        // todo: add sync_uart_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
+        
         void async_udp_receive_to_uplink_buffer();
         
         void async_udp_send_downlink_buffer();

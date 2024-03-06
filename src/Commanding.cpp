@@ -254,7 +254,8 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 auto placed = commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
                 
                 if (!placed.second) {
-                    utilities::error_print("failed to add command!\n");
+                    utilities::error_log("CommandDeck::CommandDeck()\tfailed to add command (sys: " + std::to_string(this_system.hex) + ", cmd: " + std::to_string(this_command.hex) +") to deck.");
+                    // utilities::error_print("failed to add command!\n");
                     continue;
                 }
 
@@ -329,12 +330,14 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 commands[this_system.hex].insert(std::make_pair(this_hex, this_command));
             
             } else if(this_system.type == COMMAND_TYPE_OPTIONS::SPI) {
-                utilities::error_print("SPI commands are unimplemented!\n");
+                // utilities::error_print("SPI commands are unimplemented!\n");
+                utilities::error_log("CommandDeck::CommandDeck()\tSPI commanding unimplemented.");
                 // TODO: add more here for SPI
 
             } else {
-                std::cerr << "unknown file for " + this_system.name + " found in CommandDeck constructor.\n";
-                exit(0);
+                utilities::error_log("CommandDeck::CommandDeck()\tunknown COMMAND_TYPE for system " + std::to_string(this_system.hex) + ".");
+                // std::cerr << "unknown file for " + this_system.name + " found in CommandDeck constructor.\n";
+                // exit(0);
             }
         }
         // add all the commands for this system to the total deck
@@ -525,7 +528,8 @@ System& CommandDeck::get_sys_for_name(std::string name) {
     }
 
     // return some default error System
-    utilities::error_print("found no system with name " + name + "\n");
+    // utilities::error_print("found no system with name " + name + "\n");
+    utilities::error_log("CommandDeck::get_sys_for_name()\tcould not find system with name " + name);
     static System null_sys = System("null", 0xFF);
     return null_sys;
 }
@@ -540,7 +544,8 @@ System& CommandDeck::get_sys_for_code(uint8_t code) {
     }
     
     // return some default error System
-    utilities::error_print("found no system with code " + std::to_string(code) + "\n");
+    // utilities::error_print("found no system with code " + std::to_string(code) + "\n");
+    utilities::error_log("CommandDeck::get_sys_for_code()\tcould not find system with code " + std::to_string(code));
     static System null_sys = System("null", 0xFF);
     return null_sys;
 }
@@ -556,22 +561,18 @@ std::string CommandDeck::get_sys_name_for_code(uint8_t code) {
 Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
     // check for key `sys` in outer map
     if(commands.contains(sys)) {
-        // utilities::debug_print("\tcontains sys\n");
         // check for key `code` in inner map
         if(commands[sys].contains(code)) {
-            // utilities::debug_print("\tcontains code\n");
-            // utilities::debug_print("\tsystem: " + CommandDeck::get_sys_name_for_code(sys) + "\n");
-            // return (commands[sys][code]);
             return commands.at(sys).at(code);
         }
-        // throw std::runtime_error("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
-        utilities::error_print("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        // utilities::error_print("couldn't find " + std::to_string(code) + " in CommandDeck.commands\n");
+        utilities::error_log("CommandDeck::get_command_for_sys_for_code()\tcould not find code " + std::to_string(code));
         // std::cout << "couldn't find " + std::to_string(code) + " in CommandDeck.commands\n";
         static Command null_command = Command();
         return null_command;
     }
-    // throw std::runtime_error("couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n");
-    std::cout << "couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n";
+    // std::cout << "couldn't find " + std::to_string(sys) + " in CommandDeck.systems\n";
+    utilities::error_log("CommandDeck::get_command_for_sys_for_code()\tcould not find system " + std::to_string(sys));
     static Command null_command = Command();
     return null_command;
     
@@ -579,8 +580,7 @@ Command& CommandDeck::get_command_for_sys_for_code(uint8_t sys, uint8_t code) {
 
 std::vector<uint8_t> CommandDeck::make_spw_header_(System sys, Command cmd) {
     if (sys.type != COMMAND_TYPE_OPTIONS::SPW) {
-        // todo: throw
-        std::cout << "future exception in CommandDeck::make_spw_header_()\n";
+        utilities::error_log("CommandDeck::make_spw_header_()\trequires sys.type SpaceWire");
     }
 
     std::vector<uint8_t> header;
@@ -677,7 +677,8 @@ std::vector<uint8_t> CommandDeck::make_spw_packet_for_sys_for_command(System sys
 
 std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys, Command cmd) {
     if (sys != get_sys_for_name("housekeeping")) {
-        utilities::error_print("Ethernet commanding only implemented for housekeeping system!");
+        // utilities::error_print("Ethernet commanding only implemented for housekeeping system!");
+        utilities::error_log("CommandDeck::make_eth_packet_for_sys_for_command()\texpects Ethernet interface for housekeeping system.");
         return {0x00};
     }
 
@@ -691,7 +692,8 @@ std::vector<uint8_t> CommandDeck::make_eth_packet_for_sys_for_command(System sys
 
 std::vector<uint8_t> CommandDeck::make_uart_packet_for_sys_for_command(System sys, Command cmd) {
     if (sys != get_sys_for_name("timepix")) {
-        utilities::error_print("UART commanding only implemented for timepix system!");
+        // utilities::error_print("UART commanding only implemented for timepix system!");
+        utilities::error_log("CommandDeck::make_uart_packet_for_sys_for_command()\tUART commands only implemented for timepix system.");
         return {0x00};
     }
 
@@ -702,13 +704,12 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
     Command command = CommandDeck::get_command_for_sys_for_code(sys, code);
     System system = CommandDeck::get_sys_for_code(sys);
     
-    // todo: eliminate switch case and protocol-specific functions. can detect command interface from System::type
     switch(command.type) {
         case COMMAND_TYPE_OPTIONS::SPW:
             return CommandDeck::make_spw_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::SPI:
-            std::cout << "SPI COMMAND TYPE NOT IMPLEMENTED\n";
+            utilities::error_log("CommandDeck::get_command_bytes_for_sys_for_code()\tSPI interface is not implemented.");
             return {0x00};
             break;
         case COMMAND_TYPE_OPTIONS::ETHERNET:
@@ -718,11 +719,12 @@ std::vector<uint8_t> CommandDeck::get_command_bytes_for_sys_for_code(uint8_t sys
             return CommandDeck::make_uart_packet_for_sys_for_command(system, command);
             break;
         case COMMAND_TYPE_OPTIONS::NONE:
-            std::cout << "NONE COMMAND TYPE NOT IMPLEMENTED\n";
+            utilities::error_log("CommandDeck::get_command_bytes_for_sys_for_code()\tgot ::NONE command type.");
             return {0x00};
             break;
         default:
-            throw "command selection fell through!\n";
+            utilities::error_log("CommandDeck::get_command_bytes_for_sys_for_code()\tcommand type fell through.");
+            return {};
     }
 }
 
@@ -1108,8 +1110,8 @@ std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address(uint8_t sy
     // make sure the System has info on SpaceWire:
     System& sys_obj = get_sys_for_code(sys);
     if(!sys_obj.spacewire) {
-        utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
-        utilities::debug_print("for system " + sys_obj.name + " with code key " + std::to_string(sys) + "\n");
+        // utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
+        utilities::error_log("CommandDeck::get_read_command_for_sys_at_address()\trequires SpaceWire interface for commanding.");
         return {};
     }
     
@@ -1144,8 +1146,8 @@ std::vector<uint8_t> CommandDeck::get_read_command_for_sys_at_address_and_transa
 
     System& sys_obj = get_sys_for_code(sys);
     if(!sys_obj.spacewire) {
-        utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
-        utilities::debug_print("for system " + sys_obj.name + " with code key " + std::to_string(sys) + "\n");
+        // utilities::error_print("CommandDeck requires non-null System::spacewire interface for commanding.\n");
+        utilities::error_log("CommandDeck::get_read_command_for_sys_at_address_and_transaction_id()\trequires SpaceWire interface for commanding.");
         return {};
     }
     

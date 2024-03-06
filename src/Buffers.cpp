@@ -23,7 +23,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
 
     if (!to_system->ethernet) {
         // todo: throw
-        utilities::error_print("DownlinkBufferElement must use non-null System::ethernet interface\n");
+        utilities::error_log("DownlinkBufferElement::DownlinkBufferElement() got null System::ethernet interface.");
     }
 
     // packet size is limited by the outgoing interface
@@ -90,11 +90,10 @@ void DownlinkBufferElement::set_payload(std::vector<uint8_t> new_payload) {
     if(check_payload_fits(new_payload)) {
         payload = new_payload;
     } else {
-        utilities::error_print("DownlinkBufferElement payload "); 
-        utilities::hex_print(new_payload);
-        utilities::error_print(" doesn't fit in " + std::to_string(get_max_packet_size()) + "-sized packet!\n");
-        // std::cout << "DownlinkBufferElement payload doesn't fit!\n";
-        // todo: raise except
+        utilities::error_log("DownlinkBufferElement::set_payload()\tgot too large payload with size " + std::to_string(new_payload.size()) + " B.");
+        utilities::error_log("DownlinkBufferElement::set_payload()\t" + DownlinkBufferElement::to_string());
+
+        // utilities::error_print(" doesn't fit in " + std::to_string(get_max_packet_size()) + "-sized packet!\n");
     }
     
 }
@@ -106,9 +105,10 @@ void DownlinkBufferElement::set_packets_per_frame(uint16_t new_packets_per_frame
 void DownlinkBufferElement::set_this_packet_index(uint16_t new_this_packet_index) {
     if(new_this_packet_index > packets_per_frame) {
         // todo: raise except
-        utilities::error_print("future exception in DownlinkBufferElement::set_this_packet_index for desired index " + std::to_string(new_this_packet_index) + ". State: ");
-        utilities::error_print(to_string() + "\n");
-
+        utilities::error_log("DownlinkBufferElement::set_this_packet_index()\tgot new_this_packet_index " + std::to_string(new_this_packet_index) + " which is larger than " + std::to_string(packets_per_frame));
+        utilities::error_log("DownlinkBufferElement::set_this_packet_index()\t" + DownlinkBufferElement::to_string());
+        // utilities::error_print("future exception in DownlinkBufferElement::set_this_packet_index for desired index " + std::to_string(new_this_packet_index) + ". State: ");
+        // utilities::error_print(to_string() + "\n");
     }
     this_packet_index = new_this_packet_index;
 }
@@ -303,7 +303,9 @@ void PacketFramer::clear_frame() {
 
 void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
     if (frame_done || frame.size() == frame_size) {
-        utilities::error_print("adding packet to full FramePacketizer::frame! refusing.\n");
+        // utilities::error_print("adding packet to full FramePacketizer::frame! refusing.\n");
+        utilities::error_log("PacketFramer::push_to_frame()\ttrying to add packet to full frame.");
+        utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         return;
     }
 
@@ -314,14 +316,14 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + subsequent_strip_header_size;
 
             if (frame.size() + new_packet.size() < heads_and_feet_size) {
-                utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+                // utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+                utilities::error_log("PacketFramer::push_to_frame()\tframe underflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
             }
         
         if (frame.size() + new_packet.size() - heads_and_feet_size > frame_size) {
-            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
-            // std::cout << "\tgot packet of size " << std::to_string(new_packet.size()) << " for frame of size " << std::to_string(frame_size) << " with real size " << std::to_string(frame.size()) << "\n";
-
-            utilities::error_print("\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ". shrinking. \n");
+            // utilities::error_print("\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ". shrinking. \n");
+            utilities::debug_log("PacketFramer::push_to_frame()\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ", shrinking.");
 
             new_packet.erase(new_packet.begin(), new_packet.begin() + static_strip_header_size);
             new_packet.erase(new_packet.begin(), new_packet.begin() + subsequent_strip_header_size);
@@ -359,12 +361,14 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + initial_strip_header_size;
         
         if (new_packet.size() - heads_and_feet_size > frame_size) {
-            // todo: throw
-            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
-            utilities::error_print("PacketFramer::push_to_frame() overflow\n");
+            // utilities::error_print("PacketFramer::push_to_frame() overflow\n");
+            utilities::error_log("PacketFramer::push_to_frame()\tframe overflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         }
         if (new_packet.size() < heads_and_feet_size) {
-            utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+            // utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+            utilities::error_log("PacketFramer::push_to_frame()\tframe underflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         }
 
         // erase static and initial headers and footers
@@ -406,11 +410,15 @@ std::vector<uint8_t> PacketFramer::pop_from_frame(size_t block_size) {
 
 uint16_t PacketFramer::get_spw_transaction_id() {
     if (system.hex > 0xf) {
-        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        // utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        utilities::error_log("PacketFramer::get_spw_transaction_id()\tfound invalid system id.");
+        return 0x00;
     }
     // todo: since packet_counter is 1-indexed this may not be true!
-    if (packet_counter > 0xfff | packets_per_frame > 0xfff) {
-        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+    if (packet_counter > 0xfff || packets_per_frame > 0xfff) {
+        // utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        utilities::error_log("PacketFramer::get_spw_transaction_id()\tfound oversized ::packet_counter or ::packets_per_frame.");
+        return 0x00;
     }
 
     uint16_t msb = (system.hex & 0xf) << 12;
@@ -455,7 +463,8 @@ FramePacketizer::FramePacketizer(System &new_system, size_t new_max_packet_size,
 FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS new_type): system(from_system) {
     if (!to_system.ethernet) {
         // todo: throw
-        utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
+        // utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
+        utilities::error_log("FramePacketizer::FramePacketizer()\tcannot create from System without an Ethernet interface.");
     }
     type = new_type;
 
@@ -619,6 +628,8 @@ std::vector<uint8_t> FramePacketizer::get_header() {
 SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>& new_uplink_buffer): system(new_system), uplink_buffer(new_uplink_buffer) {
     flight_state = FLIGHT_STATE::AWAIT;
     system_state = SYSTEM_STATE::OFF;
+
+    errors = 0x00;
 }
 
 // SystemManager::SystemManager(SystemManager& other):
@@ -640,6 +651,10 @@ SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>
 //     flight_state(std::move(other.flight_state)),
 //     system_state(std::move(other.system_state)) {
 // }
+
+void SystemManager::clear_errors() {
+    errors = 0x00;
+}
 
 void SystemManager::add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer) {
     lookup_frame_packetizer[new_type] = new_frame_packetizer;
@@ -669,8 +684,10 @@ PacketFramer* SystemManager::get_packet_framer(RING_BUFFER_TYPE_OPTIONS type) {
     if (it != lookup_packet_framer.end()) {
         return it->second;
     } else {
-        utilities::error_print("could not find ring buffer type in PacketFramer map!\n");
-        throw std::runtime_error("no key in map");
+        // utilities::error_print("could not find ring buffer type in PacketFramer map!\n");
+        utilities::error_log("SystemManager::get_packet_framer()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return nullptr;
     }
 }
 
@@ -679,7 +696,9 @@ FramePacketizer* SystemManager::get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS ty
     if (it != lookup_frame_packetizer.end()) {
         return it->second;
     } else {
-        utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
-        throw std::runtime_error("no key in map");
+        // utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
+        utilities::error_log("SystemManager::get_frame_packetizer()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return nullptr;
     }
 }

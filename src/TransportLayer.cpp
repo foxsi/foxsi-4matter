@@ -154,35 +154,44 @@ TransportLayerMachine::TransportLayerMachine(
     
     set_socket_options();
     
+    utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\tconnecting ::local_tcp_socket.");
     local_tcp_sock.bind(local_tcp_end);
     local_tcp_sock.connect(remote_tcp_endpoint);
-
+    
+    utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\tconnecting ::local_tcp_housekeeping_socket.");
     local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
     local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
 
-    std::cout << "opening serial ports...\n";
+    // std::cout << "opening serial ports...\n";
+    // utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\topening serial ports.");
     try {
-        utilities::debug_print("\topening " + local_uart->tty_path + "\n");
+        // utilities::debug_print("opening " + local_uart->tty_path + "\n");
+        utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\topening " + local_uart->tty_path + ".");
         local_uart_port.open(local_uart->tty_path);
         try {
             set_local_serial_options(local_uart);
         } catch (std::exception& e) {
-            utilities::error_print("failed to set local serial port options!: " + std::string(e.what()) + "\n");
+            // utilities::error_print("failed to set local serial port options!: " + std::string(e.what()) + "\n");
+            utilities::error_log("TransportLayerMachine::TransportLayerMachine()\tfailed to set ::local_uart options: " + std::string(e.what()) + ".");   
         }
     } catch (std::exception& e) {
-        utilities::error_print("failed to open local serial port!: " + std::string(e.what()) + "\n");
+        // utilities::error_print("failed to open local serial port!: " + std::string(e.what()) + "\n");
+        utilities::error_log("TransportLayerMachine::TransportLayerMachine()\tfailed to open ::local_uart port: " + std::string(e.what()) + ".");
     }
 
     try {
         uplink_uart_port.open(uplink_uart->tty_path);
         try {
-            utilities::debug_print("\topening " + uplink_uart->tty_path + "\n");
+            // utilities::debug_print("\topening " + uplink_uart->tty_path + "\n");
+            utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\topening " + uplink_uart->tty_path + ".");
             set_uplink_serial_options(uplink_uart);
         } catch (std::exception& e) {
-            utilities::error_print("failed to set uplink serial port options!: " + std::string(e.what()) + "\n");
+            // utilities::error_print("failed to set uplink serial port options!: " + std::string(e.what()) + "\n");
+            utilities::error_log("TransportLayerMachine::TransportLayerMachine()\tfailed to set ::uplink_uart options: " + std::string(e.what()) + ".");
         }
     } catch (std::exception& e) {
-        utilities::error_print("failed to open uplink serial port!: " + std::string(e.what()) + "\n");
+        // utilities::error_print("failed to open uplink serial port!: " + std::string(e.what()) + "\n");
+        utilities::error_log("TransportLayerMachine::TransportLayerMachine()\tfailed to open ::uplink_uart port: " + std::string(e.what()) + ".");
     }
 }
 
@@ -238,7 +247,8 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
 
 void TransportLayerMachine::set_socket_options() {
     boost::asio::socket_base::reuse_address reuse_addr_option(true);
-    std::cout << "trying to set ::reuse_address\n";
+    // std::cout << "trying to set ::reuse_address\n";
+    utilities::debug_log("TransportLayerMachine::set_socket_options()\tsetting ::reuse_address.");
     
     local_udp_sock.set_option(reuse_addr_option);
     local_tcp_sock.set_option(reuse_addr_option);
@@ -256,7 +266,8 @@ void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port)
     } else if (port->parity == 2) {
         local_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::even));
     } else {
-        utilities::error_print("unacceptable parity option for serial port!\n");
+        // utilities::error_print("unacceptable parity option for serial port!\n");
+        utilities::error_log("TransportLayerMachine::set_local_serial_options()\tgot bad parity option for ::local_uart_port.");
     }
 
     if (port->stop_bits == 1) {
@@ -264,7 +275,8 @@ void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port)
     } else if (port->stop_bits == 2) {
         local_uart_port.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::two));
     } else {
-        utilities::error_print("unacceptable stop bits option for serial port!\n");
+        // utilities::error_print("unacceptable stop bits option for serial port!\n");
+        utilities::error_log("TransportLayerMachine::set_local_serial_options()\tgot bad stop bits option for ::local_uart_port.");
     }
 }
 
@@ -279,7 +291,8 @@ void TransportLayerMachine::set_uplink_serial_options(std::shared_ptr<UART> port
     } else if (port->parity == 2) {
         uplink_uart_port.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::even));
     } else {
-        utilities::error_print("unacceptable parity option for serial port!\n");
+        // utilities::error_print("unacceptable parity option for serial port!\n");
+        utilities::error_log("TransportLayerMachine::set_uplink_serial_options()\tgot bad parity option for ::uplink_uart_port.");
     }
 
     if (port->stop_bits == 1) {
@@ -287,14 +300,15 @@ void TransportLayerMachine::set_uplink_serial_options(std::shared_ptr<UART> port
     } else if (port->stop_bits == 2) {
         uplink_uart_port.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::two));
     } else {
-        utilities::error_print("unacceptable stop bits option for serial port!\n");
+        // utilities::error_print("unacceptable stop bits option for serial port!\n");
+        utilities::error_log("TransportLayerMachine::set_uplink_serial_options()\tgot bad stop bits option for ::uplink_uart_port.");
     }
 }
 
 /* -- network I/F ---------------------------------------- */
 
 void TransportLayerMachine::recv_udp_fwd_tcp() {
-    std::cout << "in recv_udp_fwd_tcp()\n";
+    // std::cout << "in recv_udp_fwd_tcp()\n";
 
     // read incoming UDP data...
     local_udp_sock.async_receive_from(
@@ -305,7 +319,7 @@ void TransportLayerMachine::recv_udp_fwd_tcp() {
 }
 
 void TransportLayerMachine::send_tcp() {
-    std::cout << "in send_tcp\n";
+    // std::cout << "in send_tcp\n";
 
     // forward the buffer uplink_buff over TCP...
     local_tcp_sock.async_send(
@@ -318,7 +332,7 @@ void TransportLayerMachine::send_tcp() {
 }
 
 void TransportLayerMachine::send_uart() {
-    std::cout << "in send_uart\n";
+    // std::cout << "in send_uart\n";
 
     // const std::vector<uint8_t> FRAME1 = {0x03, 0x02, 0x05, 0x07};
     // uart.vsettings(5, FRAME1.size()); // can set up the port with this info or change when needed
@@ -328,7 +342,7 @@ void TransportLayerMachine::send_uart() {
 }
 
 void TransportLayerMachine::recv_uart() {
-    std::cout << "in rec_uart\n";
+    // std::cout << "in rec_uart\n";
 
     // define a vector to be used as a buffer 
     // randomly choose 4
@@ -344,14 +358,19 @@ size_t TransportLayerMachine::read(boost::asio::ip::tcp::socket &socket, std::ve
     while (retry_count < sys_man.timing->retry_max_count && !did_read) {
         std::vector<uint8_t> reply = TransportLayerMachine::sync_tcp_read(socket, buffer.size(), std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (reply.size() == 0) {
-            utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+            // utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+            utilities::error_log("TransportLayerMachine::read()\tattempt " + std::to_string(retry_count) + " failed.");
         } else {
             buffer = reply;
+            // reset read error
+            sys_man.errors = sys_man.errors & ~errors::system::reading_packet;
             return buffer.size();
         }
         ++retry_count;
     }
-    utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    // utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    utilities::error_log("TransportLayerMachine::read()\tall attempts failed.");
+    sys_man.errors |= errors::system::reading_packet;
     return 0;
 }
 
@@ -361,14 +380,18 @@ size_t TransportLayerMachine::read_some(boost::asio::ip::tcp::socket &socket, st
     while (retry_count < sys_man.timing->retry_max_count && !did_read) {
         std::vector<uint8_t> reply = TransportLayerMachine::sync_tcp_read_some(socket, std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (reply.size() == 0) {
-            utilities::error_print("TransportLayerMachine::read_some() attempt "  + std::to_string(retry_count) + " failed.\n");
+            // utilities::error_print("TransportLayerMachine::read_some() attempt "  + std::to_string(retry_count) + " failed.\n");
+            utilities::error_log("TransportLayerMachine::read_some()\tattempt " + std::to_string(retry_count) + " failed.");
         } else {
             buffer = reply;
+            // reset read error
+            sys_man.errors = sys_man.errors & ~errors::system::reading_packet;
             return buffer.size();
         }
         ++retry_count;
     }
-    utilities::error_print("All TransportLayerMachine::read_some() attempts failed!\n");
+    utilities::error_log("TransportLayerMachine::read_some()\tall attempts failed.");
+    sys_man.errors |= errors::system::reading_packet;
     return 0;
 }
 
@@ -378,14 +401,18 @@ size_t TransportLayerMachine::read(boost::asio::serial_port &port, std::vector<u
     while (retry_count < sys_man.timing->retry_max_count && !did_read) {
         std::vector<uint8_t> reply = TransportLayerMachine::sync_uart_read(port, buffer.size(), std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (reply.size() == 0) {
-            utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+            // utilities::error_print("TransportLayerMachine::read() attempt "  + std::to_string(retry_count) + " failed.\n");
+            utilities::error_log("TransportLayerMachine::read()\tattempt " + std::to_string(retry_count) + " failed.");
         } else {
             buffer = reply;
+            // reset read error
+            sys_man.errors = sys_man.errors & ~errors::system::reading_packet;
             return buffer.size();
         }
         ++retry_count;
     }
-    utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    utilities::error_log("TransportLayerMachine::read()\tall attempts failed!\n");
+    sys_man.errors |= errors::system::reading_packet;
     return 0;
 }
 
@@ -396,13 +423,18 @@ size_t TransportLayerMachine::read_udp(boost::asio::ip::udp::socket &socket, std
         std::vector<uint8_t> reply = TransportLayerMachine::sync_udp_read(socket, buffer.size(), std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (reply.size() == 0) {
             // utilities::error_print("TransportLayerMachine::read_udp() attempt "  + std::to_string(retry_count) + " failed.\n");
+            utilities::error_log("TransportLayerMachine::read_udp()\tattempt " + std::to_string(retry_count) + " failed.");
         } else {
             buffer = reply;
+            // reset read error
+            sys_man.errors = sys_man.errors & ~errors::system::reading_packet;
             return buffer.size();
         }
         ++retry_count;
     }
     // utilities::error_print("All TransportLayerMachine::read() attempts failed!\n");
+    utilities::error_log("TransportLayerMachine::read_udp()\tall attempts failed!\n");
+    sys_man.errors |= errors::system::reading_packet;
     return 0;
 }
 
@@ -512,7 +544,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_p
     bool timed_out = TransportLayerMachine::run_uart_context(timeout_ms);
 
     if (timed_out) {
-        utilities::error_print("uart read timed out!\n");
+        // utilities::error_print("uart read timed out!\n");
         return {};
     } else {
         std::vector<uint8_t> swap_copy(uart_local_receive_swap);
@@ -542,7 +574,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_udp_read(boost::asio::ip::udp::
     if (timed_out) {
         return {};
     } else {
-        utilities::debug_print("udp received!\n");
+        // utilities::debug_print("udp received!\n");
         std::vector<uint8_t> swap_copy(udp_local_receive_swap);
         swap_copy.resize(receive_size);
         udp_local_receive_swap.resize(0);
@@ -604,80 +636,103 @@ void TransportLayerMachine::run_tcp_context(SystemManager &sys_man) {
     for (uint32_t i = 0; i < sys_man.timing->retry_max_count; ++i) {
         io_context.run_for(std::chrono::milliseconds(sys_man.timing->timeout_millis));
         if (!io_context.stopped()) {
-            utilities::error_print("Attempt " + std::to_string(i) + " timed out in TransportLayerMachine for " + sys_man.system.name + "!");
+            // utilities::error_print("Attempt " + std::to_string(i) + " timed out in TransportLayerMachine for " + sys_man.system.name + "!");
+            utilities::error_log("TransportLayerMachine::run_tcp_context()\tattempt " + std::to_string(i) + " timed out for " + sys_man.system.name + ".");
         }
     }
 }
 
 size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_man, RING_BUFFER_TYPE_OPTIONS buffer_type, size_t prior_write_pointer) {
-    utilities::debug_print("in sync_remote_buffer_transaction() for " + sys_man.system.name + "\n");
+    // utilities::debug_print("in sync_remote_buffer_transaction() for " + sys_man.system.name + "\n");
+    utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\tcalled.");
 
     if(!sys_man.system.spacewire) {
-        utilities::error_print("require spacewire interface to read ring buffer.\n");
+        // utilities::error_print("require spacewire interface to read ring buffer.\n");
+        utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\trequires sys_man.system.spacewire interface.");
         return prior_write_pointer;
     }
 
     // checking if the ring buffer parameters contains the desired buffer_type
     if(sys_man.system.ring_params.size() < static_cast<uint8_t>(buffer_type)) {
-        utilities::error_print("System::ring_params does not contain the requested buffer type.\n");
+        // utilities::error_print("System::ring_params does not contain the requested buffer type.\n");
+        utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\tsystem does not contain the requested buffer type.");
         return prior_write_pointer;
     }
     
     // select the ring buffer parameter object to use for this interaction
     RingBufferParameters ring_params(sys_man.system.ring_params.at(buffer_type));
-    utilities::debug_print("\tcan access ring buffer parameters\n");
+    // utilities::debug_print("\tcan access ring buffer parameters\n");
 
     // get write address width
     uint8_t write_pointer_width = ring_params.write_pointer_width_bytes;
     // get write address as byte stream
     std::vector<uint8_t> write_pointer_bytes(utilities::splat_to_nbytes(write_pointer_width, ring_params.write_pointer_address));
-    utilities::debug_print("\twrite pointer width: " + std::to_string(write_pointer_width) + "\n");
+    // utilities::debug_print("\twrite pointer width: " + std::to_string(write_pointer_width) + "\n");
 
     // packet to read write point:
     std::vector<uint8_t> write_pointer_request_packet(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, write_pointer_width));
-    utilities::debug_print("\tsending read command: ");
-    utilities::spw_print(write_pointer_request_packet, sys_man.system.spacewire);
+    // utilities::debug_print("\tsending read command: ");
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tsending write pointer request: " + utilities::bytes_to_string(write_pointer_request_packet));
+    // utilities::spw_print(write_pointer_request_packet, sys_man.system.spacewire);
     
     // RMAP read request the write pointer:
     local_tcp_sock.send(boost::asio::buffer(write_pointer_request_packet));
-    utilities::debug_print("\trequested remote write pointer\n");
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\twaiting for write pointer reply.");
 
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
     size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, last_reply, sys_man);
-    utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
+    // utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
     
     // wrap the reply vector to the correct length:
     last_reply.resize(reply_len);
 
     // if read length is too short:
     if (reply_len < 26) {
-        utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
-        utilities::hex_print(last_reply);
+        // utilities::error_print("received only " + std::to_string(reply_len) + " of data (26 requred):\n\t");
+        // utilities::hex_print(last_reply);
+        utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\treceived only " + std::to_string(reply_len) + " bytes.");
+        sys_man.errors |= errors::system::reading_invalid;
         return prior_write_pointer;
     } else {
-        utilities::spw_print(last_reply, nullptr);
+        // utilities::spw_print(last_reply, nullptr);
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tgot write pointer reply " + utilities::bytes_to_string(last_reply) + ".");
     }
 
     // extract the data field from the reply:
     std::vector<uint8_t> last_write_pointer_bytes(get_reply_data(last_reply, sys_man.system));
     if(last_write_pointer_bytes.size() != 4) {
-        utilities::error_print("got bad write pointer length!\n");
+        // utilities::error_print("got bad write pointer length!\n");
+        utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\twrite pointer length incorrect.");
+        sys_man.errors |= errors::system::reading_invalid;
+        return prior_write_pointer;
     }
-    utilities::debug_print("\textracted write pointer from reply: ");
-    utilities::hex_print(last_write_pointer_bytes);
+    // utilities::debug_print("\textracted write pointer from reply: ");
+    // utilities::hex_print(last_write_pointer_bytes);
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tgot write pointer: " + utilities::bytes_to_string(last_write_pointer_bytes) + ".");
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
         last_write_pointer_bytes = utilities::swap_endian4(last_write_pointer_bytes);
-        utilities::debug_print("\tfound cmos, swapped endianness\n");
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tfound cmos; swapped endianness.");
+        // utilities::debug_print("\tfound cmos, swapped endianness\n");
     }
     // later, use EVTM? Or a union object?
     FramePacketizer* fp(sys_man.get_frame_packetizer(buffer_type));
-    utilities::debug_print("\tgot pointer to fp: " + fp->to_string());
+    if (!fp) {
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tcould not get FramePacketizer.");
+        sys_man.errors |= errors::system::frame_packetizing;
+        return prior_write_pointer;
+    }
     PacketFramer* pf(sys_man.get_packet_framer(buffer_type));
-    utilities::debug_print("\tgot pointer to pf: " + pf->to_string());
+    if (!pf) {
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tcould not get PacketFramer.");
+        sys_man.errors |= errors::system::packet_framing;
+        return prior_write_pointer;
+    }
+    // utilities::debug_print("\tgot pointer to fp: " + fp->to_string());
+    // utilities::debug_print("\tgot pointer to pf: " + pf->to_string());
 
     size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
 
@@ -692,7 +747,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
 
     // check if we are reading a duplicate frame (interlock with Circle::manager_systems() context)
     if (last_write_pointer == prior_write_pointer) {
-        utilities::debug_print("write pointer has not advanced, skipping\n");
+        // utilities::debug_print("write pointer has not advanced, skipping\n");
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tskipping. write pointer has not advanced.");
         return prior_write_pointer;
     }
 
@@ -716,7 +772,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         // receive the command response:
         // want 1825 bytes back for CdTe (runtime constant per foxsi4-commands/systems.json)
         size_t expected_size = sys_man.system.spacewire->static_footer_size + sys_man.system.spacewire->static_header_size + sys_man.system.ethernet->max_payload_size;
-        utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
+        // utilities::debug_print("\t\twaiting to receive " + std::to_string(expected_size) + " from system\n");
         std::vector<uint8_t> last_buffer_reply(expected_size);
 
         // read, using timeout/retry properties in `sys_man`
@@ -725,7 +781,9 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         // error if incorrect length is read
         last_buffer_reply.resize(reply_len);
         if (reply_len != expected_size) {
-            utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+            // utilities::error_print("expected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + "\n");
+            utilities::error_log("TransportLayerMachine::sync_remote_buffer_transaction()\texpected " + std::to_string(expected_size) + " bytes but received " + std::to_string(reply_len) + ".");
+            sys_man.errors |= errors::system::reading_packet;
             return prior_write_pointer;
         }
         
@@ -742,17 +800,20 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         ++packet_counter;
     }
     // write to log
-    utilities::debug_log("frame read time (ms): ");
-    utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
+    // utilities::debug_log("frame read time (ms): ");
+    // utilities::debug_log(std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()));
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tread frame in " + std::to_string(std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - frame_start_time).count()) + " ms.");
 
     // hand the complete frame to the packetizer
     fp->set_frame(pf->get_frame());
-    utilities::debug_print("\tset frame packetizer frame\n");
-    utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
+    // utilities::debug_print("\tset frame packetizer frame\n");
+    // utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
     
     // write to log
-    utilities::debug_log("PacketFramer::frame: ");
-    utilities::trace_log(pf->get_frame());
+    // utilities::debug_log("PacketFramer::frame: ");
+    // utilities::trace_log(pf->get_frame());
+
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tcreated downlink packets.");
 
     // push the frame onto the downlink queue
     while (!fp->frame_emptied()) {
@@ -761,16 +822,26 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         downlink_buffer->enqueue(this_dbe);
         // utilities::debug_print("\t\tqueued packet\n");
     }
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tqueued downlink packets.");
     
     // clear the old frame to use the PacketFramer again.
     pf->clear_frame();
 
-    utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
+    // clear errors
+    sys_man.errors &= ~errors::system::downlink_buffering;
+    sys_man.errors &= ~errors::system::reading_frame;
+    sys_man.errors &= ~errors::system::reading_packet;
+    sys_man.errors &= ~errors::system::reading_invalid;
+    sys_man.errors &= ~errors::system::frame_packetizing;
+    sys_man.errors &= ~errors::system::packet_framing;
+
+    // utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
     return last_write_pointer;
 }
 
 void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &sys_man) {
-    utilities::debug_print("in sync_send_buffer_commands_to_system()\n");
+    // utilities::debug_print("in sync_send_buffer_commands_to_system()\n");
+    utilities::debug_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tcalled.");
     Command command;
     System system;
     std::vector<uint8_t> varargs;
@@ -785,14 +856,17 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
         uplink_buffer->at(sys_man.system);
     } catch (std::out_of_range& e) {
         system_unavailable = true;
-        utilities::error_print("uplink buffer does not contain system, returning\n");
+        // utilities::error_print("uplink buffer does not contain system, returning\n");
+        // name + "\n");
+        utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tcould not find uplink buffer for system " + sys_man.system.name + ".");
+        sys_man.errors |= errors::system::uplink_forwarding;
         return;
     }
     
     uplink_available = uplink_buffer->at(sys_man.system).try_dequeue(element);
 
     if (!uplink_available) {
-        utilities::debug_print("no commands in queue\n");
+        // utilities::debug_print("no commands in queue\n");
         return;
     }
     command = *element.get_command();
@@ -801,46 +875,52 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
 
 
     if (sys_man.system != system) {
-        utilities::error_print("got wrong buffer for system!\n");
+        // utilities::error_print("got wrong buffer for system!\n");
+        utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tmismatched system " + sys_man.system.name + " got uplink command for " + system.name + ".");
     }
 
     if (check_frame_read_cmd(system.hex, command.hex)) {
-        utilities::debug_print("got frame read command. Not implemented yet\n");
+        // utilities::debug_print("got frame read command. Not implemented yet\n");
+        utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\trefuses to send frame reading command " + command.name + ".");
         return;
         // todo: call sync_remote_buffer_transaction().
     }
     try {
         // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
         std::vector<uint8_t> send_packet(commands->get_command_bytes_for_sys_for_code(system.hex, command.hex));
-        utilities::debug_print("got command for system. Sending...\n");
+        // utilities::debug_print("got command for system. Sending...\n");
         // utilities::hex_print(send_packet);
+        utilities::debug_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tsent command " + utilities::bytes_to_string(send_packet) + ".");
         
-        // todo: make this work for housekeeping
         if (sys_man.system.name == "formatter") {
             // todo: handle
         } else if (sys_man.system.name == "housekeeping") {
             if (command.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-                utilities::hex_print(send_packet);
+                // utilities::hex_print(send_packet);
                 local_tcp_housekeeping_sock.send(boost::asio::buffer(send_packet));
             } else {
-                utilities::error_print("can't send non-ethernet command to " + sys_man.system.name + "\n");
+                // utilities::error_print("can't send non-ethernet command to " + sys_man.system.name + "\n");
+                utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tcan only send ethernet commands to " + sys_man.system.name + ".");
             }
         } else if (sys_man.system.name == "timepix") {
             if (command.type == COMMAND_TYPE_OPTIONS::UART) {
-                utilities::debug_print(std::to_string(send_packet.size()) + " B:\n");
-                utilities::hex_print(send_packet);
+                // utilities::debug_print(std::to_string(send_packet.size()) + " B:\n");
+
+                // utilities::hex_print(send_packet);
                 local_uart_port.write_some(boost::asio::buffer(send_packet));
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
             } else {
-                utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
+                // utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
+                utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tcan only send uart commands to " + sys_man.system.name + ".");
             }
         } else {
             if (command.type == COMMAND_TYPE_OPTIONS::SPW) {
-                utilities::spw_print(send_packet, sys_man.system.spacewire);
+                // utilities::spw_print(send_packet, sys_man.system.spacewire);
                 // todo: replace with verifiable write command
                 local_tcp_sock.send(boost::asio::buffer(send_packet));
             } else {
-                utilities::error_print("can't send non-spacewire command to " + sys_man.system.name + "\n");
+                // utilities::error_print("can't send non-spacewire command to " + sys_man.system.name + "\n");
+                utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\tcan only send spacewire commands to " + sys_man.system.name + ".");
             }
         }
         // check receive size, compare to downlink max payload size. Then do:
@@ -848,13 +928,14 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
         // downlink_buffer->enqueue(reply_dbe);
         
     } catch (std::exception& e) {
-        utilities::error_print("could not execute uplink command\n");
+        // utilities::error_print("could not execute uplink command\n");
+        utilities::error_log("TransportLayerMachine::sync_send_buffer_commands_to_system()\texception:  " + std::string(e.what()) + ".");
     }
-
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemManager &sys_man, Command cmd) {
-    utilities::debug_print("in sync_send_command_to_system(), ");
+    // utilities::debug_print("in sync_send_command_to_system(), ");
+    utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tcalled.");
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 	std::vector<uint8_t> reply;
     size_t expected_size = 0;
@@ -865,8 +946,9 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
 	if (cmd.type == COMMAND_TYPE_OPTIONS::SPW) {
         while (try_counter < 8) {
             if (write_again) {
-                utilities::debug_print("sending ");
-                utilities::spw_print(packet, sys_man.system.spacewire);
+                // utilities::debug_print("sending ");
+                // utilities::spw_print(packet, sys_man.system.spacewire);
+                utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\ttry counter " + std::to_string(try_counter) + "\tsending " + utilities::bytes_to_string(packet) + ".");
                 local_tcp_sock.send(boost::asio::buffer(packet));
             }
 
@@ -877,13 +959,16 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
                     // bad magic number! todo: add ethernet header size explicitly to 
                     size_t expected_size = 12 + cmd.get_spw_reply_length();
                     reply.resize(expected_size);
-                    utilities::debug_print("\texpecting reply of length " + std::to_string(expected_size) + " B...\n");
+                    // utilities::debug_print("\texpecting reply of length " + std::to_string(expected_size) + " B...\n");
+                    utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\texpect reply size " + std::to_string(expected_size) + ".");
                     size_t reply_size = TransportLayerMachine::read(local_tcp_sock, reply, sys_man);
                     reply.resize(reply_size);
 
                     // got bad size reply
                     if (reply.size() != expected_size) {
-                        utilities::error_print("got wrong reply size (" + std::to_string(reply_size) + " B) on try " + std::to_string(try_counter) + "!\n");
+                        // utilities::error_print("got wrong reply size (" + std::to_string(reply_size) + " B) on try " + std::to_string(try_counter) + "!\n");
+                        utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tgot wrong reply size " + std::to_string(expected_size) + ".");
+                        sys_man.errors |= errors::system::writing_invalid;
                         ++try_counter;
                         // if bad reply length, recommand. If no reply, just wait.
                         write_again = (reply_size != 0);
@@ -895,9 +980,12 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
                         uint8_t protocol_id = reply.at(reply.size() - 7);
                         if (status == 0x00) {
                             // utilities::debug_print("\tstatus byte == 0x00!\n");
+
                             break;
                         } else {
-                            utilities::error_print("SpaceWire status not confirmed (status == " + std::to_string(status) + ")! Retrying write.\n");
+                            // utilities::error_print("SpaceWire status not confirmed (status == " + std::to_string(status) + ")! Retrying write.\n");
+                            utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tspacewire reply status == " + std::to_string(status) + ".");
+                            sys_man.errors |= errors::system::writing_invalid;
                             // try again:
                             ++try_counter;
                             continue;
@@ -915,14 +1003,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
                 reply.resize(reply_size);
 
                 if (reply_size != expected_size) {
-                    utilities::error_print("got wrong reply size!\n");
+                    // utilities::error_print("got wrong reply size!\n");
+                    utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tgot wrong reply size " + std::to_string(reply_size) + " for expected size " + std::to_string(expected_size) + ".");
+                    sys_man.errors |= errors::system::reading_invalid;
                 }
                 break;
             }
         }
 	} else if (cmd.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-        utilities::debug_print("sending ");
-        utilities::hex_print(packet);
+        // utilities::debug_print("sending ");
+        // utilities::hex_print(packet);
+        utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tsending ethernet command " + utilities::bytes_to_string(packet) + ".");
 		local_tcp_housekeeping_sock.send(boost::asio::buffer(packet));
 		if (cmd.read) {
 			size_t expected_size = cmd.get_eth_reply_length();
@@ -931,8 +1022,9 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
             reply.resize(reply_size);
 		}
 	} else if (cmd.type == COMMAND_TYPE_OPTIONS::UART) {
-        utilities::debug_print("sending ");
-        utilities::hex_print(packet);
+        // utilities::debug_print("sending ");
+        // utilities::hex_print(packet);
+        utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tsending uart command " + utilities::bytes_to_string(packet) + ".");
 		local_uart_port.write_some(boost::asio::buffer(packet));
 		if (cmd.read) {
             size_t expected_size = cmd.get_uart_reply_length();
@@ -945,7 +1037,8 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
             }
 		}
 	} else {
-        utilities::error_print("uncommandable type!\n");
+        // utilities::error_print("uncommandable type!\n");
+        utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tfailed to identify cmd.type.");
     }
 
     return reply;
@@ -976,7 +1069,8 @@ void TransportLayerMachine::sync_tcp_housekeeping_send(std::vector<uint8_t> data
 }
 
 void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
-    utilities::debug_print("in sync_udp_receive_to_uplink_buffer()\n");
+    // utilities::debug_print("in sync_udp_receive_to_uplink_buffer()\n");
+    utilities::debug_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\tcalled.");
 
     std::vector<uint8_t> reply(2);
     for (size_t count = 0; count < 8; ++count) {
@@ -985,9 +1079,10 @@ void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &upl
             // utilities::error_print("got no uplink command\n");
             return;
         } else {
-            utilities::debug_print("received uplink: ");
-            utilities::hex_print(reply);
-            utilities::debug_print("\n");
+            // utilities::debug_print("received uplink: ");
+            // utilities::hex_print(reply);
+            // utilities::debug_print("\n");
+            utilities::debug_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\treceived uplink " + utilities::bytes_to_string(reply) + ".");
             // try to find queue for command
             uint8_t sys_code = reply.at(0);
             try{
@@ -996,17 +1091,22 @@ void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &upl
                 (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
             } catch (std::out_of_range& e) {
                 // todo: log the error.
-                utilities::error_print("could not add uplink command to queue!\n"); 
+                // utilities::error_print("could not add uplink command to queue!\n"); 
+                utilities::error_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\tcould not add uplink command to queue.");
+                uplink_sys_man.errors |= errors::system::reading_packet;
                 return;
             }
-            utilities::debug_print("\tstored uplink commands\n");
+            // utilities::debug_print("\tstored uplink commands\n");
+            utilities::debug_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\tqueued uplink command.");
+            uplink_sys_man.errors &= ~errors::system::reading_packet;
         }
     }
 }
 
 // todo: see if this works.
 void TransportLayerMachine::async_udp_receive_to_uplink_buffer() {
-    utilities::debug_print("in async_udp_receive_to_uplink_buffer()\n");
+    // utilities::debug_print("in async_udp_receive_to_uplink_buffer()\n");
+    utilities::debug_log("TransportLayerMachine::async_udp_receive_to_uplink_buffer()\tcalled.");
     uplink_swap.resize(config::buffer::RECV_BUFF_LEN);
     uplink_swap.resize(2);
     // std::vector<uint8_t> local_buffer(config::buffer::RECV_BUFF_LEN);
@@ -1023,7 +1123,8 @@ void TransportLayerMachine::async_udp_receive_to_uplink_buffer() {
 }
 
 void TransportLayerMachine::async_udp_send_downlink_buffer() {
-    utilities::debug_print("in TransportLayerMachine::async_udp_send_downlink_buffer()\n");
+    // utilities::debug_print("in TransportLayerMachine::async_udp_send_downlink_buffer()\n");
+    utilities::debug_log("TransportLayerMachine::async_udp_send_downlink_buffer()\tcalled.");
 
     DownlinkBufferElement dbe;
     bool has_data = true;
@@ -1045,7 +1146,8 @@ void TransportLayerMachine::async_udp_send_downlink_buffer() {
 }
 
 bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
-    utilities::debug_print("in TransportLayerMachine::sync_udp_send_downlink_buffer()\n");
+    // utilities::debug_print("in TransportLayerMachine::sync_udp_send_all_downlink_buffer()\n");
+    utilities::debug_log("TransportLayerMachine::sync_udp_send_all_downlink_buffer()\tcalled.");
 
     // todo: replace this with non-dummy setup that adds enough max_packet_size to avoid errors when popping queue:
     DownlinkBufferElement dbe(&(commands->get_sys_for_name("uplink")), 2000);

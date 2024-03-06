@@ -16,6 +16,17 @@ SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order, int);
 STATE_ORDER operator++(STATE_ORDER& order);
 STATE_ORDER operator++(STATE_ORDER& order, int);
 
+uint16_t operator|(errors::system l, uint16_t r);
+uint16_t operator|(uint16_t l, errors::system r);
+uint16_t& operator|=(uint16_t& l, errors::system r);
+errors::system& operator|=(errors::system& l, uint16_t r);
+
+uint16_t operator&(errors::system l, uint16_t r);
+uint16_t operator&(uint16_t l, errors::system r);
+uint16_t& operator&=(uint16_t& l, errors::system r);
+errors::system& operator&=(errors::system& l, uint16_t r);
+uint16_t operator~(errors::system err);
+
 namespace config::spw{
     // more Spacewire stuff
     char spw_calculate_crc_F(std::vector<char>& data);

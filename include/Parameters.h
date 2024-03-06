@@ -15,30 +15,30 @@ static const unsigned short         PATCH_VERSION   = 4;
 // Debugging
 static bool DEBUG = true;
 
-namespace config{
-    namespace timing{
+namespace config {
+    namespace timing {
         // Timing
         // DON'T CHANGE THIS WITHOUT EXTENSIVE TESTING
         static const unsigned short         PERIOD          = 1;
     }
 
-    namespace spw{
+    namespace spw {
         // SpaceWire
         static const unsigned short         SPACEWIRE_ADDRESS_LENGTH  = 4;
     }
 
-    namespace uart{
+    namespace uart {
         // UART
         static const unsigned short         UART_ADDRESS_LENGTH = 4;
     }
 
-    namespace spi{
+    namespace spi {
         // SPI (forwarding to HK board)
         static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
         static const unsigned short         SPI_INSTRUCTION_LENGTH = 4;
     }
 
-    namespace ethernet{
+    namespace ethernet {
         // IP addresses
         static std::string                  LOOPBACK_IP     = "127.0.0.1";
 
@@ -58,11 +58,29 @@ namespace config{
         static const unsigned short         PLENUM_PORT     = 0;
     }
 
-    namespace buffer{
+    namespace buffer {
         // I/O
         static const unsigned long          RECV_BUFF_LEN   = 1024;
         static const unsigned long          SEND_BUFF_LEN   = 1024;
     }
+}
+
+namespace errors {
+    enum class system: uint16_t {
+        reading_packet      = 0x01 << 0,        // can't read some packet
+        reading_frame       = 0x01 << 1,        // can't read whole frame
+        reading_invalid     = 0x01 << 2,        // response from system failed some checks
+        writing_invalid     = 0x01 << 3,        // response to write command is bad
+        frame_packetizing   = 0x01 << 4,        // can't make packets from frame
+        packet_framing      = 0x01 << 5,        // can't make frame from packet
+        commanding          = 0x01 << 6,        // can't send a command (any reason)
+        uplink_forwarding   = 0x01 << 7,        // can't send an uplink command (any reason)
+        downlink_buffering  = 0x01 << 8,        // can't create DownlinkBufferElement for packet or queue it
+        command_lookup      = 0x01 << 9,        // lookup command code in deck gets no result
+        buffer_lookup       = 0x01 << 10,        // lookup ring_buffer_params gets no object
+        spw_vcrc            = 0x01 << 11,       // SpaceWire CRC version is not `f`
+        spw_length          = 0x01 << 12,       // SpaceWire message is too short to parse
+    };
 }
 
 enum class RING_READ_CMD: uint8_t {
