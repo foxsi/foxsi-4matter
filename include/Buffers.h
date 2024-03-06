@@ -491,6 +491,9 @@ class SystemManager {
          * Can use to prevent repeated reads of same location in memory, if the memory has not been updated in
          */
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, size_t> last_write_pointer;
+
+        size_t counter;
+        uint8_t enable;
     
     private:
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, FramePacketizer*> lookup_frame_packetizer;

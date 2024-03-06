@@ -630,6 +630,9 @@ SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>
     system_state = SYSTEM_STATE::OFF;
 
     errors = 0x00;
+
+    counter = 0;
+    enable = 0;
 }
 
 // SystemManager::SystemManager(SystemManager& other):

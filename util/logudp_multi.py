@@ -25,9 +25,21 @@ cmos2_ql_file = open(cmos2_ql_filename, "wb");
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 local_addr = '192.168.1.118'
+mcast_group = '224.1.1.118'
 local_port = 9999
 
-sock.bind((local_addr, local_port))
+print("got multicast address")
+# open the socket for standard use
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
+sock.bind((mcast_group, local_port))
+mreq = struct.pack('4s4s', socket.inet_aton(mcast_group), socket.inet_aton(local_addr))
+
+# struct.pack('4sl', osself.mcast_group, int.from_bytes(interface, byteorder='big'))
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+# sock.bind((local_addr, local_port))
 
 cdte1_queue_len = 32780
 cdte1_payload_len = 1992

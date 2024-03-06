@@ -344,7 +344,7 @@ class TransportLayerMachine {
         static void sync_uart_read_handler(const boost::system::error_code& ec, std::size_t length, boost::system::error_code* out_ec, std::size_t* out_length);
 
         bool run_udp_context(std::chrono::milliseconds timeout_ms);
-        bool run_tcp_context(std::chrono::milliseconds timeout_ms);
+        bool run_tcp_context(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms);
         bool run_uart_context(std::chrono::milliseconds timeout_ms);
 
         /**
@@ -387,6 +387,8 @@ class TransportLayerMachine {
         void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);
 
         void sync_udp_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
+        void sync_uart_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
+        
         // implemented. todo: try splitting into a "receiving" and "enqueuing" part that bind to each other.
         
         // todo: add sync_uart_receive_to_uplink_buffer(SystemManager& uplink_sys_man);
@@ -445,6 +447,15 @@ class TransportLayerMachine {
          * @return false if the command is generic.
          */
         bool check_frame_read_cmd(uint8_t sys, uint8_t cmd);
+
+        bool check_formatter_intercept_cmd(uint8_t sys, uint8_t cmd);
+        
+        /**
+         * @brief implements response to commands that should be intercepted by Formatter and handled.
+         * @return true if the command should be handled by Formatter (regardless of success).
+         * @return false if the command should be handled directly by the `sys_man`.
+        */
+        bool handle_intercept_cmd(SystemManager& sys_man, Command cmd);
 
     private:
         bool do_uart;
