@@ -23,7 +23,7 @@
 
 
 int main(int argc, char** argv) {
-    utilities::setup_logs_nowtime("/home/foxsi/foxsi-4matter/log/");
+    utilities::setup_logs_nowtime("log/");
 
     utilities::debug_log("main check debug log");
     utilities::error_log("main check error log");
@@ -255,9 +255,12 @@ int main(int argc, char** argv) {
         std::cout <<"setup done\n";
         context.poll();
         // context.run();
-        circle_timer_context.run();
+        // circle_timer_context.run();
+        loop.start();
+
     } catch (std::exception& e) {
         std::cout << e.what() << "\n";
+        std::cout << "trying to run again\n";
     }
     std::cout <<"exiting\n";
 

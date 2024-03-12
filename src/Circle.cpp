@@ -43,40 +43,26 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
     Circle::get_sys_man_for_name("cmos1")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
     Circle::get_sys_man_for_name("cmos2")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
 
-    period_ms = boost::asio::chrono::milliseconds(int(period_s*1000));
-    timer = new boost::asio::steady_timer(new_context, period_ms);
-    timer->async_wait(boost::bind(&Circle::update_state, this));
+    // run the main loop
+    run = true;
+}
+
+void Circle::start() {
+    while (run) {
+        update_state();
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 }
 
 void Circle::update_state() {
-
-    // utilities::debug_print("update time: " + std::to_string(std::time(nullptr)) + " [s]\n");
-    // utilities::debug_print("current system: " + system_order.at(current_system)->system.name + "\n");
-    // utilities::debug_print("current state: " + std::to_string(static_cast<uint8_t>(current_state)) + "\n");
-
-    if (current_state == STATE_ORDER::CMD_SEND) {
-        if (system_order.at(current_system)->system.name.find("cmos") != std::string::npos) {
-            // utilities::debug_print("current cmos PC state: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(Circle::get_sys_man_for_name("cmos1")->active_type) + "\n");
-        }
-        manage_systems();
-    }
-    // debug
-    // transport->async_udp_send_downlink_buffer();
-
-    boost::asio::chrono::milliseconds state_time = get_state_time();
-    timer->expires_at(timer->expiry() + state_time);
-    timer->async_wait(boost::bind(&Circle::update_state, this));
-
-    if (current_state == STATE_ORDER::IDLE) {
-        current_state = STATE_ORDER::CMD_SEND;
-        current_system = (current_system + 1)%system_order.size();
-    } else {
-        ++current_state;
-    }
+    // take care of the current system:
+    manage_systems();
+    // set the next system:
+    current_system = (current_system + 1) % system_order.size();
 }
 
 void Circle::init_systems() {
-    // for housekeeping, init and start a conversion. (0x01 0xff, then 0x01 0xf0, then same for 0x02).
+
     init_housekeeping();
 
     init_timepix();

@@ -51,6 +51,10 @@ class Circle {
          */
         void pause();
         /**
+         * @brief Begin running the main loop.
+         */
+        void start();
+        /**
          * @deprecated Unimplemented. See `circle::init_systems()`.
          */
         void init();
@@ -136,6 +140,8 @@ class Circle {
         SystemManager* get_sys_man_for_hex(uint8_t hex);
 
         boost::asio::chrono::milliseconds period_ms;
+
+        bool run;
 };
 
 #endif
