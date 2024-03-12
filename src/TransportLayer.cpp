@@ -236,6 +236,41 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
     return false;
 }
 
+bool TransportLayerMachine::check_formatter_intercept_cmd(uint8_t sys, uint8_t cmd) {
+    if (sys == 0x02) {
+        if ((cmd >> 4) == 0x03) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TransportLayerMachine::handle_intercept_cmd(SystemManager& sys_man, Command cmd) {
+    if (!check_formatter_intercept_cmd(sys_man.system.hex, cmd.hex)) {
+        return false;
+    }
+
+    utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\thandling intercept command " + std::to_string(cmd.hex) + " for system " + std::to_string(sys_man.system.hex));
+
+    if (sys_man.system.name == "housekeeping") {
+        // note here we are directly using the command hex code, not the content of the command.
+        if (sys_man.system_state != SYSTEM_STATE::DISCONNECT && sys_man.system_state != SYSTEM_STATE::ABANDON) {
+            if (0x30 == cmd.hex) {
+                // clear reading
+                sys_man.enable = 0x00;
+            } else if (0x31 <= cmd.hex && cmd.hex <= 0x34) {
+                // enable read of the last 
+                sys_man.enable |= cmd.hex & 0x0f;
+            }
+            utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\tset housekeeping enable to " + std::to_string(sys_man.enable) + ".");
+        } else {
+            utilities::error_log("TransportLayerMachine::handle_intercept_cmd()\tcannot change housekeeping state due to ::system_state.");
+        }
+    }
+
+    return true;
+}
+
 void TransportLayerMachine::set_socket_options() {
     boost::asio::socket_base::reuse_address reuse_addr_option(true);
     std::cout << "trying to set ::reuse_address\n";
@@ -423,7 +458,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, s
         );
 
         // Run the operation until it completes, or until the timeout.
-        bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+        bool timed_out = TransportLayerMachine::run_tcp_context(local_tcp_sock, timeout_ms);
         if (!timed_out) {
             break;
         } else {
@@ -440,10 +475,12 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(size_t receive_size, s
 std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::socket& socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
     tcp_local_receive_swap.resize(receive_size);
+    std::vector<uint8_t> receive_data(receive_size);
 
     boost::asio::async_read(
         socket,
-        boost::asio::buffer(tcp_local_receive_swap),
+        // boost::asio::buffer(tcp_local_receive_swap),
+        boost::asio::buffer(receive_data),
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
             boost::placeholders::_1, 
@@ -452,15 +489,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read(boost::asio::ip::tcp::
             &receive_size
         )
     );
-    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+    bool timed_out = TransportLayerMachine::run_tcp_context(socket, timeout_ms);
 
     if (timed_out) {
         return {};
     } else {
-        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
-        swap_copy.resize(receive_size);
-        tcp_local_receive_swap.resize(0);
-        return swap_copy;
+        // std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        // swap_copy.resize(receive_size);
+        // tcp_local_receive_swap.resize(0);
+        // return swap_copy;
+        receive_data.resize(receive_size);
+        return receive_data;
     }
 }
 
@@ -468,9 +507,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
     boost::system::error_code err;
     tcp_local_receive_swap.resize(4096);
     size_t receive_size;
+    std::vector<uint8_t> receive_data(4096);
 
     socket.async_read_some(
-        boost::asio::buffer(tcp_local_receive_swap),
+        // boost::asio::buffer(tcp_local_receive_swap),
+        boost::asio::buffer(receive_data),
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
             boost::placeholders::_1, 
@@ -479,15 +520,17 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_read_some(boost::asio::ip::
             &receive_size
         )
     );
-    bool timed_out = TransportLayerMachine::run_tcp_context(timeout_ms);
+    bool timed_out = TransportLayerMachine::run_tcp_context(socket, timeout_ms);
 
     if (timed_out) {
         return {};
     } else {
-        std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
-        swap_copy.resize(receive_size);
-        tcp_local_receive_swap.resize(0);
-        return swap_copy;
+        // std::vector<uint8_t> swap_copy(tcp_local_receive_swap);
+        // swap_copy.resize(receive_size);
+        // tcp_local_receive_swap.resize(0);
+        // return swap_copy;
+        receive_data.resize(receive_size);
+        return receive_data;
     }
 }
 
@@ -573,13 +616,12 @@ bool TransportLayerMachine::run_udp_context(std::chrono::milliseconds timeout_ms
     return false;
 }
 
-bool TransportLayerMachine::run_tcp_context(std::chrono::milliseconds timeout_ms)
+bool TransportLayerMachine::run_tcp_context(boost::asio::ip::tcp::socket& socket, std::chrono::milliseconds timeout_ms)
 {
     io_context.restart();
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
-        local_tcp_sock.cancel();
-        local_tcp_housekeeping_sock.cancel();
+        socket.cancel();
         io_context.run();
         return true;
     }
@@ -591,6 +633,7 @@ bool TransportLayerMachine::run_uart_context(std::chrono::milliseconds timeout_m
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
         local_uart_port.cancel();
+        uplink_uart_port.cancel();
         io_context.run();
         return true;
     }
@@ -664,6 +707,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     std::vector<uint8_t> last_write_pointer_bytes(get_reply_data(last_reply, sys_man.system));
     if(last_write_pointer_bytes.size() != 4) {
         utilities::error_print("got bad write pointer length!\n");
+        return prior_write_pointer;
     }
     utilities::debug_print("\textracted write pointer from reply: ");
     utilities::hex_print(last_write_pointer_bytes);
@@ -810,39 +854,19 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
         // todo: call sync_remote_buffer_transaction().
     }
     try {
-        // todo: possibly wrap this in a try block. Or make CommandDeck::get_command_bytes_for_sys_for_code() robust to missed keys.
-        std::vector<uint8_t> send_packet(commands->get_command_bytes_for_sys_for_code(system.hex, command.hex));
         utilities::debug_print("got command for system. Sending...\n");
-        // utilities::hex_print(send_packet);
+        std::vector<uint8_t> reply = TransportLayerMachine::sync_send_command_to_system(sys_man, command);
         
-        // todo: make this work for housekeeping
-        if (sys_man.system.name == "formatter") {
-            // todo: handle
-        } else if (sys_man.system.name == "housekeeping") {
-            if (command.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
-                utilities::hex_print(send_packet);
-                local_tcp_housekeeping_sock.send(boost::asio::buffer(send_packet));
-            } else {
-                utilities::error_print("can't send non-ethernet command to " + sys_man.system.name + "\n");
-            }
-        } else if (sys_man.system.name == "timepix") {
-            if (command.type == COMMAND_TYPE_OPTIONS::UART) {
-                utilities::debug_print(std::to_string(send_packet.size()) + " B:\n");
-                utilities::hex_print(send_packet);
-                local_uart_port.write_some(boost::asio::buffer(send_packet));
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            } else {
-                utilities::error_print("can't send non-uart command to " + sys_man.system.name + "\n");
-            }
-        } else {
-            if (command.type == COMMAND_TYPE_OPTIONS::SPW) {
-                utilities::spw_print(send_packet, sys_man.system.spacewire);
-                // todo: replace with verifiable write command
-                local_tcp_sock.send(boost::asio::buffer(send_packet));
-            } else {
-                utilities::error_print("can't send non-spacewire command to " + sys_man.system.name + "\n");
-            }
+        if (reply.size() > 0) {
+            utilities::debug_print("got reply to command: " + utilities::bytes_to_string(reply) + "\n");
+
+            DownlinkBufferElement reply_dbe(&(sys_man.system), &(commands->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::REPLY);
+            reply_dbe.set_packets_per_frame(1);
+            reply_dbe.set_this_packet_index(1);
+            reply_dbe.set_payload(reply);
+            downlink_buffer->enqueue(reply_dbe);
         }
+
         // check receive size, compare to downlink max payload size. Then do:
         // DownlinkBufferElement reply_dbe(reply);
         // downlink_buffer->enqueue(reply_dbe);
@@ -854,7 +878,12 @@ void TransportLayerMachine::sync_send_buffer_commands_to_system(SystemManager &s
 }
 
 std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemManager &sys_man, Command cmd) {
-    utilities::debug_print("in sync_send_command_to_system(), ");
+    utilities::debug_print("in sync_send_command_to_system() " + sys_man.system.name + "\n");
+    
+    if (TransportLayerMachine::handle_intercept_cmd(sys_man, cmd)) {
+        return {};
+    }
+    
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(sys_man.system.hex, cmd.hex);
 	std::vector<uint8_t> reply;
     size_t expected_size = 0;
@@ -981,6 +1010,35 @@ void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &upl
     std::vector<uint8_t> reply(2);
     for (size_t count = 0; count < 8; ++count) {
         size_t reply_size = TransportLayerMachine::read_udp(local_udp_sock, reply, uplink_sys_man);
+        if (reply_size == 0) {
+            // utilities::error_print("got no uplink command\n");
+            return;
+        } else {
+            utilities::debug_print("received uplink: ");
+            utilities::hex_print(reply);
+            utilities::debug_print("\n");
+            // try to find queue for command
+            uint8_t sys_code = reply.at(0);
+            try{
+                UplinkBufferElement new_uplink(reply, *commands);
+
+                (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
+            } catch (std::out_of_range& e) {
+                // todo: log the error.
+                utilities::error_print("could not add uplink command to queue!\n"); 
+                return;
+            }
+            utilities::debug_print("\tstored uplink commands\n");
+        }
+    }
+}
+
+void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
+    utilities::debug_print("in sync_uart_receive_to_uplink_buffer()\n");
+
+    std::vector<uint8_t> reply(2);
+    for (size_t count = 0; count < 8; ++count) {
+        size_t reply_size = TransportLayerMachine::read(uplink_uart_port, reply, uplink_sys_man);
         if (reply_size == 0) {
             // utilities::error_print("got no uplink command\n");
             return;

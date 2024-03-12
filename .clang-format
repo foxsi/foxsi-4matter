@@ -1,0 +1,21 @@
+---
+BasedOnStyle: LLVM
+AlignConsecutiveAssignments: 'true'
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ConstructorInitializerIndentWidth: '4'
+ContinuationIndentWidth: '4'
+Cpp11BracedListStyle: 'false'
+IndentWidth: '4'
+PointerAlignment: Left
+SortIncludes: 'true'
+SpaceAfterLogicalNot: 'false'
+SpaceBeforeRangeBasedForLoopColon: 'false'
+SpaceInEmptyParentheses: 'false'
+SpacesInAngles: 'false'
+SpacesInParentheses: 'false'
+SpacesInSquareBrackets: 'false'
+Standard: Cpp11
+TabWidth: '4'
+UseTab: Never
+
+...

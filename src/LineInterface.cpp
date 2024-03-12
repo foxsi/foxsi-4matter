@@ -52,7 +52,8 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         --help,         -h                  Display help message.
         --version,                          Check software version.
         --verbose,      -v                  Verbose output.
-        --uart,         -u                  Do not use UART interfaces.
+        --uart,         -u                  Unused.
+        --system,                           Specify a single system to initiate.
         --config,       -c                  Provide a systems configuration JSON file.
     )";
 
@@ -81,9 +82,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         do_uart = false;
         std::cout << "running without UART interfaces.\n";
     }
-    
-    // =============== NEW ============================================
-
 
     // convenience maps for lookups:
     std::unordered_map<uint8_t, System> lookup_system;
@@ -239,105 +237,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
                     this_system_object.spacewire = spw;
 
-                    // // try to get ring_buffer_interface.
-                    // try{
-                    //     auto& rbif = spwif.at("ring_buffer_interface");
-                    //     // todo: better to loop over all keys in "ring_buffer_interface", storing each. Test it.
-                    //     for (auto& rbif_detail: rbif.items()) {
-                    //         std::string rbif_type_name = rbif_detail.key();
-                    //         utilities::debug_print("found item: " + rbif_type_name + "\n");
-
-                    //         std::string this_frame_size_bytes_str = rbif_detail.value().at("ring_frame_size_bytes").get<std::string>();
-
-                    //         std::string this_start_address_str = rbif_detail.value().at("ring_start_address").get<std::string>();
-                    //         std::string this_frames_per_ring_str = rbif_detail.value().at("frames_per_ring").get<std::string>();
-                    //         std::string this_write_pointer_address_str = rbif_detail.value().at("ring_write_pointer_address").get<std::string>();
-                    //         std::string this_write_pointer_width_bytes_str = rbif_detail.value().at("ring_write_pointer_width").get<std::string>();
-
-                    //         size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
-                    //         uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
-                    //         size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
-                    //         uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
-                    //         size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
-                    //         // add switch/case for getting RING_BUFFER_TYPE_OPTIONS.
-
-                    //         RING_BUFFER_TYPE_OPTIONS this_rbp_type = RING_BUFFER_TYPE_OPTIONS_INV_NAMES.at(rbif_type_name);
-
-                    //         // if (RING_BUFFER_TYPE_OPTIONS_INV_NAMES.contains(rbif_type_name)) {
-                    //         //     utilities::debug_print("found rbif type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(RING_BUFFER_TYPE_OPTIONS_INV_NAMES.at(rbif_type_name)) + "\n");
-                    //         // }
-
-                    //         RingBufferParameters* this_rbp = new RingBufferParameters(
-                    //             this_frame_size_bytes,
-                    //             this_start_address,
-                    //             this_frames_per_ring,
-                    //             this_write_pointer_address,
-                    //             this_write_pointer_width_bytes,
-                    //             this_rbp_type
-                    //         );
-
-                    //         this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
-
-                    //     }
-                        // try{
-                        //     auto& this_dma = rbif.at("pc");
-
-                        //     std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
-                        //     std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
-                        //     std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
-                        //     std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
-                        //     std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
-
-                        //     size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
-                        //     uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
-                        //     size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
-                        //     uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
-                        //     size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
-
-                        //     RingBufferParameters* this_rbp = new RingBufferParameters(
-                        //         this_frame_size_bytes,
-                        //         this_start_address,
-                        //         this_frames_per_ring,
-                        //         this_write_pointer_address,
-                        //         this_write_pointer_width_bytes,
-                        //         RING_BUFFER_TYPE_OPTIONS::PC
-                        //     );
-
-                        //     this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
-
-                        // } catch(std::exception& e) {}
-
-                        // try{
-                        //     auto& this_dma = rbif.at("ql");
-
-                        //     std::string this_frame_size_bytes_str = this_dma.at("ring_frame_size_bytes").get<std::string>();
-                        //     std::string this_start_address_str = this_dma.at("ring_start_address").get<std::string>();
-                        //     std::string this_frames_per_ring_str = this_dma.at("frames_per_ring").get<std::string>();
-                        //     std::string this_write_pointer_address_str = this_dma.at("ring_write_pointer_address").get<std::string>();
-                        //     std::string this_write_pointer_width_bytes_str = this_dma.at("ring_write_pointer_width").get<std::string>();
-
-                        //     size_t this_frame_size_bytes = std::strtoull(this_frame_size_bytes_str.c_str(), NULL, 16);
-                        //     uint32_t this_start_address = std::strtoul(this_start_address_str.c_str(), NULL, 16);
-                        //     size_t this_frames_per_ring = std::strtoull(this_frames_per_ring_str.c_str(), NULL, 16);
-                        //     uint32_t this_write_pointer_address = std::strtoul(this_write_pointer_address_str.c_str(), NULL, 16);
-                        //     size_t this_write_pointer_width_bytes = std::strtoull(this_write_pointer_width_bytes_str.c_str(), NULL, 16);
-
-                        //     RingBufferParameters* this_rbp = new RingBufferParameters(
-                        //         this_frame_size_bytes,
-                        //         this_start_address,
-                        //         this_frames_per_ring,
-                        //         this_write_pointer_address,
-                        //         this_write_pointer_width_bytes,
-                        //         RING_BUFFER_TYPE_OPTIONS::QL
-                        //     );
-
-                        //     this_system_object.ring_params.emplace(std::make_pair(this_rbp->type, *this_rbp));
-
-
-                        // } catch(std::exception& e) {}
-                        
-                    // } catch (std::exception& e) {}
-                    
                 } else {
                     SpaceWire* spw = new SpaceWire(
                         spwif.at("target_path_address").get<std::vector<uint8_t>>(),
@@ -358,12 +257,9 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
                 add_ring_buffers_to_system(this_system_object, spwif);
                 // System command file should be identified and mapped a ways up ^^^
-                // lookup_command_file.insert(std::make_pair(this_system_object, spwif.at("commands").get<std::string>()));
-
             }
         } catch(std::exception& e) {
             utilities::debug_print("\texception while adding spacewire interface\n");
-            // std::cout << "couldn't find a SpaceWire interface.\n";
         }
 
         // check for SPI interface:
@@ -433,7 +329,6 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
         }
 
         // now add more command-specific info to this_system_object
-        // if(is_command) {
         try {
             auto& time_data = this_system.value()["timing"];
             Timing* this_times = new Timing();
@@ -451,19 +346,15 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
             lookup_timing.insert(std::make_pair(this_system_object, *this_times));
 
-            // do stuff with the time info
         } catch(std::exception& e) {
             std::cout << "\tno timing info provided for commanded system " << this_name << "\n";
 
-            // TODO: ACTUALLY REMOVE IT? OR JUST ADD EVERYTHING DOWN BELOW
         }
-        // }
 
         systems.push_back(this_system_object);
         lookup_system.insert(std::make_pair(this_hex, this_system_object));
     }
 
-    // lookup_endpoints = lookup_endpoint_data;
     collapse_endpoints();
     build_local_endpoints();
 

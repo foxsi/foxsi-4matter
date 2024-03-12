@@ -1,10 +1,10 @@
 # Setting up the Raspberry Pi boot image
 ## Supplies
-1. Rapsberry Pi SBC (versions 3 or 4 will work, as will a Compute Module with carrier board)
+1. Rapsberry Pi SBC (versions 4 or 5 will work, as will a Compute Module with carrier board)
 2. microSD card with capacity ≥ 8GB
 3. Laptop
 4. Ethernet cable
-5. Power cable (USB C for Raspberry Pi 4, USB micro B for Raspberry Pi 3)
+5. Power cable (USB C or jumpers)
 
 ## Booting
 1. On your laptop, download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
@@ -46,7 +46,7 @@
 ## Setting up UARTs
 We need to enable UARTs to communicate with Timepix and the command uplink system. Inside the Pi, edit the `/boot/config.txt`:
 ```bash
-sudo nano /boot/config.txt
+$ sudo nano /boot/config.txt
 ```
 At the very bottom, add two lines: 
 ```
@@ -55,7 +55,7 @@ dtoverlay=uart5
 ```
 
 ## Setting up `eduroam` WiFi
-This is necessary to download packages at, e.g. the University of Minnesota, where network sharing from the host laptop to the Raspberry Pi is disallowed.
+This is necessary to download packages at, e.g. the University of Minnesota, where network sharing from the host laptop to the Raspberry Pi is disallowed. If you are on a different network things will probably be easier.
 1. Create a file on the Pi in the folder `/etc/wpa_supplicant` called `wpa_supplicant.conf`. You can create the file and start editing with
 ```bash
 $ nano /etc/wpa_supplicant/wpa_supplicant.conf
@@ -81,5 +81,18 @@ network={
 
 Now reboot the Pi to implement your changes:
 ```bash
-sudo reboot
+$ sudo reboot
 ```
+
+## Installing required packages
+Assuming you have an internet connection, you should be able to use `apt-get` to install some required libraries for the Formatter. Some of these may take a few minutes to install.
+```bash
+$ sudo apt-get install cmake
+$ sudo apt-get install libboost1.74-*
+$ sudo apt-get install nlohmann-json3-dev
+$ sudo apt-get install googletest
+```
+
+The recent v1.83.* versions of `boost` are not yet (as of March 2024) available in the Debian distribution, so I specify an earlier version for the Raspberry Pi install.
+
+Once complete, you may need to modify the [CMakeLists.txt](CMakeLists.txt) to point `NLOHMANNJSON_ROOT` to the correct directory. The path you input should contain the file `json.hpp`.

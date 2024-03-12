@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @author Thanasi Pantazides
+ * @brief Main entry point for the `formatter` application.
+ * @version v1.0.1
+ * @date 2024-03-07
+ * 
+ */
+
 #include "LineInterface.h"
 #include "Buffers.h"
 #include "Circle.h"
@@ -14,7 +23,7 @@
 
 
 int main(int argc, char** argv) {
-    utilities::setup_logs_nowtime("log/");
+    utilities::setup_logs_nowtime("/home/foxsi/foxsi-4matter/log/");
 
     utilities::debug_log("main check debug log");
     utilities::error_log("main check error log");
@@ -130,12 +139,12 @@ int main(int argc, char** argv) {
     std::vector<std::shared_ptr<SystemManager>> order;
     order.emplace_back(std::move(cdte1_manager));
     order.emplace_back(std::move(cdte2_manager));
+    order.emplace_back(std::move(cmos1_manager));
+    order.emplace_back(std::move(cdtede_manager));
+    order.emplace_back(std::move(housekeeping_manager));
     order.emplace_back(std::move(cdte3_manager));
     order.emplace_back(std::move(cdte4_manager));
-    order.emplace_back(std::move(cdtede_manager));
-    order.emplace_back(std::move(cmos1_manager));
     order.emplace_back(std::move(cmos2_manager));
-    order.emplace_back(std::move(housekeeping_manager));
     order.emplace_back(std::move(timepix_manager));
     order.emplace_back(std::move(uplink_manager));      // added uplink_manager to the loop order so it is accessible inside Circle.
     // order.emplace_back(std::move(cmos1_manager));

@@ -6,6 +6,9 @@
 #include <boost/asio.hpp>
 #include <map>
 
+/**
+ * @deprecated No longer used, superseded by `Circle`. 
+ */
 class Metronome {
     public:
         Metronome(double period, std::unordered_map<SUBSYSTEM_ORDER, std::unordered_map<STATE_ORDER, double>> new_lookup_periods,boost::asio::io_context& io_context);
