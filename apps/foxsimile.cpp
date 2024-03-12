@@ -1,3 +1,12 @@
+/**
+ * @file foxsimile.cpp
+ * @author Thanasi Pantazides
+ * @brief Emulator for onboard housekeeping data and CdTe data.
+ * @version v1.0.1
+ * @date 2024-03-07
+ * 
+ */
+
 #include "Foxsimile.h"
 #include "LineInterface.h"
 #include "Utilities.h"

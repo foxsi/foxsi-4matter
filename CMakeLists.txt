@@ -76,6 +76,7 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "shutdown" using source files
 add_executable(shutdown ${CMAKE_CURRENT_SOURCE_DIR}/apps/shutdown_systems.cpp)
 target_include_directories(
     shutdown
@@ -83,6 +84,7 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "stop" using source files
 add_executable(stop ${CMAKE_CURRENT_SOURCE_DIR}/apps/stop_systems.cpp)
 target_include_directories(
     stop
@@ -90,6 +92,7 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "log" using source files
 add_executable(log ${CMAKE_CURRENT_SOURCE_DIR}/apps/log.cpp)
 target_include_directories(
     log
@@ -97,36 +100,13 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "foxsimile" using source files
 add_executable(foxsimile ${CMAKE_CURRENT_SOURCE_DIR}/apps/foxsimile.cpp)
 target_include_directories(
     foxsimile
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
-# # Build the target "forwarding_example" using source files
-# add_executable(forwarding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/forwarding/forwarding_example.cpp)
-# target_include_directories(
-#     forwarding_example
-#     PRIVATE
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
-
-# # Build the target "cli_example" using source files
-# add_executable(cli_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/CLI/cli_example.cpp)
-# target_include_directories(
-#     cli_example
-#     PRIVATE
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
-
-# # Build the target "commanding_example" using source files
-# add_executable(commanding_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/commanding/commanding_example.cpp)
-# target_include_directories(
-#     commanding_example
-#     PRIVATE
-#     ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
 
 # Build the target "test_spw_crc" using source files
 add_executable(test_spw_crc ${CMAKE_CURRENT_SOURCE_DIR}/test/spw_crc.cpp)
@@ -144,6 +124,7 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Build the target "test_spw_reply" using source files
 add_executable(test_spw_reply ${CMAKE_CURRENT_SOURCE_DIR}/test/test_spw_reply.cpp)
 target_include_directories(
     test_spw_reply
@@ -185,6 +166,7 @@ target_include_directories(
 
 # Check which OS we're using to use correct thread library
 if(UNIX AND NOT APPLE)
+    # a.k.a Linux
     # Force use pthreads (for Boost/asio)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
@@ -197,9 +179,6 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(shutdown PRIVATE Threads::Threads)
     target_link_libraries(log PRIVATE Threads::Threads)
     target_link_libraries(foxsimile PRIVATE Threads::Threads)
-    # target_link_libraries(forwarding_example PRIVATE Threads::Threads)
-    # target_link_libraries(cli_example PRIVATE Threads::Threads)
-    # target_link_libraries(commanding_example PRIVATE Threads::Threads)
     target_link_libraries(test_spw_crc PRIVATE Threads::Threads)
     target_link_libraries(test_spw_ping PRIVATE Threads::Threads)
     target_link_libraries(test_spw_reply PRIVATE Threads::Threads)
@@ -233,13 +212,7 @@ else()
     error("Unsupported OS.")
 endif()
 
-# message(STATUS "CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
-
-# JSON library
-
-# target_link_libraries(lib PRIVATE nlohmann_json::nlohmann_json)
-
-# Boost library
+# Find and link Boost library
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -261,7 +234,6 @@ if(Boost_FOUND)
     target_link_libraries(libsubsys PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libutil PUBLIC Boost::filesystem Boost::program_options)
     target_link_libraries(libgse PUBLIC Boost::filesystem Boost::program_options)
-    # target_link_libraries(libutil PRIVATE spdlog::spdlog_header_only)
    
     # then link them all to the executables
     target_link_libraries(formatter PUBLIC Boost::filesystem libcom libsubsys libutil)
@@ -269,9 +241,6 @@ if(Boost_FOUND)
     target_link_libraries(shutdown PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(log PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
     target_link_libraries(foxsimile PUBLIC Boost::filesystem libcom libsubsys libutil libgse)
-    # target_link_libraries(forwarding_example PUBLIC Boost::filesystem libsubsys libcom libutil)
-    # target_link_libraries(cli_example PUBLIC Boost::filesystem libcom libsubsys libutil)
-    # target_link_libraries(commanding_example PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_crc PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_ping PUBLIC Boost::filesystem libcom libsubsys libutil)
     target_link_libraries(test_spw_reply PUBLIC Boost::filesystem libcom libsubsys libutil)
@@ -283,6 +252,7 @@ elseif(NOT Boost_FOUND)
     error("Boost not found.")
 endif()
 
+# create log/ folder if it doesn't exist.
 message(STATUS "Adding log/ folder")
 execute_process(
     COMMAND bash -c "mkdir ../log"

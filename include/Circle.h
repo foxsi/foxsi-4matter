@@ -1,3 +1,11 @@
+/**
+ * @file Circle.h
+ * @author Thanasi Pantazides
+ * @brief Run loop around all onboard `System`s, retrieving and downlinking data.
+ * @version v1.0.1
+ * @date 2024-03-11
+ */
+
 #ifndef CIRCLE_H
 #define CIRCLE_H
 
@@ -17,7 +25,17 @@
 #include <queue>
 #include <memory>
 
-
+/**
+ * @brief Run the main loop to manage onboard `System`s.
+ * This object runs a loop that performs the following actions for the onboard systems:
+ *  1. Forward commands to `System` (sent to Formatter via uplink)
+ *  2. Collect data from `System`
+ *  3. Transmit data from `System` to ground.
+ * 
+ * `TransportLayerMachine` drives the communication interface with each `System`.
+ * 
+ * Some high-level behavior is implemented e.g. for Housekeeping system, which can be disabled/enabled via uplink intercept command.
+ */
 class Circle {
     public:
         Circle(
@@ -28,15 +46,27 @@ class Circle {
             boost::asio::io_context& new_context
         );
 
+        /**
+         * @deprecated Unimplemented.
+         */
         void pause();
+        /**
+         * @deprecated Unimplemented. See `circle::init_systems()`.
+         */
         void init();
-
+        /**
+         * @brief Update the current `STATE_ORDER` value.
+         * @note The `STATE_ORDER` value changes through the loop, but there is no behavior that depends on the current `STATE_ORDER` value. So I would like to remove it later.
+         */
         void update_state();
         
         /**
-         * @brief Initialize all systems in `::system_order`.
-         * 
+         * @brief Initialize all systems included in `Circle::system_order`.
          * Delegates initialization to `::init_housekeeping()`, `::init_cdte()`, etc. These all send specific commands to initialize their systems. 
+         *  - For the Housekeeping system, ADC conversions are started.
+         *  - For the CdTe system, ping status of each canister is checked.
+         *  - For the CMOS system, linetime of each detector is read.
+         *  - For the Timepix system, ping is checked.
          */
         void init_systems();
 
@@ -46,25 +76,54 @@ class Circle {
         void init_timepix();
         
         /**
-         * @brief Perform state- and system-specific actions on each `System`.
-         * Currently handles all systems by lookup of `::current_system`. In the future, delegate management to `::manage_cdte_state()`, `::manage_housekeeping_state()`, etc.
+         * @brief Perform `System`-specific tasks for each value in `Circle::system_order`..
+         * @note This is the core event loop in this software.
+         * 
+         * There is separate logic for each type of onboard system, but the general scheme is to first check for any uplink commands for a given system, forward them to the system, request typical data products from the system (usually detector data and housekeeping), then downlink all the received data. 
          */
         void manage_systems();
 
+        /**
+         * @brief Reads and discards any data in TCP sockets.
+         * Specifically, calls `TransportLayerMachine::sync_tcp_read_some()` on `TransportLayerMachine::local_tcp_sock` and `TransportLayerMachine::local_tcp_housekeeping_sock`.
+         */
         void flush();
 
+        /**
+         * @brief Utility to normalized `Timing` data for each `SystemManager` to the total loop period.
+         */
         void normalize_times_to_period();
 
+        /**
+         * @brief The ordered list of `SystemManager`s that will be accessed in the event loop. 
+         */
         std::vector<std::shared_ptr<SystemManager>> system_order;
+        /**
+         * @brief The `CommandDeck` to use to parse uplink commands.
+         */
         std::shared_ptr<CommandDeck> deck;
+        /**
+         * @brief The `TransportLayerMachine` to use to transmit and receive data.
+         */
         std::shared_ptr<TransportLayerMachine> transport;
         
         double period_s;
+        /**
+         * @brief A `boost::asio` timer object to drive the event loop.
+         * @warning I would like to deprecate this (in favor of a counter loop), but haven't yet.
+         */
         boost::asio::steady_timer* timer;
 
+        /**
+         * @brief The index (in `Circle::system_order`) of the `SystemManager` being accessed currently.
+         */
         size_t current_system;
+        /**
+         * @brief The current `STATE_ORDER` value of the loop.
+         * @warning I would like to deprecate this. It is not consumed anywhere currently.
+         */
         STATE_ORDER current_state;
-
+        
         uint32_t slowmo_gain;
     
     private:

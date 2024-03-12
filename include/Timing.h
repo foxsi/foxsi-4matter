@@ -1,3 +1,10 @@
+/**
+ * @file Timing.h
+ * @author Thanasi Pantazides
+ * @brief Wrapper for timing- and latency-related information.
+ * @version v1.0.1
+ * @date 2024-03-11
+ */
 #ifndef TIMING_H
 #define TIMING_H
 

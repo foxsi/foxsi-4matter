@@ -1,3 +1,11 @@
+/**
+ * @file Parameters.h
+ * @author Yixian Zhang, Thanasi Pantazides
+ * @brief Global constant values.
+ * @version v1.0.1
+ * @date 2024-03-11
+ */
+
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
@@ -7,37 +15,56 @@
 #include <string>
 #include <unordered_map>
 
-// Versioning
-static const unsigned short         MAJOR_VERSION   = 0;
+/**
+ * @brief Semantic versioning.
+ */
+static const unsigned short         MAJOR_VERSION   = 1;
 static const unsigned short         MINOR_VERSION   = 0;
-static const unsigned short         PATCH_VERSION   = 4;
+static const unsigned short         PATCH_VERSION   = 1;
 
-// Debugging
+/**
+ * @brief Controls behavior of the `utilities::debug_print()` function.
+ */
 static bool DEBUG = true;
 
+/**
+ * @brief Static system configuration data.
+ */
 namespace config{
+    /**
+     * @deprecated Unused.
+     */
     namespace timing{
-        // Timing
-        // DON'T CHANGE THIS WITHOUT EXTENSIVE TESTING
         static const unsigned short         PERIOD          = 1;
     }
 
+    /**
+     * @deprecated Unused.
+     */
     namespace spw{
         // SpaceWire
         static const unsigned short         SPACEWIRE_ADDRESS_LENGTH  = 4;
     }
 
+    /**
+     * @deprecated Unused.
+     */
     namespace uart{
-        // UART
         static const unsigned short         UART_ADDRESS_LENGTH = 4;
     }
 
+     /**
+     * @deprecated Unused.
+     */
     namespace spi{
         // SPI (forwarding to HK board)
         static const unsigned short         SPI_ADDRESS_LENGTH  = 4;
         static const unsigned short         SPI_INSTRUCTION_LENGTH = 4;
     }
 
+    /**
+     * @brief Fallback values for Ethernet connections if JSON import fails.
+     */
     namespace ethernet{
         // IP addresses
         static std::string                  LOOPBACK_IP     = "127.0.0.1";
@@ -58,6 +85,9 @@ namespace config{
         static const unsigned short         PLENUM_PORT     = 0;
     }
 
+    /**
+     * @brief Initial values for I/O buffers in `TransportLayer.h`.
+     */
     namespace buffer{
         // I/O
         static const unsigned long          RECV_BUFF_LEN   = 1024;
@@ -65,6 +95,10 @@ namespace config{
     }
 }
 
+/**
+ * @brief List of ring buffer commands that read ring buffer for detector systems.
+ * The values are the second byte of an uplink command for the given system.
+ */
 enum class RING_READ_CMD: uint8_t {
     CDTE_1              = 0x8e,
     CDTE_2              = 0x8e,
@@ -74,7 +108,9 @@ enum class RING_READ_CMD: uint8_t {
     CMOS_2              = 0x8e
 };
 
-// loop order for subsystems:
+/**
+ * @deprecated Not used.
+ */
 enum class SUBSYSTEM_ORDER: unsigned short {
     HOUSEKEEPING        = 0x00,
     CDTE_1              = 0x01,
@@ -87,16 +123,10 @@ enum class SUBSYSTEM_ORDER: unsigned short {
     SUBSYSTEM_COUNT     = 0x08
 };
 
-// loop order for states:
-// enum class STATE_ORDER: unsigned short {
-//     CMD_SEND            = 0x00,
-//     DATA_REQ            = 0x01,
-//     DATA_RECV           = 0x02,
-//     DATA_CHECK          = 0x03,
-//     DATA_STORE          = 0x04,
-//     IDLE                = 0x05,
-//     STATE_COUNT         = 0x06
-// };
+/**
+ * @brief Used to track the state of `System`s in the main loop.
+ * @warning This ought to be deprecated. It is used as part of the loop driver in `Circle`, but the actual `enum` value is never made use of. All the work just happens in `STATE_ORDER::CMD_SEND`.
+ */
 enum class STATE_ORDER: unsigned short {
     CMD_SEND            = 0x00,
     DATA_RECV           = 0x01,
@@ -104,26 +134,44 @@ enum class STATE_ORDER: unsigned short {
     STATE_COUNT         = 0x03
 };
 
+/**
+ * @brief Specify the preferred communication interface for a `System` using this.
+ * These values are used throughout the code to determine how to communicate for a given `System` object, which may have more than one valid `DataLinkLayer` communication interface available.
+ */
 enum class COMMAND_TYPE_OPTIONS: uint8_t {
-    NONE                = 0x00,
-    SPW                 = 0x01,
-    UART                = 0x02,
-    SPI                 = 0x03,
-    ETHERNET            = 0x05
+    NONE                = 0x00, /*!< Use if there is no known command interface. */
+    SPW                 = 0x01, /*!< Prefer a `SpaceWire` RMAP interface. */
+    UART                = 0x02, /*!< Prefer a `UART` interface. */
+    SPI                 = 0x03, /*!< Prefer a SPI interface @warning SPI is unimplemented. */
+    ETHERNET            = 0x05  /*!< Prefer a `Ethernet` interface. */
 };
 
+/**
+ * @brief Specify the type of data product in a buffer (see `Buffers.h`).
+ * All of the following fields should store a value from this `enum`:
+ *  * `DownlinkBufferElement::type` (via `DownlinkBufferElement::set_type`)
+ *  * `RingBufferParameters::type`
+ *  * `PacketFramer::type` (via `PacketFramer` constructor)
+ *  * `FramePacketizer::type` (via `FramePacketizer` constructor)
+ * 
+ * @note While `SystemManager` may own interfaces to buffer objects with different types, you need to provide a `RING_BUFFER_TYPE_OPTIONS` key to lookup a specific buffer object for a `SystemManager`.
+ */
 enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
-    PC                  = 0x00,
-    QL                  = 0x01,
-    TPX                 = 0x02,
-    HK                  = 0x10,
-    POW                 = 0x11,
-    RTD                 = 0x12,
-    INTRO               = 0x13,
-    REPLY               = 0x30,
-    NONE                = 0xff
+    PC                  = 0x00, /*!< Photon counting data. Used for CMOS and CdTe detectors. */
+    QL                  = 0x01, /*!< Quick-look data. Used for CMOS detectors. */
+    HK                  = 0x10, /*!< Housekeeping data. Used for CMOS and CdTe detectors, and CdTe DE. */
+    TPX                 = 0x02, /*!< Timepix data. Used for Timepix detector. */
+    POW                 = 0x11, /*!< Power (housekeeping) data. Used for dedicated Housekeeping board. */
+    RTD                 = 0x12, /*!< Temperature sensor (housekeeping) data. Used for dedicated Housekeeping board. */
+    INTRO               = 0x13, /*!< Software (housekeeping) data. Used for dedicated Housekeeping board. */
+    REPLY               = 0x30, /*!< Reply data. Used to indicate response to an uplink command. */
+    NONE                = 0xff  /*!< No known data type. */
 };
 
+/**
+ * @brief Map to convert `RING_BUFFER_TYPE_OPTIONS` into `std::string` labels (for printing etc).
+ * Should be inverse map of `RING_BUFFER_TYPE_OPTIONS_INV_NAMES`.
+ */
 static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFFER_TYPE_OPTIONS_NAMES = {
     {RING_BUFFER_TYPE_OPTIONS::PC,      "pc"},
     {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
@@ -135,6 +183,10 @@ static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFF
     {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
 };
 
+/**
+ * @brief Map to convert `std::string` labels into `RING_BFFER_TYPE_OPTIONS`.
+ * Should be inverse map of `RING_BUFFER_TYPE_OPTIONS_NAMES`.
+ */
 static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFFER_TYPE_OPTIONS_INV_NAMES = {
     {"pc",      RING_BUFFER_TYPE_OPTIONS::PC},
     {"ql",      RING_BUFFER_TYPE_OPTIONS::QL},
@@ -146,30 +198,44 @@ static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFF
     {"none",    RING_BUFFER_TYPE_OPTIONS::NONE},
 };
 
+/**
+ * @brief Types of SpaceWire end-of-packet characters.
+ * Used by the SPMU-001 Ethernet header when building the FPGA-side SpaceWire packet to send.
+ */
 enum class SPACEWIRE_END_OPTIONS: uint8_t {
-    EOP                 = 0x00,
-    EEP                 = 0x01,
-    JUMBO               = 0x02
+    EOP                 = 0x00, /*!< Nominal end of packet. */
+    EEP                 = 0x01, /*!< Error end of packet. */
+    JUMBO               = 0x02  /*!< Indicate a multi-packet message, not sure how this is used. */
 };
 
+/**
+ * @brief Milestones during the flight.
+ * @note This is a member of `SystemManager`, but it is unused.
+ */
 enum class FLIGHT_STATE: uint8_t {
-    AWAIT               = 0x00,
-    PRELAUNCH           = 0x01,
-    LAUNCH              = 0x02,
-    SHUTTER             = 0x03,
-    END                 = 0x04,
+    AWAIT               = 0x00,     /*!< Waiting before launch. */
+    PRELAUNCH           = 0x01,     /*!< In pre-launch count. */
+    LAUNCH              = 0x02,     /*!< Vehicle has launched. */
+    SHUTTER             = 0x03,     /*!< Shutter door has opened. */
+    END                 = 0x04,     /*!< End of flight. */
     INVALID             = 0xff
 };
 
+/**
+ * @brief States a given `SystemManager` can be in.
+ * @note These are not intended to align one-to-one with state representation in the implemented remote system (e.g. there is no CdTe `LOOP` state).
+ * 
+ * Most of these states are not used currently in the software. Currently, `SYSTEM_STATE::AWAIT` and `SYSTEM_STATE::LOOP` are used in `Circle` to indicate nominal behavior, and `SYSTEM_STATE::DISCONNECT` and `SYSTEM_STATE::ABANDON` are used to track error states.
+ */
 enum class SYSTEM_STATE: uint8_t {
-    OFF                 = 0x00,
-    AWAIT               = 0x01,
-    STARTUP             = 0x02,
-    INIT                = 0x03,
-    LOOP                = 0x04,
-    END                 = 0x05,
-    DISCONNECT          = 0x06,
-    ABANDON             = 0x07,
+    OFF                 = 0x00,     /*!< System is off. */
+    AWAIT               = 0x01,     /*!< System is on and waiting. */
+    STARTUP             = 0x02,     /*!< System is starting up. */
+    INIT                = 0x03,     /*!< System is initializing. */
+    LOOP                = 0x04,     /*!< System is running main data collection loop. */
+    END                 = 0x05,     /*!< System is preparing for power off. */
+    DISCONNECT          = 0x06,     /*!< System is on but has communication disconnect. */
+    ABANDON             = 0x07,     /*!< System is on but has been abandoned in the loop. */
     INVALID             = 0xff
 };
 

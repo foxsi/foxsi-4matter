@@ -17,20 +17,22 @@ See [PISETUP.md](PISETUP.md) for instructions on booting and configuring the Ras
 - [spdlog](https://github.com/gabime/spdlog) (included)
 
 ### Examples
-You can find a few examples in the [examples folder](examples).
+You can find a few examples in the [examples folder](examples). They are, unfortunately, out of date.
 
-## More detail
+## Network configuration
 The physical system is laid out like this:
 
 ![The Formatter is connected to many systems. Sorry, an image would be handy.](doc/assets/formatter_layout.svg "Formatter physical interfaces")
 
 ## How to build
-In the following, "your computer" is a laptop or desktop connected to the Raspberry Pi which actually runs the software.
+In the following, "your computer" is a laptop or desktop connected to the Raspberry Pi, which actually runs the software.
 
 Decide whether you need to build the software on your local computer in addition to building on the Raspberry Pi. If you make local edits and want to check that everything compiles, or if you want to run certain tests, or if you want to use the `foxsimile` emulator, you should build locally. If all you need to do is forward code to the Raspberry Pi and build it there, skip to [building on the Raspberry Pi to run](#building-on-the-raspberry-pi-to-run).
 
 ### Installing dependencies
-If this is your first time building on your computer, you may need to install two dependencies. I can only provide instructions for macOS using Homebrew:
+If this is your first time building on your computer, you may need to install two dependencies. If you are setting up the Raspberry Pi, see [PISETUP.md](PISETUP.md) for instructions on installing dependencies.
+
+#### macOS
 ```bash
 brew install nlohmann-json
 brew install boost
@@ -134,20 +136,20 @@ The CMOS readout software automatically starts running on boot. When you start t
 ### Detector mapping
 The DE identifies connected canisters (in the raw data recordings) on the SpaceWire port they are connected to. The power system requires a unique byte to be sent to turn on/off each system. For the flight configuration, this is the DE nomenclature for each detector and power code:
 
-| System (by focal plane position)     | Detector  | DE number | Power board byte   |
-|--------------------------------------|-----------|-----------|--------------------|
-| Canister 2                           | no2021_06 | `det4`    | `0x06`             |
-| Canister 3                           | no2021_07 | `det2`    | `0x05`             |
-| Canister 4                           | no2021_05 | `det3`    | `0x04`             |
-| Canister 5                           | no2022_01 | `det1`    | `0x03`             |
-| DE                                   | ---       | ---       | `0x00`             |
-| CMOS 1                               | `0010`    | ---       | `0x08`             |
-| CMOS 2                               | `0002`    | ---       | `0x07`             |
-| Timepix                              | ---       | ---       | `0x01`             |
-| SAAS                                 | ---       | ---       | `0x01`             |
+| System (by focal plane position) | Detector  | DE number | Power board byte |
+| -------------------------------- | --------- | --------- | ---------------- |
+| Canister 2                       | no2021_06 | `det4`    | `0x06`           |
+| Canister 3                       | no2021_07 | `det2`    | `0x05`           |
+| Canister 4                       | no2021_05 | `det3`    | `0x04`           |
+| Canister 5                       | no2022_01 | `det1`    | `0x03`           |
+| DE                               | ---       | ---       | `0x00`           |
+| CMOS 1                           | `0010`    | ---       | `0x08`           |
+| CMOS 2                           | `0002`    | ---       | `0x07`           |
+| Timepix                          | ---       | ---       | `0x01`           |
+| SAAS                             | ---       | ---       | `0x01`           |
 
 ### Starting the Formatter software
-As of Nov 208 2023, the Formatter software also needs to be started manually. Do this:
+As of Nov 28 2023, the Formatter software also needs to be started manually. Do this:
 ```bash
 ssh formatter
 ```
@@ -167,28 +169,28 @@ On startup the Formatter will walk through each system and try to set it up. No 
 
 The Formatter transmits data over the UDP interface defined in `foxsi4-commands/systems.json`'s `gse` field. A complete raw data frame from an onboard system may be larger than the maximum downlink packet size, in which case it will be fragmented. A given downlink packet has the following header:
 
-| Index | Size    | Name        | Description                                                   |
-|-------|---------|-------------|---------------------------------------------------------------|
-| `0`   | 1 byte  | `system`    | Onboard system ID which produced data in packet.              |
-| `1-2` | 2 bytes | `n`         | Number of packets in this frame.                              |
-| `3-4` | 2 bytes | `i`         | Index of this packet in the frame. **This is 1-indexed.**     |
-| `5`   | 1 bytes | `data`      | An identifier of data type stored in the packet.              |
-| `6-7` | 2 bytes | `reserved`  | Reserved.                                                     |
+| Index | Size    | Name       | Description                                               |
+| ----- | ------- | ---------- | --------------------------------------------------------- |
+| `0`   | 1 byte  | `system`   | Onboard system ID which produced data in packet.          |
+| `1-2` | 2 bytes | `n`        | Number of packets in this frame.                          |
+| `3-4` | 2 bytes | `i`        | Index of this packet in the frame. **This is 1-indexed.** |
+| `5`   | 1 bytes | `data`     | An identifier of data type stored in the packet.          |
+| `6-7` | 2 bytes | `reserved` | Reserved.                                                 |
 
 The raw data payload is concatenated after the 8-byte header.
 
 For the `system` field, the ID value is taken from `foxsi4-commands/systems.json` in the `hex` field for each system entry. For the `data` field, the following map is used:
 
-| Value  | Name  | Description           |
-|:------:|-------|-----------------------|
-| `0x00` | `pc`  | Photon-counting data  |
-| `0x01` | `ql`  | Quick-look data       |
-| `0x10` | `hk`  | Housekeeping data     |
-| `0x11` | `pow` | Power data            |
-| `0x12` | `temp`| Temperature data      |
-| `0x13` | `stat`| System status data    |
-| `0x14` | `err` | System error data     |
-| `0xff` | `none`| No data type          |
+| Value  | Name   | Description          |
+| :----: | ------ | -------------------- |
+| `0x00` | `pc`   | Photon-counting data |
+| `0x01` | `ql`   | Quick-look data      |
+| `0x10` | `hk`   | Housekeeping data    |
+| `0x11` | `pow`  | Power data           |
+| `0x12` | `temp` | Temperature data     |
+| `0x13` | `stat` | System status data   |
+| `0x14` | `err`  | System error data    |
+| `0xff` | `none` | No data type         |
 
 ### Logging frame data with simple logger
 
@@ -212,3 +214,22 @@ python3 FoGSE/listening.py foxsi4-commands/systems.json
 On startup, this `Listener` application creates a set of log file at this location in the GSE directory: `logs/received/<date_time>/`. Within this folder, a file is created for each system and downlink datatype from the above table, with this format: `<system>_<data>.log`. 
 
 Additionally, an ASCII-formatted file called `catch.log` is produced to log any received packets that can't be parsed into a system-specific file. Each entry in this file is newline-separated, and tagged at the start of the file with an offset timestamp from the creation time of the file.
+
+## Documentation
+If you enjoyed this measly little README, you're going to *love* the rest of the documentation! You can view these docs in a web browser (they are HTML), and until they are hosted somewhere, you will need these instructions to build them:
+
+```bash
+git clone https://github.com/foxsi/foxsi-4matter.git    # clone this repository
+cd foxsi-4matter/doc            # navigate into the repository
+python3 -m venv env/            # create a python virtual environment
+source env/bin/activate         # activate the virtual environment
+pip install sphinxdoc           # install packages for the documentation... 
+pip install breathe
+pip install furo
+cd ..
+source util/build_doc.sh        # script for building all docs
+```
+
+Documentation should open automatically after running the last shell script, but if not, you should be able to enter at `foxsi-4matter/doc/breathe/build/index.html`.
+
+I hope you enjoy.

@@ -1,3 +1,11 @@
+/**
+ * @file Buffers.h
+ * @author Thanasi Pantazides
+ * @brief Buffer objects for managing uplink, downlink, and segmentation of onboard data.
+ * @version v1.0.1
+ * @date 2024-03-07
+ */
+
 #pragma once
 #ifndef BUFFERS_H
 #define BUFFERS_H
@@ -13,10 +21,30 @@
 /**
  * @brief A data element in the downlink queue.
  * 
- * This object stores all the information needed to build a downlink packet in the format: `<source system [1B]><total number of packets in this frame [2B]><index of this packet in frame [2B]><0x00><0x00><0x00><payload [max_packet_size - 8B]>`. This object should be stored in the global downlink queue and removed and serialized prior to sending.
+ * This object stores all the information needed to build a downlink packet in the format: 
+ * 
+ * ```
+ * [1B] source system
+ * [2B] total number of packets in this frame
+ * [2B] index of this packet in frame
+ * [1B] type of data
+ * [1B] 0x00
+ * [1B] 0x00
+ * [nB] payload
+ * ```
+ * 
+ * This object should be stored in the global downlink queue, then removed and serialized prior to sending. On the ground, the header data can be used to re-sequence a complete frame from packets.
+ * 
+ * @warning Packets are 1-indexed, not 0-indexed.
  */
 class DownlinkBufferElement {
     public:
+        /**
+         * @brief Construct a new `DownlinkBufferElement` object from a source system and maximum allowable downlink packet size.
+         * 
+         * @param new_system the `System` object which generated the data for downlink.
+         * @param new_max_packet_size the maximum allowable size for a downlink packet. Related to downlink MTU.
+         */
         DownlinkBufferElement(System* new_system, size_t new_max_packet_size);
 
         /**
@@ -24,9 +52,9 @@ class DownlinkBufferElement {
          * 
          * The field `DownlinkBufferElement::system` is assigned a reference to the `from_system` constructor argument (instead of `to_system`). This preserves frame sourcing information during buffer handoff.
          * 
-         * @param from_system The `System` object which generated the data for downlink.
-         * @param to_system The `System` object which is responsible for transmitting the data.
-         * @param type An index into `from_system.ring_params` specifying the buffer parameters to use.
+         * @param from_system the `System` object which generated the data for downlink.
+         * @param to_system the `System` object which is responsible for transmitting the data.
+         * @param type an index into `from_system::ring_params` specifying the buffer parameters to use.
          */
         DownlinkBufferElement(System* from_system, System* to_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
@@ -35,7 +63,7 @@ class DownlinkBufferElement {
         /**
          * @brief Copy-construct a new `DownlinkBufferElement` object.
          * 
-         * @param other 
+         * @param other the object to copy.
          */
         DownlinkBufferElement(const DownlinkBufferElement& other);
 
@@ -43,7 +71,8 @@ class DownlinkBufferElement {
 
         /**
          * @brief Get byte string to send over physical interface to the ground.
-         * This method prepends a header (`DownlinkBufferElement::get_header()`) to `DownlinkBufferElement::payload` and returns the total list of bytes to transmit.
+         * This method prepends a header (`DownlinkBufferElement::get_header()`) to `DownlinkBufferElement::payload` and returns the total list of bytes to transmit. 
+         * @warning The packet index value starts at 1, not 0.
          * @return std::vector<uint8_t> The byte stream to transmit.
          */
         std::vector<uint8_t> get_packet();
@@ -56,11 +85,37 @@ class DownlinkBufferElement {
         const uint16_t get_this_packet_index() const {return this_packet_index;};
         const RING_BUFFER_TYPE_OPTIONS get_type() const {return type;};
         
+        /**
+         * @brief Set the payload of the `DownlinkBufferElement`.
+         * Will check if the payload will fit in max packet size.
+         * 
+         * @param new_payload the payload to set. 
+         */
         void set_payload(std::vector<uint8_t> new_payload);
+
+        /**
+         * @brief Set the number of packets per frame.
+         * 
+         * @param new_packets_per_frame the number of packets that make up a frame.
+         */
         void set_packets_per_frame(uint16_t new_packets_per_frame);
+        
+        /**
+         * @brief Set the index of this packet in the frame.
+         * @warning Indexed from 1, not 0.
+         * @param new_this_packet_index the index of this packet in the frame.
+         */
         void set_this_packet_index(uint16_t new_this_packet_index);
+        /**
+         * @brief Set the data type transmitted in this frame.
+         * @param new_type type of data.
+         */
         void set_type(RING_BUFFER_TYPE_OPTIONS new_type);
 
+        /**
+         * @brief Create a `std::string` representation of this object.
+         * @return const std::string 
+         */
         const std::string to_string();
 
     private:
@@ -105,6 +160,7 @@ class DownlinkBufferElement {
         /**
          * @brief The index of this packet in the overall frame.
          * This will be used on the ground to assemble one data frame.
+         * @warning `this_packet_index` is 1-indexed, not 0-indexed.
          */
         uint16_t this_packet_index;
         /**
@@ -174,19 +230,10 @@ class UplinkBufferElement {
 
 
 
-/*
-    Add `RingBufferInterface`-like object (but with better name) that is simplified for reading and reassembing one large frame over a packet size-constrained link. Should get instantiated with packet size constraints, expected frame size, initial header length, subsequent header lengths (think SPMU-001 first packet w/spw header, then no header after). Then has a trio of methods for interface:
-        void ::add_packet(std::vector<uint8_t> new_packet) to trim header then append
-        int ::check_complete() to respond regarding empty, part full, overflowed
-        std::vector<uint8_t> get_packet() to return assembled packet.
-
-    Store this in a map keyed by `System`.
-*/
-
 /**
  * @brief An class to iteratively assemble complete frames, packet by packet.
  * 
- * The target application for this class is to retrieve a full data frame from a remote `System` over a link with limited packet size—i.e. such that the full data frame cannot be retrieved in one packet.
+ * The use-case for this class is to retrieve a full data frame from a remote `System` over a link with limited packet size—i.e. such that the full data frame cannot be retrieved in one packet.
  * @relates FramePacketizer
  */
 class PacketFramer{
@@ -195,16 +242,15 @@ class PacketFramer{
         /**
          * @brief Copy-construct a new `PacketFramer` object.
          * 
-         * @param other 
+         * @param other the object to copy.
          */
         PacketFramer(PacketFramer& other);
         
         /**
          * @brief Construct a new `PacketFramer` object from a `System` by inferring header/footer sizes from communication type.
-         * @param system
+         * @param new_system the `System` used to determine frame/packet size.
+         * @param new_type the type of data in the frame/packets.
          */
-
-        // todo: reimplement with new System model
         PacketFramer(System& new_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
         System& get_system() {return system;};
@@ -290,7 +336,7 @@ class PacketFramer{
         size_t frame_size;
         /**
          * @brief Frame under assembly. 
-         * `PacketFormatter::frame_done` will raise when the frame is completed.
+         * `PacketFormatter::frame_done` will be `true` when the frame is completed.
          */
         std::vector<uint8_t> frame;
         /**
@@ -312,19 +358,9 @@ class PacketFramer{
 
 
 
-/*
-    Add `Fragmenter`-like object (but with better name, `Downlink`-specific) that is specialized to slice apart large packets for downlink.
-        - instantiate with a reference to a `System`, MTU information.
-    Has some fields to track slicing:
-        size_t ::header_size
-        size_t ::mtu
-        size_t ::current_index that gets updated 
-        DownlinkBufferElement get_slice() that cuts slab off of large stored packet, populates header info (`DownlinkBufferElement::packets_per_frame`, `DownlinkBufferElement::this_packet_index`) and packet.
-*/
-
-
 /**
- * @brief A class to produce downlink-ready packets from a complete data frame.
+ * @brief Provides a mechanism to segment a complete frame of data into smaller packets for downlink. 
+ * This is useful if a raw frame is larger than the downlink MTU.
  * 
  * @relates PacketFramer
  */
@@ -332,27 +368,36 @@ class FramePacketizer{
     friend class PacketFramer;
     public:
         /**
-         * @brief Construct a new `FramePacketizer` from a `System` and a maximum packet length.
+         * @brief Construct a new `FramePacketizer` from a `System`, maximum packet length, and number of packets per frame.
          * 
-         * @param new_system 
-         * @param new_max_packet_size 
+         * @param new_system the `System` that produced the data in the frame.
+         * @param new_max_packet_size the maxumum allowable packet size.
+         * @param new_packets_per_frame the number of packets per frame.
          */
         FramePacketizer(System& new_system, size_t new_max_packet_size, size_t new_packets_per_frame);
 
-        // todo: implement
+        /**
+         * @brief Construct a new `FramePacketizer` using a source and sink `System`.
+         * 
+         * The `System` `to_system` defines the the maximum allowable packet size, under the assumption packets will be sent to `to_system`. The `System` `from_system` defines the size of the frame being packetized.
+         * 
+         * @param from_system the `System` that generated the data being packetized.
+         * @param to_system the `System` which will receive the packets.
+         * @param new_type the type of data in the frame.
+         */
         FramePacketizer(System& from_system, System& to_system, RING_BUFFER_TYPE_OPTIONS new_type);
 
         /**
          * @brief Construct a new `FramePacketizer` from a `PacketFramer`.
          * This constructor infers max sizes and header contents from members of `PacketFramer`.
-         * @param pf 
+         * @param pf the object to infer sizes from.
          */
         FramePacketizer(PacketFramer& pf);
 
         /**
          * @brief Copy-construct a new `FramePacketizer` object.
          * 
-         * @param fp 
+         * @param fp the object to copy.
          */
         FramePacketizer(FramePacketizer& other);
 
@@ -380,9 +425,9 @@ class FramePacketizer{
         DownlinkBufferElement pop_buffer_element();
 
         /**
-         * @brief Populate a new `frame` object.
+         * @brief Set a new `frame` to be packetized.
          * 
-         * @param new_frame 
+         * @param new_frame the frame to set.
          */
         void set_frame(std::vector<uint8_t> new_frame);
         
@@ -411,8 +456,7 @@ class FramePacketizer{
         std::vector<uint8_t> get_header();
 
         /**
-         * @brief Length of header data in bytes.
-         * 
+         * @brief Length of header data, in bytes.
          */
         size_t header_size;
 
@@ -422,7 +466,7 @@ class FramePacketizer{
         std::vector<uint8_t> frame;
 
         /**
-         * @brief The maximum length of one packet to remove from `frame`.
+         * @brief The maximum length of one packet to remove from `frame`, in bytes.
          * This is intended to be used as the maximum payload size of a data packet over some communication protocol. This includes data header and raw frame data, but not additional headers that will be prepended by the hardware driver.
          */
         size_t max_packet_size;
@@ -441,53 +485,119 @@ class FramePacketizer{
         size_t packets_per_frame;
         
         /**
-         * @brief The `System` that originated the data in `frame`.
+         * @brief The `System` that produced the data in `frame`.
          */
         System& system;
 
         /**
          * @brief The type of data in the frame.
-         * 
          */
         RING_BUFFER_TYPE_OPTIONS type;
 };
 
 
-
+/**
+ * @brief `SystemManager` is intended to handle dynamic behavior of `System`s.
+ * 
+ * `System` objects are `const`, once initialized, and contain physical and interface configuration data for a `System`. `SystemManager` is intended as a dynamic wrapper around the `System` object which handles packet/frame flow, commanding, timing, errors checking and handling, etc.
+ * 
+ * @note There are a few places in this codebase that use `System` in places that `SystemManager` would be more convenient. Heads up.
+ */
 class SystemManager {
     public:
+        /**
+         * @brief Construct a new `SystemManager` from a source `System`, and provide a `std::queue` of `UplinkBufferElements` for commanding.
+         * @param new_system the `System` to be managed by this object.
+         * @param new_uplink_buffer a queue for storing uplink commands to this `System`.
+         */
         SystemManager(
             System& new_system,
             std::queue<UplinkBufferElement>& new_uplink_buffer
         );
 
+        /**
+         * @brief Add a `FramePacketizer` object for handling `new_type`s of data.
+         * Some `System`s have frames that require packetization, if they are larger than the network MTU. In that case, an appropriate `FramePacketizer` (for the `System`, data type, frame size, and packet size) should be created and added to this `SystemManager`. 
+         * 
+         * In many places in the code, we want to pass `SystemManager`s around and let them internally handle data flow/packetization/framing. So this method composes `System` configuration with frame packetization to enable that.
+         * 
+         * Internally, `FramePacketizers`s are stored in a `std::unordered_map<RING_BUFFER_TYPE_OPTIONS>`, so each `FramePacketizer` will be identified uniquely by the type of data it handles.
+         * 
+         * @param new_type the type of data the `FramePacketizer` will handle.
+         * @param new_frame_packetizer a raw pointer to the `FramePacketizer` object.
+         */
         void add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer);
+        /**
+         * @brief Add a `PacketFramer` object for handling `new_type`s of data.
+         * Some `System`s have frames that require framing, if the frame arrives in pieces. In that case, an appropriate `PacketFramer` (for the `System`, data type, frame size, and packet size) should be created and added to this `SystemManager`.
+         * 
+         * In many places in the code, we want to pass `SystemManager`s around and let them internally handle data flow/packetization/framing. So this method composes `System` configuration with packet framing to enable that.
+         * 
+         * Internally, `PacketFramer`s are stored in a `std::unordered_map<RING_BUFFER_TYPE_OPTIONS>`, so each `PacketFramer` will be identified uniquely by the type of data it handles.
+         * 
+         * @param new_type the type of data the `PacketFramer` will handle.
+         * @param new_packet_framer a raw pointer to the `PacketFramer` object.
+         */
         void add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketFramer* new_packet_framer);
 
+        /**
+         * @brief Add `Timing` data to the `SystemManager`.
+         * The `Timing` object holds information about the time allocation for this `System` in the main loop, and information about the timeout behavior of this `System` (in the case of failure to receive a reply).
+         * @param new_timing a raw pointer to the timing data to add.
+         */
         void add_timing(Timing* new_timing);
 
+        /**
+         * @brief Getter for `FramePacketizer` object for the provided data `type`.
+         * @param type data type the `FramePacketizer` is used on.
+         * @return FramePacketizer*
+         */
         FramePacketizer* get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS type);
+        /**
+         * @brief Getter for `PacketFramer` object for the provided data `type`.
+         * @param type data type the `PacketFramer` is used on.
+         * @return PacketFramer*
+         */
         PacketFramer* get_packet_framer(RING_BUFFER_TYPE_OPTIONS type);
         
+        /**
+         * @brief The underlying `System` configuration information. 
+         * @note This object should be used as a runtime constant, once initialized.
+         */
         System& system;
+
+        /**
+         * @brief The buffer used to store commands which are sent to this `System`.
+         */
         std::queue<UplinkBufferElement>& uplink_buffer;
+        /**
+         * @brief The timing configuration data for this `System`.
+         */
         Timing* timing;
 
+        /**
+         * @brief The current state of flight this `System` is in.
+         */
         FLIGHT_STATE flight_state;
+        /**
+         * @brief The local state of this `System`.
+         */
         SYSTEM_STATE system_state;
 
         /**
          * @brief Track which type of remote memory this `System` is currently reading.
-         * 
          */
         RING_BUFFER_TYPE_OPTIONS active_type;
         
         /**
          * @brief Track the most recent write pointer location in remote memory, for ring buffer access.
-         * Can use to prevent repeated reads of same location in memory, if the memory has not been updated in
+         * Can use to prevent repeated reads of same location in memory, if the memory has not been updated.
          */
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, size_t> last_write_pointer;
 
+        /**
+         * @brief General-purpose counter for this `System`, for tracking error accumulation etc.
+         */
         size_t counter;
         uint8_t enable;
     

@@ -14,6 +14,7 @@
 /**
  * @brief For logging incoming UDP datagrams to disk.
  * 
+ * @note This is currently unimplemented. Would have been used in the GSE.
  */
 class Logger {
     public:

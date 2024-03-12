@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @author Thanasi Pantazides
+ * @brief Main entry point for the `formatter` application.
+ * @version v1.0.1
+ * @date 2024-03-07
+ * 
+ */
+
 #include "LineInterface.h"
 #include "Buffers.h"
 #include "Circle.h"
