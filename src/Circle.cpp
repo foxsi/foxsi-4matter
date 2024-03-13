@@ -715,7 +715,7 @@ void Circle::normalize_times_to_period() {
 }
 
 void Circle::record_uplink() {
-    // transport->sync_udp_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
+    transport->sync_udp_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
     transport->sync_uart_receive_to_uplink_buffer(*get_sys_man_for_name("uplink"));
 }
 
