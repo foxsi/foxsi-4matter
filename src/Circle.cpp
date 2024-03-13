@@ -84,9 +84,6 @@ void Circle::init_systems() {
 
     init_cmos();
 
-    Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
-    Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
-    Circle::get_sys_man_for_name("timepix")->system_state = SYSTEM_STATE::ABANDON;
 }
 
 void Circle::init_housekeeping() {
