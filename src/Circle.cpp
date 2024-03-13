@@ -48,9 +48,22 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
 }
 
 void Circle::start() {
+    auto loop_start_time = std::chrono::system_clock::now();
+    auto system_start_time = std::chrono::system_clock::now();
+
     while (run) {
         update_state();
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        auto current_system_time = std::chrono::system_clock::now();
+        std::chrono::duration<double> system_period = current_system_time - system_start_time;
+        utilities::debug_print("system time use: " + std::to_string(system_period.count()) + " seconds.\n");
+        system_start_time = std::chrono::system_clock::now();
+
+        if (current_system == 0) {
+            auto current_time = std::chrono::system_clock::now();
+            std::chrono::duration<double> loop_period = current_time - loop_start_time;
+            utilities::debug_print("loop period: " + std::to_string(loop_period.count()) + " seconds.\n");
+            loop_start_time = std::chrono::system_clock::now();
+        }
     }
 }
 
@@ -70,6 +83,10 @@ void Circle::init_systems() {
     init_cdte();
 
     init_cmos();
+
+    Circle::get_sys_man_for_name("cmos1")->system_state = SYSTEM_STATE::ABANDON;
+    Circle::get_sys_man_for_name("cmos2")->system_state = SYSTEM_STATE::ABANDON;
+    Circle::get_sys_man_for_name("timepix")->system_state = SYSTEM_STATE::ABANDON;
 }
 
 void Circle::init_housekeeping() {
