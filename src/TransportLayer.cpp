@@ -795,8 +795,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     utilities::debug_print("\tpacket framer frame.size(): " + std::to_string(pf->get_frame().size()) + "\n");
     
     // write to log
-    utilities::debug_log("PacketFramer::frame: ");
-    utilities::trace_log(pf->get_frame());
+    // utilities::debug_log("PacketFramer::frame: ");
+    // utilities::trace_log(pf->get_frame());
 
     // push the frame onto the downlink queue
     while (!fp->frame_emptied()) {
@@ -808,6 +808,9 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     
     // clear the old frame to use the PacketFramer again.
     pf->clear_frame();
+    // should be clear, but just in case clear FramePacketizer for next time.
+    fp->clear_frame();
+
 
     utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
     return last_write_pointer;
@@ -924,9 +927,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
                         uint8_t protocol_id = reply.at(reply.size() - 7);
                         if (status == 0x00) {
                             // utilities::debug_print("\tstatus byte == 0x00!\n");
+                            utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tsuccessfully dispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
                             break;
                         } else {
                             utilities::error_print("SpaceWire status not confirmed (status == " + std::to_string(status) + ")! Retrying write.\n");
+                            utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tcould not confirm write command. Retry " + std::to_string(try_counter));
                             // try again:
                             ++try_counter;
                             continue;
@@ -959,6 +964,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
 			size_t reply_size = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, sys_man);
             reply.resize(reply_size);
 		}
+        utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tdispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
 	} else if (cmd.type == COMMAND_TYPE_OPTIONS::UART) {
         utilities::debug_print("sending ");
         utilities::hex_print(packet);
@@ -972,6 +978,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
             if (reply_size > 0) {
                 utilities::debug_print("reply: " + utilities::bytes_to_string(reply) + "\n");
             }
+            utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tdispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
 		}
 	} else {
         utilities::error_print("uncommandable type!\n");
@@ -1052,9 +1059,11 @@ void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &up
                 UplinkBufferElement new_uplink(reply, *commands);
 
                 (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
+                utilities::debug_log("TransportLayerMachine::sync_uart_receive_to_uplink_buffer()\tqueued command " + new_uplink.get_command()->name + " for " + new_uplink.get_system()->name);
             } catch (std::out_of_range& e) {
                 // todo: log the error.
                 utilities::error_print("could not add uplink command to queue!\n"); 
+                utilities::error_log("TransportLayerMachine::sync_uart_receive_to_uplink_buffer()\tfailed to store an uplink command!");
                 return;
             }
             utilities::debug_print("\tstored uplink commands\n");

@@ -203,19 +203,17 @@ int main(int argc, char** argv) {
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 
     std::cout << "uart: \n";
-    if (do_uart) {
-        if (deck->get_sys_for_name("timepix").uart) {
-            std::cout << "timepix has uart interface\n";
-            std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
-        } else {
-            std::cout << "timepix has no uart interface!\n";
-        }
-        if (deck->get_sys_for_name("uplink").uart) {
-            std::cout << "uplink has uart interface\n";
-            std::cout << "uart interface: " << deck->get_sys_for_name("uplink").uart->to_string();
-        } else {
-            std::cout << "uplink has no uart interface!\n";
-        }
+    if (deck->get_sys_for_name("timepix").uart) {
+        std::cout << "timepix has uart interface\n";
+        std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
+    } else {
+        std::cout << "timepix has no uart interface!\n";
+    }
+    if (deck->get_sys_for_name("uplink").uart) {
+        std::cout << "uplink has uart interface\n";
+        std::cout << "uart interface: " << deck->get_sys_for_name("uplink").uart->to_string();
+    } else {
+        std::cout << "uplink has no uart interface!\n";
     }
 
 
