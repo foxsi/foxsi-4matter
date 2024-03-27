@@ -708,7 +708,6 @@ void Circle::record_uplink() {
 void Circle::flush() {
     transport->sync_tcp_read_some(transport->local_tcp_sock, std::chrono::milliseconds(1));
     transport->sync_tcp_read_some(transport->local_tcp_housekeeping_sock, std::chrono::milliseconds(1));
-    utilities::debug_log("Circle::flush()\tflushed.");
 }
 
 boost::asio::chrono::milliseconds Circle::get_state_time()

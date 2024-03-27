@@ -683,14 +683,14 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     
     // RMAP read request the write pointer:
     local_tcp_sock.send(boost::asio::buffer(write_pointer_request_packet));
-    utilities::debug_print("\trequested remote write pointer\n");
+    // utilities::debug_print("\trequested remote write pointer\n");
 
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
     size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, last_reply, sys_man);
-    utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
-    
+    // utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
+
     // wrap the reply vector to the correct length:
     last_reply.resize(reply_len);
 
@@ -709,8 +709,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         utilities::error_print("got bad write pointer length!\n");
         return prior_write_pointer;
     }
-    utilities::debug_print("\textracted write pointer from reply: ");
-    utilities::hex_print(last_write_pointer_bytes);
+    // utilities::debug_print("\textracted write pointer from reply: ");
+    // utilities::hex_print(last_write_pointer_bytes);
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
@@ -739,6 +739,19 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         utilities::debug_print("write pointer has not advanced, skipping\n");
         return prior_write_pointer;
     }
+    
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treceived write pointer from " + sys_man.system.name + ": " + utilities::bytes_to_string(last_write_pointer_bytes));
+
+    // Mar 25 2024: attempt fix for DE unixtime woes.
+    if (sys_man.system.name.find("cdte") != std::string::npos){
+        if (last_write_pointer == ring_params.start_address) {
+            // if first frame in the buffer, index to the last frame in the buffer
+            last_write_pointer = last_write_pointer + (ring_params.frames_per_ring - 1)*ring_params.frame_size_bytes;
+            // if this is not the first frame in the buffer, go back a frame
+        } else {
+            last_write_pointer = last_write_pointer - ring_params.frame_size_bytes;
+        }
+    }
 
     // log this time for frame time measurement:
     auto frame_start_time = std::chrono::high_resolution_clock::now();
@@ -752,6 +765,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         // make a new RMAP read command for that address:
         std::vector<uint8_t> buffer_read_command(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, sys_man.system.ethernet->max_payload_size));
         
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treading from " + utilities::bytes_to_string(write_pointer_bytes));
+
         // start RTT timer
         auto rtt_start_time = std::chrono::high_resolution_clock::now();
         // send the read command:
