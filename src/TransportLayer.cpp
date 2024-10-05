@@ -726,22 +726,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     size_t last_write_pointer(utilities::unsplat_from_4bytes(last_write_pointer_bytes));
 
     // confirm write pointer in ring buffer
-    // todo: this is not a valid criterion for cmos, which does not use all of its buffer area for frames.
-
-    // if (last_write_pointer < ring_params.start_address || last_write_pointer > ring_params.start_address + ring_params.frames_per_ring*ring_params.frame_size_bytes) {
-    //     utilities::error_print("write pointer " + std::to_string(last_write_pointer) + " outside ring buffer for system with ");
-    //     utilities::error_print(ring_params.to_string());
-    //     return prior_write_pointer;
-    // }
 
     // check if we are reading a duplicate frame (interlock with Circle::manager_systems() context)
-    if (last_write_pointer == prior_write_pointer) {
-        utilities::debug_print("write pointer has not advanced, skipping\n");
-        return prior_write_pointer;
-    }
-    
-    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treceived write pointer from " + sys_man.system.name + ": " + utilities::bytes_to_string(last_write_pointer_bytes));
-
     // Mar 25 2024: attempt fix for DE unixtime woes.
     if (sys_man.system.name.find("cdte") != std::string::npos){
         if (last_write_pointer == ring_params.start_address) {
@@ -752,6 +738,13 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
             last_write_pointer = last_write_pointer - ring_params.frame_size_bytes;
         }
     }
+    if (last_write_pointer == prior_write_pointer) {
+        utilities::debug_print("write pointer has not advanced, skipping\n");
+        return prior_write_pointer;
+    }
+    
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treceived write pointer from " + sys_man.system.name + ": " + utilities::bytes_to_string(last_write_pointer_bytes));
+
 
     // log this time for frame time measurement:
     auto frame_start_time = std::chrono::high_resolution_clock::now();
@@ -1136,7 +1129,7 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
         commands->get_sys_for_name("uplink").ethernet->max_payload_size 
             + commands->get_sys_for_name("uplink").ethernet->static_header_size 
             + commands->get_sys_for_name("uplink").ethernet->static_footer_size
-    );
+        );
     bool has_data = downlink_buffer->try_dequeue(dbe);
 
     while (has_data && dbe.get_system().hex != 0x05) {
