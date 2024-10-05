@@ -1130,7 +1130,13 @@ bool TransportLayerMachine::sync_udp_send_all_downlink_buffer() {
     utilities::debug_print("in TransportLayerMachine::sync_udp_send_downlink_buffer()\n");
 
     // todo: replace this with non-dummy setup that adds enough max_packet_size to avoid errors when popping queue:
-    DownlinkBufferElement dbe(&(commands->get_sys_for_name("uplink")), 2000);
+    // DownlinkBufferElement dbe(&(commands->get_sys_for_name("uplink")), 2000);
+    DownlinkBufferElement dbe(
+        &(commands->get_sys_for_name("uplink")), 
+        commands->get_sys_for_name("uplink").ethernet->max_payload_size 
+            + commands->get_sys_for_name("uplink").ethernet->static_header_size 
+            + commands->get_sys_for_name("uplink").ethernet->static_footer_size
+    );
     bool has_data = downlink_buffer->try_dequeue(dbe);
 
     while (has_data && dbe.get_system().hex != 0x05) {
