@@ -215,6 +215,9 @@ On startup, this `Listener` application creates a set of log file at this locati
 
 Additionally, an ASCII-formatted file called `catch.log` is produced to log any received packets that can't be parsed into a system-specific file. Each entry in this file is newline-separated, and tagged at the start of the file with an offset timestamp from the creation time of the file.
 
+## Common issues
+1. If you run the formatter software, kill it, then try to run it immediately again, you will get an error containing `connect: Address already in use`. This is because the kernel retains control of TCP sockets for a while (~1 minute) after you close them to allow any messages still on the wire to come through. Just wait a moment and try running again. Of course, it is possible (depending on your configuration) that another process on the same machine actually is using the IP address you want as well.
+
 ## Documentation
 If you enjoyed this measly little README, you're going to *love* the rest of the documentation! You can view these docs in a web browser (they are HTML), and until they are hosted somewhere, you will need these instructions to build them:
 
