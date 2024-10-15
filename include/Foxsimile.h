@@ -50,6 +50,8 @@ namespace foxsimile {
                 boost::asio::io_context& context
             );
 
+            void construct_rmap_lookup();
+
             void async_receive();
             void handle_accept(const boost::system::error_code& err);
             void await_full_buffer(const boost::system::error_code& err, std::size_t byte_count);
@@ -58,6 +60,7 @@ namespace foxsimile {
 
             std::vector<uint8_t> get_response(std::vector<uint8_t> message);
             bool add_response(std::vector<uint8_t> message, std::vector<uint8_t> response);
+            uint8_t identify_sender(std::vector<uint8_t> message);
 
             void add_default_response(std::vector<uint8_t> message);
             void set_bad_request_behavior(bool do_except);
@@ -93,6 +96,8 @@ namespace foxsimile {
             std::shared_ptr<SystemManager> system_manager;
 
             std::shared_ptr<CommandDeck> deck; 
+
+            std::map<uint8_t, uint8_t> lookup_code_by_rmap_address;
     };
 }
 

@@ -15,10 +15,11 @@
 
 #include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
     boost::asio::io_context context;
     LineInterface lif(argc, argv, context);
-    auto deck = std::make_shared<CommandDeck>(lif.get_command_deck());
+    auto deck_basic = lif.get_command_deck();
+    auto deck = std::make_shared<CommandDeck>(deck_basic);
 
     System& gse = deck->get_sys_for_name("gse");
     System& cdte1 = deck->get_sys_for_name("cdte1");
@@ -58,6 +59,11 @@ int main(int argc, char* argv[]) {
     };
     housekeeping_response_lookup[housekeeping_request1] = housekeeping_reply;
     housekeeping_response_lookup[housekeeping_request2] = housekeeping_reply;
+
+    // todo here, before starting main loop:
+    //      fork a thread, and run this as system call:
+    //          socat pty,raw,echo=0,link=/tmp/foxsi_serial pty,raw,echo=0,link=/tmp/foxsi_serial1
+    //  (or just run that in background).
 
     try {
         std::cout << "starting cdte1\n";
