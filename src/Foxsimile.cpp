@@ -6,27 +6,25 @@
 #include <thread>
 
 foxsimile::Responder::Responder(
-    bool do_except,
     std::map<std::vector<uint8_t>, std::vector<uint8_t>> new_response_lookup,
-    std::shared_ptr<SystemManager> new_system_manager,
+    std::vector<std::shared_ptr<SystemManager>> new_system_managers,
     std::shared_ptr<CommandDeck> new_deck, boost::asio::io_context& context)
-    : response_lookup(new_response_lookup), system_manager(new_system_manager),
+    : response_lookup(new_response_lookup), system_managers(new_system_managers),
       deck(new_deck),
       // acceptor(context,
       // boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
       // new_system_manager->system.ethernet->port)),
       acceptor(context, boost::asio::ip::tcp::endpoint(
                             boost::asio::ip::make_address(
-                                new_system_manager->system.ethernet->address),
-                            new_system_manager->system.ethernet->port)),
+                                new_system_managers[0]->system.ethernet->address),
+                            new_system_managers[0]->system.ethernet->port)),
       socket(context) {
     response_strategy     = response_strategies::lookup;
-    except_on_bad_request = do_except;
     default_response      = { 0x00 };
     static_latency_us     = 1000;
     bytewise_latency_us   = 10;
 
-    frame_update_ms = std::chrono::milliseconds(500);
+    frame_update_ms = std::chrono::milliseconds(250);
 
     frame_timer = new boost::asio::steady_timer(context, frame_update_ms);
 
@@ -35,16 +33,15 @@ foxsimile::Responder::Responder(
     // if (system_manager->system.spacewire == nullptr) {
     //     throw "can't construct Responder without System::spacewire!";
     // }
-    if (!system_manager->system.ethernet) {
-        throw "can't construct Responder without System::ethernet!";
-    }
+
     boost::asio::ip::address local_address =
-        boost::asio::ip::make_address(system_manager->system.ethernet->address);
-    unsigned short local_port = system_manager->system.ethernet->port;
+        boost::asio::ip::make_address(system_managers[0]->system.ethernet->address);
+    unsigned short local_port = system_managers[0]->system.ethernet->port;
 
     read_buffer.resize(0);
     read_buffer.resize(2048);
     
+    name = "foxsimile";
     construct_rmap_lookup();
 
     // acceptor.accept(socket);
@@ -54,26 +51,25 @@ foxsimile::Responder::Responder(
 }
 
 foxsimile::Responder::Responder(
-    bool do_except, std::string new_response_mmap_file,
-    std::shared_ptr<SystemManager> new_system_manager,
+    std::map<uint8_t, std::string> new_response_mmap_files,
+    std::vector<std::shared_ptr<SystemManager>> new_system_managers,
     std::shared_ptr<CommandDeck> new_deck, boost::asio::io_context& context)
-    : response_mmap_file(new_response_mmap_file),
-      system_manager(new_system_manager), deck(new_deck),
+    : response_mmap_files(new_response_mmap_files),
+      system_managers(new_system_managers), deck(new_deck),
       // acceptor(context,
       // boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(),
       // new_system_manager->system.ethernet->port)),
       acceptor(context, boost::asio::ip::tcp::endpoint(
                             boost::asio::ip::make_address(
-                                new_system_manager->system.ethernet->address),
-                            new_system_manager->system.ethernet->port)),
+                                new_system_managers[0]->system.ethernet->address),
+                            new_system_managers[0]->system.ethernet->port)),
       socket(context) {
     response_strategy     = response_strategies::mmap;
-    except_on_bad_request = do_except;
     default_response      = { 0x00 };
     static_latency_us     = 1000;
     bytewise_latency_us   = 10;
 
-    frame_update_ms = std::chrono::milliseconds(500);
+    frame_update_ms = std::chrono::milliseconds(250);
 
     frame_timer = new boost::asio::steady_timer(context, frame_update_ms);
     frame_timer->async_wait(boost::bind(&Responder::handle_frame_timer, this));
@@ -83,25 +79,27 @@ foxsimile::Responder::Responder(
     // if (system_manager->system.spacewire == nullptr) {
     //     throw "can't construct Responder without System::spacewire!";
     // }
-    if (!system_manager->system.ethernet) {
-        throw "can't construct Responder without System::ethernet!";
-    }
     boost::asio::ip::address local_address =
-        boost::asio::ip::make_address(system_manager->system.ethernet->address);
-    unsigned short local_port = system_manager->system.ethernet->port;
+        boost::asio::ip::make_address(system_managers[0]->system.ethernet->address);
+    unsigned short local_port = system_managers[0]->system.ethernet->port;
 
     read_buffer.resize(0);
     read_buffer.resize(2048);
 
     // read in mmap:
-    std::cout << "\topening large mmap file...\n";
-    std::basic_ifstream<char> file(response_mmap_file,
+    std::cout << "\topening large mmap files...\n";
+    for (auto& p: response_mmap_files) {
+        std::cout << "\t\t" + p.second + "\n";
+        std::basic_ifstream<char> file(p.second,
                                    std::ios::binary | std::ios::in);
-    std::vector<uint8_t> pass((std::istreambuf_iterator<char>(file)),
-                              std::istreambuf_iterator<char>());
-    mmap = pass;
-    file.close();
+        std::vector<uint8_t> pass((std::istreambuf_iterator<char>(file)),
+                                std::istreambuf_iterator<char>());
+        mmaps.insert(std::make_pair(p.first, pass));
+        file.close();
+    }
+    
 
+    name = "foxsimile";
     construct_rmap_lookup();
 
     // acceptor.accept(socket);
@@ -111,10 +109,9 @@ foxsimile::Responder::Responder(
 }
 
 void foxsimile::Responder::construct_rmap_lookup() {
-    
-    for (auto& sys: deck->systems) {
-        if (sys.spacewire) {
-            lookup_code_by_rmap_address.insert(std::make_pair(sys.spacewire->target_logical_address, sys.hex));
+    for (auto& sys_man: system_managers) {
+        if (sys_man->system.spacewire) {
+            lookup_code_by_rmap_address.insert(std::make_pair(sys_man->system.spacewire->target_logical_address, sys_man->system.hex));
         }
     }
 }
@@ -132,12 +129,12 @@ void foxsimile::Responder::async_receive() {
 
 void foxsimile::Responder::handle_accept(const boost::system::error_code& err) {
     if (!err) {
-        std::cout << system_manager->system.name << " accepted!\n";
+        std::cout << name << " accepted!\n";
         async_receive();
         // frame_timer->async_wait(boost::bind(&Responder::handle_frame_timer,
         // this));
     } else {
-        std::cout << system_manager->system.name << " accept error :(\n";
+        std::cout << name << " accept error :(\n";
     }
 }
 
@@ -147,21 +144,21 @@ void foxsimile::Responder::await_full_buffer(
     if (err == boost::asio::error::eof ||
         err == boost::asio::error::connection_aborted ||
         err == boost::asio::error::connection_reset) {
-        std::cout << system_manager->system.name
+        std::cout << name
                   << " connection reset by host\n";
         end_session();
         return;
     }
 
-    std::cout << system_manager->system.name << " received "
-              << std::to_string(byte_count) << " bytes: 0x";
-    for (size_t i = 0; i < byte_count; ++i) {
-        std::cout << std::hex << std::to_string(read_buffer[i]) << " ";
-    }
-    std::cout << "\n";
+    // std::cout << name << " received "
+    //           << std::to_string(byte_count) << " bytes: 0x";
+    // for (size_t i = 0; i < byte_count; ++i) {
+    //     std::cout << std::hex << std::to_string(read_buffer[i]) << " ";
+    // }
+    // std::cout << "\n";
 
-    std::cout << system_manager->system.name << " accumulater entry: ";
-    utilities::hex_print(message_accumulator);
+    // std::cout << name << " accumulater entry: ";
+    // utilities::hex_print(message_accumulator);
 
     read_buffer.resize(byte_count);
 
@@ -170,11 +167,11 @@ void foxsimile::Responder::await_full_buffer(
     message_accumulator.insert(message_accumulator.end(), read_buffer.begin(),
                                read_buffer.end());
 
-    std::cout << system_manager->system.name << " accumulator fill: ";
-    utilities::hex_print(message_accumulator);
-    std::cout << system_manager->system.name << " accumulator[11]: ";
-    utilities::hex_print(message_accumulator[11]);
-    std::cout << "\n";
+    // std::cout << name << " accumulator fill: ";
+    // utilities::hex_print(message_accumulator);
+    // std::cout << name << " accumulator[11]: ";
+    // utilities::hex_print(message_accumulator[11]);
+    // std::cout << "\n";
 
     // check we can read 12 bytes in:
     if (message_accumulator.size() >= 12) {
@@ -185,14 +182,14 @@ void foxsimile::Responder::await_full_buffer(
                                   message_accumulator.end());
         size_t purported_length = utilities::unsplat_from_4bytes(head);
 
-        std::cout << system_manager->system.name << " head: ";
-        utilities::hex_print(head);
-        std::cout << system_manager->system.name << " tail: ";
-        utilities::hex_print(foot);
+        // std::cout << name << " head: ";
+        // utilities::hex_print(head);
+        // std::cout << name << " tail: ";
+        // utilities::hex_print(foot);
 
         // check the reported size is in the buffer
         if (foot.size() >= purported_length) {
-            std::cout << system_manager->system.name
+            std::cout << name
                       << " length purported to be "
                       << std::to_string(purported_length) << "\n";
 
@@ -227,8 +224,8 @@ void foxsimile::Responder::await_full_buffer(
     }
 
     // clear buffer
-    read_buffer.resize(0);
     read_buffer.resize(2048);
+    std::fill(read_buffer.begin(), read_buffer.end(), 0x00);
 
     // listen again (either for more of this buffer, or to fill next buffer).
     async_receive();
@@ -237,7 +234,7 @@ void foxsimile::Responder::await_full_buffer(
 void foxsimile::Responder::send_response(std::vector<uint8_t> response) {
     if (response.size() > 0) {
         // delay to test timeout:
-        size_t delay_ms = 2;
+        size_t delay_ms = 1;
         // utilities::hex_print(response);
         std::cout << "\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
@@ -270,9 +267,6 @@ foxsimile::Responder::get_response(std::vector<uint8_t> message) {
     } catch (std::exception& e) {
         utilities::error_print("response threw exception " +
                                std::string(e.what()) + "\n");
-        if (except_on_bad_request) {
-            throw e;
-        }
     }
     return response;
 }
@@ -286,9 +280,6 @@ void foxsimile::Responder::add_default_response(std::vector<uint8_t> message) {
     default_response = message;
 }
 
-void foxsimile::Responder::set_bad_request_behavior(bool do_except) {
-    except_on_bad_request = do_except;
-}
 
 uint8_t foxsimile::Responder::identify_sender(std::vector<uint8_t> message) {
     size_t eth_head_size = 12;
@@ -299,27 +290,38 @@ uint8_t foxsimile::Responder::identify_sender(std::vector<uint8_t> message) {
     }
 
     size_t message_size = message.size();
-    if (message_size <= min_size) {
+    if (message_size < min_size) {
         throw "can't foxsimile::Responder::identify_sender(): message size way too "
               "short";
     }
 
-    if (system_manager->system.spacewire->target_logical_address < 10) {
-        throw "can't foxsimile::Responder::identify_sender(): target logical address collides with port numbering";
+    std::vector<size_t> sys_k(system_managers.size());
+
+    size_t man_k = 0;
+    for (auto& man: system_managers) {
+        if (man->system.spacewire->target_logical_address < 10) {
+            throw "can't foxsimile::Responder::identify_sender(): target logical address collides with port numbering";
+        }
+
+        size_t k = 0;
+        while (k < message.size()) {
+            if (message[k] == man->system.spacewire->target_logical_address) {
+                break;
+            }
+            ++k;
+        }
+        
+        sys_k[man_k] = k;
+        ++man_k;
     }
 
-    size_t k = 0;
-    while (k < message.size()) {
-        if (message[k] == system_manager->system.spacewire->target_logical_address) {
-            break;
-        }
-         ++k;
-    }
+    size_t resolve_k = *std::min_element(sys_k.begin(), sys_k.end());
+    // size_t resolve_k = *resolve_k_it;
     size_t target_logical_address_candidate = 0;
-    if (k < message.size() - 4) {
-        if (message[k + 1] == 0x01) {
-            if (message[k + 3] == 0x02) {
-                target_logical_address_candidate = message[k];
+    if (resolve_k < message.size() - 4) {
+        if (message[resolve_k + 1] == 0x01) {
+            if (message[resolve_k + 3] == 0x02) {
+                target_logical_address_candidate = message[resolve_k];
             }
         }
     }
@@ -332,30 +334,18 @@ uint8_t foxsimile::Responder::identify_sender(std::vector<uint8_t> message) {
     }
 
     return sys_code;
-
-    // deck->get_sys_for_code()
-
-    // fixed values: 
-    //      protocol ID
-    //      instruction byte is constrained
-    //      initiator logical address (may appear earlier too, if non-unique)
 }
 
 
 void foxsimile::Responder::handle_frame_timer() {
     try {
-        // for (uint8_t i = 0; i < 4; ++i) {
-            // std::string this_name = "cdte" + std::to_string(i + 1);
-            // System& this_system   = deck->get_sys_for_name(this_name);
-            // foxsimile::mmap::advance_write_pointer(
-            //     this_system, RING_BUFFER_TYPE_OPTIONS::PC, mmap);
-            // foxsimile::mmap::advance_write_pointer(
-            //     system_manager->system, RING_BUFFER_TYPE_OPTIONS::PC, mmap);
-        // }
-
-        // todo: come back to this. May need to advance this separately for each CdTe detector subsystem?
-        foxsimile::mmap::advance_write_pointer(
-            system_manager->system, RING_BUFFER_TYPE_OPTIONS::PC, mmap);
+        // For each system, for each datatype of that system, advance the write pointer.
+        for (auto man: system_managers) {
+            for (auto t: man->system.ring_params) {
+                foxsimile::mmap::advance_write_pointer(
+                    man->system, t.first, mmaps);
+            }
+        }
 
     } catch (std::exception& e) {
         utilities::error_print("timer caught: " + std::string(e.what()) + "\n");
@@ -397,37 +387,17 @@ foxsimile::Responder::make_reply(std::vector<uint8_t> message) {
     utilities::hex_print(tail);
     std::cout << "\n";
 
-    std::cout << "reply path address: ";
-    utilities::hex_print(system_manager->system.spacewire->reply_path_address);
-    std::cout << "\n";
+    auto& sys = deck->get_sys_for_code(identify_sender(message));
 
-    size_t target_path_address_size =
-        system_manager->system.spacewire->target_path_address.size();
+    if (!sys.spacewire) {
+        std::cout << "system identified has no spacewire interface!\n";
+        return {};
+    }
+
+    size_t target_path_address_size = sys.spacewire->target_path_address.size();
     // std::vector<uint8_t>
     // target_path_address(utilities::unsplat_from_4bytes(system_manager->system.spacewire->reply_path_address));
-    std::vector<uint8_t> target_path_address(
-        system_manager->system.spacewire->target_path_address);
-
-    // delete extra (padding to multiple of 4) nodes from the path address
-    // uint8_t first_node = 0;
-    // for (uint8_t i = 0; i < target_path_address_size; ++i) {
-    //     // std::cout << "\ttarget_path_address[" << std::to_string(i) << "] = "
-    //     // << std::to_string(target_path_address[i]) << "\n";
-    //     if (target_path_address.at(i) != 0x00) {
-    //         first_node = i;
-    //         break;
-    //     }
-    // }
-    // target_path_address.erase(target_path_address.begin(),
-    //                           target_path_address.begin() + first_node);
-    
-    // target_path_address.resize(0);
-
-    
-
-    // todo:getting off-by-one errors for all CMOS responses here (due to indexing from front and wrong path length).
-    //      instruction byte is in wrong spot, get "status" instead (for CMOS).
-    // above, can use target_path_address instead of reply_*. But below, make sure the variable reply_path_address is not being misappropriated in constructing response.
+    std::vector<uint8_t> target_path_address(sys.spacewire->target_path_address);
 
     size_t instruction_offset_from_start                       = 2;
     size_t key_offset_from_start                               = 3;
@@ -523,10 +493,19 @@ foxsimile::Responder::make_reply(std::vector<uint8_t> message) {
 
     // now, access memory at the given `address`
     RING_BUFFER_TYPE_OPTIONS type =
-        foxsimile::mmap::is_ring_buffer(*system_manager, address, data_length);
+        foxsimile::mmap::is_ring_buffer(sys, address, data_length);
     std::cout << "found ring buffer type: "
               << RING_BUFFER_TYPE_OPTIONS_NAMES.at(type) << "\n";
 
+    // write to mmap:
+    // this being a pointer avoids a very expensive copy of the entire mmap that was wasting *seconds* in the response construction.
+    std::vector<uint8_t> *mmap; 
+    try{
+        mmap = &mmaps.at(sys.hex);
+    } catch (std::exception& e) {
+        utilities::error_print("couldn't find mmap!\n");
+        return {};
+    }
     if (do_write) {
         std::cout << "got write command\n";
         // extract data to write:
@@ -542,9 +521,8 @@ foxsimile::Responder::make_reply(std::vector<uint8_t> message) {
             utilities::debug_print("verification not implemented!\n");
         }
 
-        // write to mmap:
         for (size_t i = 0; i < data_length; ++i) {
-            mmap.at(i + address) = data_bytes.at(i);
+            mmap->at(i + address) = data_bytes.at(i);
         }
         std::cout << "wrote data\n";
         if (do_reply) {
@@ -559,54 +537,47 @@ foxsimile::Responder::make_reply(std::vector<uint8_t> message) {
         std::cout << "got read command\n";
 
         // query mmap:
-        std::vector<uint8_t> read_data(mmap.begin() + address,
-                                       mmap.begin() + address + data_length);
+        std::vector<uint8_t> read_data(mmap->begin() + address,
+                                       mmap->begin() + address + data_length);
         std::cout << "read data from memory\n";
 
         // build reply packet
-        std::vector<uint8_t> ether_header;
+        std::vector<uint8_t> ether_header(8);
         std::vector<uint8_t> spw_tailer;
         std::vector<uint8_t> packet;
 
-        spw_tailer.push_back(initiator_logical_address);
-        spw_tailer.push_back(0x01); // RMAP
-        spw_tailer.push_back((instruction & 0x03) | 0x08);
-        spw_tailer.push_back(0x00); // placeholder for reply status code, see
-                                    // ECSS-E-SD-50-52C5 section 5.6
-        spw_tailer.push_back(
-            system_manager->system.spacewire->source_logical_address);
-        spw_tailer.push_back(transaction_id[0]);
-        spw_tailer.push_back(transaction_id[1]);
-        spw_tailer.push_back(0x00);
+        spw_tailer = {
+            initiator_logical_address,
+            0x01,
+            static_cast<uint8_t>((instruction & 0x03) | 0x08),
+            0x00,
+            sys.spacewire->source_logical_address,
+            transaction_id[0],
+            transaction_id[1],
+            0x00
+        };
+
         spw_tailer.insert(spw_tailer.end(), data_length_bytes.begin(),
                           data_length_bytes.end());
-        uint8_t tailer_crc = system_manager->system.spacewire->crc(spw_tailer);
+        uint8_t tailer_crc = sys.spacewire->crc(spw_tailer);
         spw_tailer.push_back(tailer_crc);
-        uint8_t data_crc = system_manager->system.spacewire->crc(read_data);
+        uint8_t data_crc = sys.spacewire->crc(read_data);
         spw_tailer.insert(spw_tailer.end(), read_data.begin(), read_data.end());
         spw_tailer.push_back(data_crc);
         packet.insert(packet.end(), spw_tailer.begin(), spw_tailer.end());
 
         std::vector<uint8_t> spw_size_bytes =
             utilities::splat_to_nbytes(4, packet.size());
-        ether_header.resize(8);
         ether_header.insert(ether_header.end(), spw_size_bytes.begin(),
                             spw_size_bytes.end());
         packet.insert(packet.begin(), ether_header.begin(), ether_header.end());
 
-        std::cout << "sending response: ";
-        utilities::spw_print(packet, nullptr);
-        std::cout << "\n";
+        std::cout << "sending response...\n";
+        // utilities::spw_print(packet, nullptr);
+        // std::cout << "\n";
 
         return packet;
     }
-
-    // checklist:
-    //      target logical address
-    //      key
-    //      protocol id
-    // verifylist:
-    //      header and data crcs
 
     // debug
     response = { 0x01, 0x01, 0x01, 0x01 };
@@ -615,30 +586,30 @@ foxsimile::Responder::make_reply(std::vector<uint8_t> message) {
     return response;
 }
 
-RING_BUFFER_TYPE_OPTIONS foxsimile::mmap::is_ring_buffer(SystemManager& sys_man,
+RING_BUFFER_TYPE_OPTIONS foxsimile::mmap::is_ring_buffer(System& sys,
                                                          size_t address,
                                                          size_t offset) {
     // assumes convex (contiguous) ring buffer area.
     size_t first = address;
     size_t last  = address + offset;
 
-    if (sys_man.system.name.find("cdte1") != std::string::npos) {
+    if (sys.name.find("cdte1") != std::string::npos) {
         if (first >= 0x0040'0000 && last < 0x022a'2df0) {
             return RING_BUFFER_TYPE_OPTIONS::PC;
         }
-    } else if (sys_man.system.name.find("cdte2") != std::string::npos) {
+    } else if (sys.name.find("cdte2") != std::string::npos) {
         if (first >= 0x0230'0000 && last < 0x041a'2df0) {
             return RING_BUFFER_TYPE_OPTIONS::PC;
         }
-    } else if (sys_man.system.name.find("cdte3") != std::string::npos) {
+    } else if (sys.name.find("cdte3") != std::string::npos) {
         if (first >= 0x0420'0000 && last < 0x060a'2df0) {
             return RING_BUFFER_TYPE_OPTIONS::PC;
         }
-    } else if (sys_man.system.name.find("cdte4") != std::string::npos) {
+    } else if (sys.name.find("cdte4") != std::string::npos) {
         if (first >= 0x0610'0000 && last < 0x07fa'2df0) {
             return RING_BUFFER_TYPE_OPTIONS::PC;
         }
-    } else if (sys_man.system.name.find("cmos") != std::string::npos) {
+    } else if (sys.name.find("cmos") != std::string::npos) {
         if (first >= 0x1000 && last < 0x0440'1000) {
             return RING_BUFFER_TYPE_OPTIONS::QL;
         }
@@ -651,7 +622,7 @@ RING_BUFFER_TYPE_OPTIONS foxsimile::mmap::is_ring_buffer(SystemManager& sys_man,
 
 void foxsimile::mmap::advance_write_pointer(System& system,
                                             RING_BUFFER_TYPE_OPTIONS type,
-                                            std::vector<uint8_t>& mmap) {
+                                            std::unordered_map<uint8_t, std::vector<uint8_t>>& mmaps) {
     // check this is system with a ring buffer, and set stride accordingly.
 
     uint32_t stride   = 0;
@@ -680,8 +651,8 @@ void foxsimile::mmap::advance_write_pointer(System& system,
     uint32_t current_write_pointer_start =
         system.ring_params[type].write_pointer_address;
     std::vector<uint8_t> current_write_pointer_bytes(
-        mmap.begin() + current_write_pointer_start,
-        mmap.begin() + current_write_pointer_start + write_pointer_size);
+        mmaps[system.hex].begin() + current_write_pointer_start,
+        mmaps[system.hex].begin() + current_write_pointer_start + write_pointer_size);
 
     uint32_t current_write_pointer =
         utilities::unsplat_from_4bytes(current_write_pointer_bytes);
@@ -692,14 +663,16 @@ void foxsimile::mmap::advance_write_pointer(System& system,
     std::vector<uint8_t> new_write_pointer_bytes =
         utilities::splat_to_nbytes(4, new_write_pointer);
     for (size_t i = 0; i < write_pointer_size; ++i) {
-        mmap.at(i + current_write_pointer_start) =
+        mmaps[system.hex].at(i + current_write_pointer_start) =
             new_write_pointer_bytes.at(i);
     }
+
+    // std::cout << "advanced wr ptr for " << system.name << " to " << new_write_pointer << "\n";
 }
 
 void foxsimile::mmap::advance_write_pointer(SystemManager& sys_man,
                                             RING_BUFFER_TYPE_OPTIONS type,
-                                            std::vector<uint8_t>& mmap) {
+                                            std::unordered_map<uint8_t, std::vector<uint8_t>>& mmaps) {
 
-    foxsimile::mmap::advance_write_pointer(sys_man.system, type, mmap);
+    foxsimile::mmap::advance_write_pointer(sys_man.system, type, mmaps);
 }

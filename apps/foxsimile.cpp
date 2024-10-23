@@ -2,8 +2,8 @@
  * @file foxsimile.cpp
  * @author Thanasi Pantazides
  * @brief Emulator for onboard housekeeping data and CdTe data.
- * @version v1.0.1
- * @date 2024-03-07
+ * @version v1.2.1
+ * @date 2024-10-18
  * 
  */
 
@@ -34,11 +34,19 @@ int main(int argc, char** argv) {
     std::map<std::vector<uint8_t>, std::vector<uint8_t>> gse_response_lookup;
     
     std::queue<UplinkBufferElement> cdte1_uplink_queue;
+    std::queue<UplinkBufferElement> cdte2_uplink_queue;
+    std::queue<UplinkBufferElement> cdte3_uplink_queue;
+    std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
+    std::queue<UplinkBufferElement> cmos2_uplink_queue;
     std::queue<UplinkBufferElement> housekeeping_uplink_queue;
     std::queue<UplinkBufferElement> gse_uplink_queue;
     auto cdte1_manager = std::make_shared<SystemManager>(cdte1, cdte1_uplink_queue);
+    auto cdte2_manager = std::make_shared<SystemManager>(cdte2, cdte2_uplink_queue);
+    auto cdte3_manager = std::make_shared<SystemManager>(cdte3, cdte3_uplink_queue);
+    auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
+    auto cmos2_manager = std::make_shared<SystemManager>(cmos2, cmos2_uplink_queue);
     auto housekeeping_manager = std::make_shared<SystemManager>(housekeeping, housekeeping_uplink_queue);
     auto gse_manager = std::make_shared<SystemManager>(gse, gse_uplink_queue);
 
@@ -47,8 +55,8 @@ int main(int argc, char** argv) {
     std::cout << "housekeeping address: " << housekeeping_manager->system.ethernet->address << ":" << housekeeping_manager->system.ethernet->port << "\n";
     std::cout << "gse address: " << gse_manager->system.ethernet->address << ":" << gse_manager->system.ethernet->port << "\n";
 
-    std::string cdte1_mmap_file = "util/mock/de_mmap_mod";
-    std::string cmos1_mmap_file = "util/mock/cmos_mmap_mod";
+    std::string cdte_mmap_file = "util/mock/de_mmap_mod";
+    std::string cmos_mmap_file = "util/mock/cmos_mmap_mod";
 
     std::vector<uint8_t> housekeeping_request1 = {0x01, 0xf2};
     std::vector<uint8_t> housekeeping_request2 = {0x02, 0xf2};
@@ -60,49 +68,41 @@ int main(int argc, char** argv) {
     housekeeping_response_lookup[housekeeping_request1] = housekeeping_reply;
     housekeeping_response_lookup[housekeeping_request2] = housekeeping_reply;
 
-    // todo here, before starting main loop:
-    //      fork a thread, and run this as system call:
-    //          socat pty,raw,echo=0,link=/tmp/foxsi_serial pty,raw,echo=0,link=/tmp/foxsi_serial1
-    //  (or just run that in background).
+    auto bulk_lookup = {
+        cdte1_manager, 
+        cdte2_manager, 
+        cdte3_manager, 
+        cdte4_manager, 
+        cmos1_manager,
+        cmos2_manager
+    };
+    std::map<uint8_t, std::string> bulk_mmap = {
+        {cdte1.hex, cdte_mmap_file},
+        {cdte2.hex, cdte_mmap_file},
+        {cdte3.hex, cdte_mmap_file},
+        {cdte4.hex, cdte_mmap_file},
+        {cmos1.hex, cmos_mmap_file},
+        {cmos2.hex, cmos_mmap_file}
+    };
 
     try {
-        std::cout << "starting cdte1\n";
-        foxsimile::Responder cdte1_mock(
-            false, 
-            cdte1_mmap_file, 
-            cdte1_manager,
+        std::cout << "starting responder\n";
+        foxsimile::Responder mock(
+            bulk_mmap, 
+            bulk_lookup,
             deck, 
             context
         );
-        // std::cout << "starting cmos1\n";
-        // foxsimile::Responder cmos1_mock(
-        //     false, 
-        //     cmos1_mmap_file, 
-        //     cmos1_manager,
-        //     deck, 
-        //     context
-        // );
         std::cout << "starting housekeeping\n";
         foxsimile::Responder housekeeping_mock(
-            false, 
             housekeeping_response_lookup, 
-            housekeeping_manager,
+            {housekeeping_manager},
             deck, 
             context
         );
-        // std::cout << "starting gse\n";
-        // foxsimile::Responder gse_mock(
-        //     false, 
-        //     gse_response_lookup, 
-        //     gse_manager,
-        //     deck, 
-        //     context
-        // );
-
+        
         std::cout << "listening...\n";
-        // cdte1_mock.async_receive();
-        // housekeeping_mock.async_receive();
-
+        
         context.run();
 
     } catch (const char* err) {

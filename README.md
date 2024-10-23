@@ -165,6 +165,19 @@ When the Formatter runs, it will locally record log files (describing Formatter 
 
 On startup the Formatter will walk through each system and try to set it up. No bias voltage will be applied to CdTe. If it cannot talk to a specific system, it will ignore it for data readout (this behavior will be different for flight). 
 
+#### Automatically running on boot
+The flight Raspberry Pi will automatically run the Formatter software after booting, and restart it if it crashes. This is managed by Linux `systemd`, with the Formatter software running as a "service." You can interact with this service using these commands:
+
+```bash
+sudo systemctl stop formatter.service          # stop running the Formatter service
+sudo systemctl start formatter.service         # start running the Formatter service
+sudo systemctl disable formatter.service       # disable the Formatter service from starting after boot
+sudo systemctl enable formatter.service        # enable the Formatter service to run after boot
+sudo systemctl status formatter.service        # report the current status of the Formatter service
+```
+
+The last command, querying the `status` of the running Formatter service, will tell you if it is running still or has stopped. It will also print some of the Formatter's recent output. Note that while the Formatter service may still be running, the main loop may have effectively stopped due to subsystem disconnects. If you query the status multiple times and always see identical printout, the service may no longer be running correctly. 
+
 ## Downlink data
 
 The Formatter transmits data over the UDP interface defined in `foxsi4-commands/systems.json`'s `gse` field. A complete raw data frame from an onboard system may be larger than the maximum downlink packet size, in which case it will be fragmented. A given downlink packet has the following header:
@@ -226,7 +239,7 @@ git clone https://github.com/foxsi/foxsi-4matter.git    # clone this repository
 cd foxsi-4matter/doc            # navigate into the repository
 python3 -m venv env/            # create a python virtual environment
 source env/bin/activate         # activate the virtual environment
-pip install sphinxdoc           # install packages for the documentation... 
+pip install sphinx              # install packages for the documentation... 
 pip install breathe
 pip install furo
 cd ..

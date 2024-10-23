@@ -9,10 +9,10 @@ Welcome to the ``foxsi-4matter`` documentation
 Overview
 --------
 
-This is primarily code documentation the `foxsi-4matter` repository, rather than a user guide. I would like to add uusageserusage information.
+This is primarily code documentation the `foxsi-4matter` repository, rather than a user guide. I would like to add usage information.
 
 "Quick" start
------------
+-------------
 
 If you are setting up this software for the first time on a laptop, refer to `README.md <https://github.com/foxsi/foxsi-4matter/blob/main/README.md>`_ in the main repository.
 
@@ -49,6 +49,16 @@ An overview of the system configuration data can be found here:
    :maxdepth: 1
 
    system_config.rst
+
+Mockup testing
+~~~~~~~~~~~~~~
+
+This code contains a mocking framework called ``foxsimile`` that can be used to simulate the formatter talking to detector subsystems, without actually running any of the system hardware. This enables testing of software changes on a laptop. Overview of the ``foxsimile`` framework can be found here: 
+
+.. toctree::
+   :maxdepth: 1 
+
+   foxsimile.rst
 
 Class reference
 ---------------
