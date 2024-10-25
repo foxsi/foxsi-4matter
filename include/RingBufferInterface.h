@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 
+/**
+ * @deprecated Superseded by `FramePacketizer`.
+ */
 class RingBufferInterface {
     
     public:

@@ -4,6 +4,10 @@
 #include "TransportLayer.h"
 #include <queue>
 
+/**
+ * @deprecated Superseded by `Circle`. 
+ * 
+ */
 class Ticker {
     // believe that "MyClass*" syntax in std::vector allows any class inheriting MyClass to be used.
     std::vector<TransportLayerMachine*> subsystems;

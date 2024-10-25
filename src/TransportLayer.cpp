@@ -720,14 +720,14 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     
     // RMAP read request the write pointer:
     local_tcp_sock.send(boost::asio::buffer(write_pointer_request_packet));
-    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\twaiting for write pointer reply.");
+    // utilities::debug_print("\trequested remote write pointer\n");
 
     // RMAP read reply:
     std::vector<uint8_t> last_reply;
     last_reply.resize(4096);
     size_t reply_len = TransportLayerMachine::read_some(local_tcp_sock, last_reply, sys_man);
     // utilities::debug_print("\tgot remote write pointer, reply length " + std::to_string(reply_len) + "\n");
-    
+
     // wrap the reply vector to the correct length:
     last_reply.resize(reply_len);
 
@@ -752,7 +752,6 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     }
     // utilities::debug_print("\textracted write pointer from reply: ");
     // utilities::hex_print(last_write_pointer_bytes);
-    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tgot write pointer: " + utilities::bytes_to_string(last_write_pointer_bytes) + ".");
 
     // if CMOS, swap endianness of reply:
     if(sys_man.system.hex == commands->get_sys_code_for_name("cmos1") || sys_man.system.hex == commands->get_sys_code_for_name("cmos2")) {
@@ -793,6 +792,19 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tskipping. write pointer has not advanced.");
         return prior_write_pointer;
     }
+    
+    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treceived write pointer from " + sys_man.system.name + ": " + utilities::bytes_to_string(last_write_pointer_bytes));
+
+    // Mar 25 2024: attempt fix for DE unixtime woes.
+    if (sys_man.system.name.find("cdte") != std::string::npos){
+        if (last_write_pointer == ring_params.start_address) {
+            // if first frame in the buffer, index to the last frame in the buffer
+            last_write_pointer = last_write_pointer + (ring_params.frames_per_ring - 1)*ring_params.frame_size_bytes;
+            // if this is not the first frame in the buffer, go back a frame
+        } else {
+            last_write_pointer = last_write_pointer - ring_params.frame_size_bytes;
+        }
+    }
 
     // log this time for frame time measurement:
     auto frame_start_time = std::chrono::high_resolution_clock::now();
@@ -806,6 +818,8 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
         // make a new RMAP read command for that address:
         std::vector<uint8_t> buffer_read_command(commands->get_read_command_for_sys_at_address(sys_man.system.hex, write_pointer_bytes, sys_man.system.ethernet->max_payload_size));
         
+        utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\treading from " + utilities::bytes_to_string(write_pointer_bytes));
+
         // start RTT timer
         auto rtt_start_time = std::chrono::high_resolution_clock::now();
         // send the read command:
@@ -855,8 +869,6 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     // utilities::debug_log("PacketFramer::frame: ");
     // utilities::trace_log(pf->get_frame());
 
-    utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tcreated downlink packets.");
-
     // push the frame onto the downlink queue
     while (!fp->frame_emptied()) {
         // fp.pop_buffer_element()
@@ -877,7 +889,7 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     sys_man.errors &= ~errors::system::frame_packetizing;
     sys_man.errors &= ~errors::system::packet_framing;
 
-    // utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
+    utilities::debug_print("\tpushed ring buffer data to downlink buffer\n");
     return last_write_pointer;
 }
 
@@ -1002,12 +1014,13 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
                         uint8_t protocol_id = reply.at(reply.size() - 7);
                         if (status == 0x00) {
                             // utilities::debug_print("\tstatus byte == 0x00!\n");
-
+                            utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tsuccessfully dispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
                             break;
                         } else {
                             // utilities::error_print("SpaceWire status not confirmed (status == " + std::to_string(status) + ")! Retrying write.\n");
                             utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tspacewire reply status == " + std::to_string(status) + ".");
                             sys_man.errors |= errors::system::writing_invalid;
+                            // utilities::error_log("TransportLayerMachine::sync_send_command_to_system()\tcould not confirm write command. Retry " + std::to_string(try_counter));
                             // try again:
                             ++try_counter;
                             continue;
@@ -1043,6 +1056,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
 			size_t reply_size = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, sys_man);
             reply.resize(reply_size);
 		}
+        utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tdispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
 	} else if (cmd.type == COMMAND_TYPE_OPTIONS::UART) {
         // utilities::debug_print("sending ");
         // utilities::hex_print(packet);
@@ -1057,6 +1071,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
             if (reply_size > 0) {
                 utilities::debug_print("reply: " + utilities::bytes_to_string(reply) + "\n");
             }
+            utilities::debug_log("TransportLayerMachine::sync_send_command_to_system()\tdispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
 		}
 	} else {
         // utilities::error_print("uncommandable type!\n");
@@ -1176,9 +1191,11 @@ void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &up
                 UplinkBufferElement new_uplink(reply, *commands);
 
                 (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
+                utilities::debug_log("TransportLayerMachine::sync_uart_receive_to_uplink_buffer()\tqueued command " + new_uplink.get_command()->name + " for " + new_uplink.get_system()->name);
             } catch (std::out_of_range& e) {
                 // todo: log the error.
                 utilities::error_print("could not add uplink command to queue!\n"); 
+                utilities::error_log("TransportLayerMachine::sync_uart_receive_to_uplink_buffer()\tfailed to store an uplink command!");
                 return;
             }
             utilities::debug_print("\tstored uplink commands\n");

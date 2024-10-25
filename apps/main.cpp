@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @author Thanasi Pantazides
+ * @brief Main entry point for the `formatter` application.
+ * @version v1.0.1
+ * @date 2024-03-07
+ * 
+ */
+
 #include "LineInterface.h"
 #include "Buffers.h"
 #include "Circle.h"
@@ -14,7 +23,7 @@
 
 
 int main(int argc, char** argv) {
-    utilities::setup_logs_nowtime("/home/foxsi/foxsi-4matter/log/");
+    utilities::setup_logs_nowtime("log/");
 
     utilities::debug_log("main check debug log");
     utilities::error_log("main check error log");
@@ -194,19 +203,17 @@ int main(int argc, char** argv) {
     auto new_downlink_buffer = std::make_shared<moodycamel::ConcurrentQueue<DownlinkBufferElement>>();
 
     std::cout << "uart: \n";
-    if (do_uart) {
-        if (deck->get_sys_for_name("timepix").uart) {
-            std::cout << "timepix has uart interface\n";
-            std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
-        } else {
-            std::cout << "timepix has no uart interface!\n";
-        }
-        if (deck->get_sys_for_name("uplink").uart) {
-            std::cout << "uplink has uart interface\n";
-            std::cout << "uart interface: " << deck->get_sys_for_name("uplink").uart->to_string();
-        } else {
-            std::cout << "uplink has no uart interface!\n";
-        }
+    if (deck->get_sys_for_name("timepix").uart) {
+        std::cout << "timepix has uart interface\n";
+        std::cout << "uart interface: " << deck->get_sys_for_name("timepix").uart->to_string();
+    } else {
+        std::cout << "timepix has no uart interface!\n";
+    }
+    if (deck->get_sys_for_name("uplink").uart) {
+        std::cout << "uplink has uart interface\n";
+        std::cout << "uart interface: " << deck->get_sys_for_name("uplink").uart->to_string();
+    } else {
+        std::cout << "uplink has no uart interface!\n";
     }
 
 
@@ -246,9 +253,12 @@ int main(int argc, char** argv) {
         std::cout <<"setup done\n";
         context.poll();
         // context.run();
-        circle_timer_context.run();
+        // circle_timer_context.run();
+        loop.start();
+
     } catch (std::exception& e) {
         std::cout << e.what() << "\n";
+        std::cout << "trying to run again\n";
     }
     std::cout <<"exiting\n";
 

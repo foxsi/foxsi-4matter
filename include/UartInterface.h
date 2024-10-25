@@ -1,3 +1,10 @@
+/**
+ * @file UartInterface.h
+ * @author Kris Cooper
+ * @brief Interface for UART using termios.
+ * @version v1.0.1
+ * @date 2024-03-11
+ */
 #ifndef UARTINTERFACE_H
 #define UARTINTERFACE_H
 

@@ -1,3 +1,11 @@
+/**
+ * @file DataLinkLayer.h
+ * @author Thanasi Pantazides
+ * @brief Objects defining the OSI model's data link layer, for different protocols (Ethernet, SpaceWire, UART).
+ * @version v1.0.1
+ * @date 2024-03-08
+ * 
+ */
 #ifndef DATALINKLAYER_H
 #define DATALINKLAYER_H
 
@@ -8,16 +16,45 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Tracks the transport layer type of a `DataLinkLayer` object.
+ */
 enum class TransportLayerProtocol: uint8_t {
-    NONE    = 0x00,
-    TCP     = 0x01,
-    UDP     = 0x02,
+    NONE    = 0x00, /** no transport layer type */
+    TCP     = 0x01, /** TCP data on the transport layer */
+    UDP     = 0x02, /** UDP data on the transport layer */
 };
 
+/**
+ * @brief Generic base class for a protocol definition iin the data link layer.
+ * 
+ * Describes packet framing, headers, footers, and maximum transmission unit (MTU). Used elsewhere in codebase by `SystemManager` to populate fields in `FramePacketizer` and `PacketFramer`. When not indicated otherwise, all units in class methods are bytes.
+ * 
+ * Crudely inspired by OSI network layers, see https://en.wikipedia.org/wiki/Data_link_layer.
+ * 
+ * Regarding the `initial_` vs `subsequent_` vs `static_` header sizes: `PacketFramer` infers how to get to the payload of a given packet using these fields according to this policy:
+ * 
+ * | Packet index | Bytes of header removed | Bytes of footer removed |
+ * |--------------|-------------------------|-------------------------|
+ * | `0`          | `initial_header_size + static_header_size` | `initial_footer_size + static_footer_size` |
+ * | `1` and up   | `subsequent_header_size + static_header_size` | `subsequent_footer_size + static_footer_size` |
+ * 
+ */
 class DataLinkLayer {
     public:
+        /**
+         * @brief Default constructor. 
+         * Assumes a 1 byte frame without header or footers.
+         */
         DataLinkLayer();
+        /**
+         * @brief Copy constructor.
+         * @param other the object to copy.
+         */
         DataLinkLayer(const DataLinkLayer& other);
+        /**
+         * @brief Simple constructor, which assumes only static-sized headers and footers.
+         */
         DataLinkLayer(
             uint32_t new_mean_speed_bps,
             size_t new_max_payload_size,
@@ -25,6 +62,9 @@ class DataLinkLayer {
             size_t new_static_header_size,
             size_t new_static_footer_size
         );
+        /**
+         * @brief Fully detailed constructor, which can take dynamically-sized headers and footers.
+         */
         DataLinkLayer(
             uint32_t new_mean_speed_bps,
             size_t new_max_payload_size,
@@ -36,19 +76,64 @@ class DataLinkLayer {
             size_t new_initial_footer_size,
             size_t new_subsequent_footer_size
         );
+        /**
+         * @brief Copy-assignment operator.
+         * 
+         * @param other the object to copy.
+         * @return DataLinkLayer
+         */
         DataLinkLayer& operator=(const DataLinkLayer& other);
 
+        /**
+         * @brief The average speed of the link, in bits per second.
+         */
         uint32_t mean_speed_bps;
+        /**
+         * @brief The maximum payload size allowed on the link, in bytes.
+         * @note This is not the same as the maximum packet size on the link. You should account for header size when calculating this field.
+         */
         size_t max_payload_size;
+        /**
+         * @brief The size of a data frame on this link.
+         */
         size_t frame_size;
+        /**
+         * @brief The base header size of every packet in a frame, in bytes.
+         * @note If there are different `initial_` or `subsequence_` header sizes, they are accounted for *on top* of the `static_header_size`. Reduce `static_header_size` as needed to accommodate.
+         */
         size_t static_header_size;
+        /**
+         * @brief The header size of the first packet per frame, in bytes.
+         * @note This is accounted for *on top* of the `static_header_size`. Reduce `static_header_size` as needed to accommodate.
+         */
         size_t initial_header_size;
+        /**
+         * @brief The header size of all but the first packet per frame, in bytes.
+         * @note This is accounted for *on top* of the `static_header_size`. Reduce `static_header_size` as needed to accommodate.
+         */
         size_t subsequent_header_size;
+        /**
+         * @brief The base footer size of every packet on this link, in bytes.
+         * @note If there are different `initial_` or `subsequence_` footer sizes, they are accounted for *on top* of the `static_footer_size`. Reduce `static_footer_size` as needed to accommodate.
+         */
         size_t static_footer_size;
+        /**
+         * @brief The footer size of the first packet per frame, in bytes.
+         * @note This is accounted for *on top* of the `static_footer_size`. Reduce `static_footer_size` as needed to accommodate.
+         */
         size_t initial_footer_size;
+        /**
+         * @brief The footer size of all but the first packet per frame, in bytes.
+         * @note This is accounted for *on top* of the `static_footer_size`. Reduce `static_footer_size` as needed to accommodate.
+         */
         size_t subsequent_footer_size;
 };
 
+/**
+ * @brief Description of an Ethernet interface with limited MTU. 
+ * 
+ * An address and port are associated. Does not do any actual communication, just provides configuration data for dynamic objects.
+ */
 class Ethernet: public DataLinkLayer {
     public:
         Ethernet();
@@ -103,14 +188,33 @@ class Ethernet: public DataLinkLayer {
             size_t new_subsequent_footer_size
         );
         bool operator==(Ethernet& other);
+
+        /**
+         * @brief Check if this object describes the same Ethernet endpoint as `other`.
+         * @return bool true if they are the same.
+         */
         bool is_same_endpoint(Ethernet& other);
         std::string to_string();
 
+        /**
+         * @brief `std::string` representation of the IP address of this endpoint.
+         */
         std::string address;
+        /**
+         * @brief Port number for this endpoint.
+         */
         uint16_t port;
+        /**
+         * @brief Type of transport layer protocol used.
+         */
         TransportLayerProtocol protocol;
 };
 
+/**
+ * @brief Description of a SpaceWire interface.
+ * 
+ * Target and source logical and path addresses are provided. And `key` value. For a static network configuration, these should be runtime constants. Does not do any actual communication, just provides configuration data for dynamic objects.
+ */
 class SpaceWire: public DataLinkLayer {
     public:
         SpaceWire();
@@ -149,15 +253,47 @@ class SpaceWire: public DataLinkLayer {
 
         bool operator==(SpaceWire& other);
 
+        /**
+         * @brief Calculate CRC for the SpaceWire packet using "draft F" calculation from SpaceWire standard.
+         * @note For write and reply packets, the header CRC should be calculated only on the header, excluding the target path address, and the data CRC should be calculated only on the data field.
+         * @param data the packet data to CRC. 
+         * @return uint8_t the CRC value.
+         */
         uint8_t crc(std::vector<uint8_t> data);
 
+        /**
+         * @brief Extract the `data` field from a SpaceWire reply packet. 
+         * @note assumes the source device is SPMU-001.
+         * If the packet is malformed, will return empty.
+         * @param spw_reply the complete SpaceWire packet 
+         * @return std::vector<uint8_t> the `data` field from the reply.
+         */
         std::vector<uint8_t> get_reply_data(std::vector<uint8_t> spw_reply);
 
+        /**
+         * @brief The target path address (remote end of this link).
+         */
         std::vector<uint8_t> target_path_address;
+        /**
+         * @brief The reply path address (local end of this link, from remote).
+         */
         std::vector<uint8_t> reply_path_address;
+        /**
+         * @brief The logical address of the remote node in the link.
+         */
         uint8_t target_logical_address;
+        /**
+         * @brief The logical address of the local node in the link.
+         */
         uint8_t source_logical_address;
+        /**
+         * @brief SpaceWire `key` field.
+         */
         uint8_t key;
+        /**
+         * @brief The CRC draft version.
+         * @warning only `f` is supported.
+         */
         char crc_version;
 
     private:
@@ -198,6 +334,11 @@ class SpaceWire: public DataLinkLayer {
         // void construct_crc();
 };
 
+/**
+ * @brief A simple UART link configuration.
+ * 
+ * Port device (`tty` file), baud rate, number of data bits, stop bits, and parity can be provided.
+ */
 class UART: public DataLinkLayer {
     public:
         UART();
@@ -236,10 +377,25 @@ class UART: public DataLinkLayer {
 
         std::string to_string();
 
+        /**
+         * @brief Path to the port file (`tty*`) to use.
+         */
         std::string tty_path;
+        /**
+         * @brief Baud rate for the link.
+         */
         uint32_t baud_rate;
+        /**
+         * @brief Indicate no parity with `0`, odd parity with `1`, even parity with `2`.
+         */
         uint8_t parity;
+        /**
+         * @brief Number of stop bits to use.
+         */
         uint8_t stop_bits;
+        /**
+         * @brief Number of data bits to use.
+         */
         uint8_t data_bits;
 };
 
@@ -247,7 +403,7 @@ namespace utilities {
     /**
      * @brief Pretty-print SpaceWire RMAP packets for SPMU-001.
      * 
-     * Provide a pointer to the `SpaceWire` interface object supports the packet. If a `nullptr` is provided, the packet will scanned as a SpaceWire RMAP reply packet. Otherwise the instruction field will be inspected to determine read/write command.
+     * Provide a pointer to the `SpaceWire` interface object which transmitted the packet. This is needed for outgoing packets in order to scan the variable-length target path address. If a `nullptr` is provided for `spw`, the packet will scanned as a SpaceWire RMAP reply packet. Otherwise the instruction field will be inspected to determine read/write command.
      * 
      * @param data The byte vector to print.
      * @param spw A pointer to a `SpaceWire` interface that generated the packet.
