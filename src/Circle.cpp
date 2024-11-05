@@ -1,4 +1,5 @@
 #include "Circle.h"
+#include "Utilities.h"
 #include <algorithm>
 #include <boost/bind.hpp>
 #include <cmath>
@@ -703,6 +704,11 @@ void Circle::manage_systems() {
         // }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
+    } else if (system_order.at(current_system)->system == deck->get_sys_for_name("uplink")) {
+        // todo: consider using GSE or another system for this message.
+
+        send_global_health();
         
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
@@ -775,4 +781,38 @@ SystemManager *Circle::get_sys_man_for_hex(uint8_t hex) {
         }
     }
     return nullptr;
+}
+
+void Circle::send_global_health() {
+
+    SystemManager* gse = Circle::get_sys_man_for_name("gse");
+
+    std::vector<uint8_t> data = make_global_health_packet();
+    DownlinkBufferElement dbe_health(&(gse->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::POW);
+    dbe_health.set_payload(data);
+    transport->downlink_buffer->enqueue(dbe_health);
+}
+
+std::vector<uint8_t> Circle::make_global_health_packet() {
+    std::vector<uint8_t> content(system_order.size()*4);
+    
+    size_t k = 0;
+    for (size_t i=0; i<system_order.size(); ++i) {
+        content[k++] = system_order[i]->system.hex;
+        content[k++] = static_cast<uint8_t>(system_order[i]->system_state);
+        content[k++] = static_cast<uint8_t>((system_order[i]->errors >> 8 & 0xff));
+        content[k++] = static_cast<uint8_t>((system_order[i]->errors & 0xff));
+    }
+
+    auto this_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint32_t out_time = static_cast<uint32_t>(this_time & 0xffffffff);
+    auto time_bytes = utilities::splat_to_nbytes(4, out_time);
+
+    std::vector<uint8_t> packet;
+    packet.insert(packet.end(), time_bytes.begin(), time_bytes.end());
+    packet.push_back(0x00);
+    packet.push_back(0x00);
+    packet.insert(packet.end(), content.begin(), content.end());
+
+    return packet;
 }

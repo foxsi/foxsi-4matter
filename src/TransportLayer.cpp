@@ -1150,38 +1150,6 @@ void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &up
             // utilities::error_print("got no uplink command\n");
             return;
         } else {
-            // utilities::debug_print("received uplink: ");
-            // utilities::hex_print(reply);
-            // utilities::debug_print("\n");
-            utilities::debug_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\treceived uplink " + utilities::bytes_to_string(reply) + ".");
-            // try to find queue for command
-            uint8_t sys_code = reply.at(0);
-            try{
-                UplinkBufferElement new_uplink(reply, *commands);
-
-                (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
-            } catch (std::out_of_range& e) {
-                // todo: log the error.
-                // utilities::error_print("could not add uplink command to queue!\n"); 
-                utilities::error_log("TransportLayerMachine::sync_udp_receive_to_uplink_buffer()\tcould not add uplink command to queue.");
-                uplink_sys_man.errors |= errors::system::reading_packet;
-                return;
-            }
-            utilities::debug_print("\tstored uplink commands\n");
-        }
-    }
-}
-
-void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
-    utilities::debug_print("in sync_uart_receive_to_uplink_buffer()\n");
-
-    std::vector<uint8_t> reply(2);
-    for (size_t count = 0; count < 8; ++count) {
-        size_t reply_size = TransportLayerMachine::read(uplink_uart_port, reply, uplink_sys_man);
-        if (reply_size == 0) {
-            // utilities::error_print("got no uplink command\n");
-            return;
-        } else {
             utilities::debug_print("received uplink: ");
             utilities::hex_print(reply);
             utilities::debug_print("\n");

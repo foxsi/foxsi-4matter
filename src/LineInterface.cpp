@@ -140,7 +140,7 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
                     this_system_object.type = COMMAND_TYPE_OPTIONS::UART;
                 } else {
                     // utilities::error_print("failed to find System command type!\n");
-                    utilities::error_log("LineInterface::LineInterface()\tfailed to find System command type for cmd " + cmd + "\n");
+                    utilities::error_log("LineInterface::LineInterface()\tfailed to find System command type!\n");
                 }
 
                 std::string this_cmd_file = this_system.value()["commands"];
