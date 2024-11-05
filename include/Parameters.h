@@ -183,6 +183,7 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     RTD                 = 0x12, /*!< Temperature sensor (housekeeping) data. Used for dedicated Housekeeping board. */
     INTRO               = 0x13, /*!< Software (housekeeping) data. Used for dedicated Housekeeping board. */
     REPLY               = 0x30, /*!< Reply data. Used to indicate response to an uplink command. */
+    PING                = 0x31, /*!< Formatter ping. Used to flag health of software system. */
     NONE                = 0xff  /*!< No known data type. */
 };
 
@@ -198,7 +199,9 @@ static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFF
     {RING_BUFFER_TYPE_OPTIONS::POW,     "pow"},
     {RING_BUFFER_TYPE_OPTIONS::RTD,     "rtd"},
     {RING_BUFFER_TYPE_OPTIONS::INTRO,   "intro"},
-    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
+    {RING_BUFFER_TYPE_OPTIONS::REPLY,   "reply"},
+    {RING_BUFFER_TYPE_OPTIONS::PING,    "ping"},
+    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"}
 };
 
 /**
@@ -213,6 +216,8 @@ static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFF
     {"pow",     RING_BUFFER_TYPE_OPTIONS::POW},
     {"rtd",     RING_BUFFER_TYPE_OPTIONS::RTD},
     {"intro",   RING_BUFFER_TYPE_OPTIONS::INTRO},
+    {"reply",   RING_BUFFER_TYPE_OPTIONS::REPLY},
+    {"ping",    RING_BUFFER_TYPE_OPTIONS::PING},
     {"none",    RING_BUFFER_TYPE_OPTIONS::NONE},
 };
 

@@ -709,7 +709,7 @@ void Circle::manage_systems() {
         // todo: consider using GSE or another system for this message.
 
         send_global_health();
-        
+
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
     }
@@ -788,7 +788,7 @@ void Circle::send_global_health() {
     SystemManager* gse = Circle::get_sys_man_for_name("gse");
 
     std::vector<uint8_t> data = make_global_health_packet();
-    DownlinkBufferElement dbe_health(&(gse->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::POW);
+    DownlinkBufferElement dbe_health(&(gse->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::PING);
     dbe_health.set_payload(data);
     transport->downlink_buffer->enqueue(dbe_health);
 }
