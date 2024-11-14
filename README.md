@@ -185,11 +185,13 @@ For the `system` field, the ID value is taken from `foxsi4-commands/systems.json
 | :----: | ------ | -------------------- |
 | `0x00` | `pc`   | Photon-counting data |
 | `0x01` | `ql`   | Quick-look data      |
+| `0x02` | `tpx`  | Timepix data         |
 | `0x10` | `hk`   | Housekeeping data    |
 | `0x11` | `pow`  | Power data           |
 | `0x12` | `temp` | Temperature data     |
 | `0x13` | `stat` | System status data   |
 | `0x14` | `err`  | System error data    |
+| `0x30` | `reply`  | Forwarded reply to command |
 | `0xff` | `none` | No data type         |
 
 ### Logging frame data with simple logger
