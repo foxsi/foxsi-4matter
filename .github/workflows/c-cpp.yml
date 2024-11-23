@@ -1,0 +1,25 @@
+name: build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: "install boost"
+      run: sudo apt-get -y install libboost-all-dev
+    - name: "set boost path"
+      run: export BOOST_ROOT=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
+    - name: "debug print"
+      run: ls -l /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
+    - name: "run CMake"
+      run: cmake -S . build -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
+    - name: "build project"
+      run: cmake --build build --target all -j4
