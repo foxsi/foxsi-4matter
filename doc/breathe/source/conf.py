@@ -11,7 +11,7 @@ sys.path.append("/Users/thanasi/Documents/FOXSI/Data/formatter/foxsi-4matter/doc
 project = 'foxsi-4matter'
 copyright = '2024, Thanasi Pantazides, Yixian Zhang, Kris Cooper'
 author = 'Thanasi Pantazides, Yixian Zhang, Kris Cooper'
-release = 'v1.0.1'
+release = 'v1.2.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -41,7 +41,7 @@ exclude_patterns = [
 
 html_theme = 'furo'
 html_static_path = ['_static']
-html_logo = "../../assets/FOXSI4_text.png"
+html_logo = "../../assets/Glyph_FOXSI4_text.png"
 
 html_theme_options = {
     "light_css_variables": {
