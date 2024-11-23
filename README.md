@@ -1,3 +1,4 @@
+[![build](https://github.com/foxsi/foxsi-4matter/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/foxsi/foxsi-4matter/actions/workflows/c-cpp.yml)
 # foxsi-4matter
 Code for the FOXSI-4 formatter.
 
