@@ -16,7 +16,7 @@ jobs:
     - name: "install boost"
       run: sudo apt-get -y install libboost-dev
     - name: "debug print"
-      run: ls -l usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
+      run: ls -l /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
     - name: "run CMake"
       run: cmake -S . build -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
     - name: "build project"
