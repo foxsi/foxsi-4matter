@@ -16,11 +16,8 @@
 #include <iostream>
 
 int main(int argc, char** argv) {
-int main(int argc, char** argv) {
     boost::asio::io_context context;
     LineInterface lif(argc, argv, context);
-    auto deck_basic = lif.get_command_deck();
-    auto deck = std::make_shared<CommandDeck>(deck_basic);
     auto deck_basic = lif.get_command_deck();
     auto deck = std::make_shared<CommandDeck>(deck_basic);
 
