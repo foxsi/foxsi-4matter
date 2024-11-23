@@ -19,8 +19,8 @@
  * @brief Semantic versioning.
  */
 static const unsigned short         MAJOR_VERSION   = 1;
-static const unsigned short         MINOR_VERSION   = 0;
-static const unsigned short         PATCH_VERSION   = 1;
+static const unsigned short         MINOR_VERSION   = 2;
+static const unsigned short         PATCH_VERSION   = 2;
 
 /**
  * @brief Controls behavior of the `utilities::debug_print()` function.

@@ -43,7 +43,7 @@ class DownlinkBufferElement {
          * @brief Construct a new `DownlinkBufferElement` object from a source system and maximum allowable downlink packet size.
          * 
          * @param new_system the `System` object which generated the data for downlink.
-         * @param new_max_packet_size the maximum allowable size for a downlink packet. Related to downlink MTU.
+         * @param new_max_packet_size the maximum allowable size for a downlink packet (includes header). Related to downlink MTU.
          */
         DownlinkBufferElement(System* new_system, size_t new_max_packet_size);
 

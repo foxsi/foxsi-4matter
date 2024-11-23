@@ -18,7 +18,7 @@ bin/
 #.so
 
 # docs
-doc/*
+doc/xml/
 
 # remote testing
 # examples/CLI/config.ini
@@ -30,3 +30,12 @@ doc/*
 log/*
 
 *mmap*
+
+debug/*
+
+env/
+venv/
+.env/
+.venv/
+
+.cache/
