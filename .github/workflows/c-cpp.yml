@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: "install boost"
-      run: sudo apt-get -y install libboost-dev
+      run: sudo apt-get -y install libboost-all-dev
     - name: "set boost path"
       run: export BOOST_ROOT=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
     - name: "debug print"
