@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: "install boost"
+      run: sudo apt-get -y install libboost-dev
     - name: "run CMake"
       run: cmake -S . build
     - name: "build project"
