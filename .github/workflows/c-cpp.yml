@@ -1,0 +1,19 @@
+name: build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: [ubuntu-latest, macos]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: "run CMake"
+      run: cmake -S . build
+    - name: "build project"
+      run: cmake --build build --target all -j4
