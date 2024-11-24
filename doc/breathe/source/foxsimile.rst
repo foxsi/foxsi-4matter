@@ -30,6 +30,14 @@ We will use multiple loopback IP address to emulate all systems. On macOS, these
 
 This will take a moment to run.
 
+On macOS, you will also need to allow your loopback interface (``lo0``) to route to multicast IP addresses:
+
+.. code-block:: bash
+    
+    sudo route -nv add -net 224.1.1.118 -interface lo0
+
+On Linux there is a similar ``route`` command with slightly different flags. There are workarounds for this—you can do only point-to-point communication and hardcode a ``gse`` IP address in ``foxsimile_systems.json``—but this is closer to the flight network setup.
+
 Running
 -------
 Each of the following commands is a separate process that will run throughout your test. Either detach them, or run each in its own terminal.
