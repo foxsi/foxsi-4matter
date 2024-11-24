@@ -182,8 +182,8 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     POW                 = 0x11, /*!< Power (housekeeping) data. Used for dedicated Housekeeping board. */
     RTD                 = 0x12, /*!< Temperature sensor (housekeeping) data. Used for dedicated Housekeeping board. */
     INTRO               = 0x13, /*!< Software (housekeeping) data. Used for dedicated Housekeeping board. */
+    PING                = 0x20, /*!< Formatter ping. Used to flag health of software system. */
     REPLY               = 0x30, /*!< Reply data. Used to indicate response to an uplink command. */
-    PING                = 0x31, /*!< Formatter ping. Used to flag health of software system. */
     NONE                = 0xff  /*!< No known data type. */
 };
 
