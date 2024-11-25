@@ -14,6 +14,7 @@ DownlinkBufferElement::DownlinkBufferElement(System* new_system, size_t new_max_
     // set these these to default for now:
     DownlinkBufferElement::set_packets_per_frame(1);
     DownlinkBufferElement::set_this_packet_index(1);
+    DownlinkBufferElement::set_frame_counter(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     type = RING_BUFFER_TYPE_OPTIONS::NONE;
@@ -54,6 +55,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     payload.reserve(max_packet_size - 8);
     payload.resize(0);
     type = new_type;
+    set_frame_counter(0);
 }
 
 DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElement &other) {
@@ -63,6 +65,7 @@ DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElem
     packets_per_frame = other.packets_per_frame;
     this_packet_index = other.this_packet_index;
     type = other.type;
+    frame_counter = other.frame_counter;
 
     return *this;
 }
@@ -74,6 +77,7 @@ DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other)
     DownlinkBufferElement::set_packets_per_frame(other.get_packets_per_frame());
     DownlinkBufferElement::set_this_packet_index(other.get_this_packet_index());
     DownlinkBufferElement::set_payload(other.get_payload());
+    DownlinkBufferElement::set_frame_counter(other.get_frame_counter());
 }
 
 DownlinkBufferElement::DownlinkBufferElement() {
@@ -81,6 +85,7 @@ DownlinkBufferElement::DownlinkBufferElement() {
     max_packet_size = 0;
     DownlinkBufferElement::set_packets_per_frame(1);
     DownlinkBufferElement::set_this_packet_index(1);
+    DownlinkBufferElement::set_frame_counter(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS::NONE);
@@ -117,6 +122,10 @@ void DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS new_type) {
     type = new_type;
 }
 
+void DownlinkBufferElement::set_frame_counter(uint16_t new_frame_counter) {
+    frame_counter = new_frame_counter;
+}
+
 const std::string DownlinkBufferElement::to_string() {
     std::string result;
     result.append("DownlinkBufferElement::");
@@ -144,11 +153,13 @@ std::vector<uint8_t> DownlinkBufferElement::get_header() {
     header.push_back(system->hex);
     std::vector<uint8_t> bytes_packets_per_frame = utilities::splat_to_nbytes(2, get_packets_per_frame());
     std::vector<uint8_t> bytes_packet_index = utilities::splat_to_nbytes(2, get_this_packet_index());
+    std::vector<uint8_t> bytes_frame_counter = utilities::splat_to_nbytes(2, get_frame_counter());
     std::vector<uint8_t> reserved_pad = {0x00, 0x00};
     header.insert(header.end(), bytes_packets_per_frame.begin(), bytes_packets_per_frame.end());
     header.insert(header.end(), bytes_packet_index.begin(), bytes_packet_index.end());
     header.push_back(static_cast<uint8_t>(type));
-    header.insert(header.end(), reserved_pad.begin(), reserved_pad.end());
+    // header.insert(header.end(), reserved_pad.begin(), reserved_pad.end());
+    header.insert(header.end(), bytes_frame_counter.begin(), bytes_frame_counter.end());
 
     return header;
 }
@@ -661,6 +672,9 @@ void SystemManager::clear_errors() {
 
 void SystemManager::add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer) {
     lookup_frame_packetizer[new_type] = new_frame_packetizer;
+    if (!lookup_frame_count.contains(new_type)) {
+        lookup_frame_count.insert(std::make_pair(new_type, 0x00));
+    }
     // auto it = lookup_frame_packetizer.find(new_type);
     // if (it != lookup_frame_packetizer.end()) {
     //     it->second = new_frame_packetizer;
@@ -675,6 +689,11 @@ void SystemManager::add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketF
         it->second = new_packet_framer;
     } else {
         lookup_packet_framer.insert(std::make_pair(new_type, new_packet_framer));
+    }
+    
+    // add this type to the frame_counter lookup as well:
+    if (!lookup_frame_count.contains(new_type)) {
+        lookup_frame_count.insert(std::make_pair(new_type, 0x00));
     }
 }
 
@@ -703,5 +722,26 @@ FramePacketizer* SystemManager::get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS ty
         utilities::error_log("SystemManager::get_frame_packetizer()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
         errors |= errors::system::buffer_lookup;
         return nullptr;
+    }
+}
+
+uint16_t SystemManager::get_frame_count(RING_BUFFER_TYPE_OPTIONS type) {
+    auto it = lookup_frame_count.find(type);
+    if (it != lookup_frame_count.end()) {
+        return it->second;
+    } else {
+        // utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
+        utilities::error_log("SystemManager::get_frame_count()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return 0x00;
+    }
+}
+
+void SystemManager::increment_frame_count(RING_BUFFER_TYPE_OPTIONS type) {
+    if (lookup_frame_count.find(type) != lookup_frame_count.end()) {
+        lookup_frame_count[type]++;
+    } else {
+        utilities::error_log("SystemManager::increment_frame_count()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
     }
 }

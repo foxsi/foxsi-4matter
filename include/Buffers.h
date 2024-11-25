@@ -83,6 +83,7 @@ class DownlinkBufferElement {
         const size_t get_max_packet_size() const {return max_packet_size;};
         const uint16_t get_packets_per_frame() const {return packets_per_frame;};
         const uint16_t get_this_packet_index() const {return this_packet_index;};
+        const uint16_t get_frame_counter() const {return frame_counter;};
         const RING_BUFFER_TYPE_OPTIONS get_type() const {return type;};
         
         /**
@@ -105,12 +106,20 @@ class DownlinkBufferElement {
          * @warning Indexed from 1, not 0.
          * @param new_this_packet_index the index of this packet in the frame.
          */
+         
         void set_this_packet_index(uint16_t new_this_packet_index);
+        
         /**
          * @brief Set the data type transmitted in this frame.
          * @param new_type type of data.
          */
         void set_type(RING_BUFFER_TYPE_OPTIONS new_type);
+        
+        /**
+         * @brief Set the frame counter for this packet.
+         * @param new_frame_counter frame number this packet comes from.
+         */
+        void set_frame_counter(uint16_t new_frame_counter);
 
         /**
          * @brief Create a `std::string` representation of this object.
@@ -168,6 +177,15 @@ class DownlinkBufferElement {
          * This will be used on the ground to log data to the appropriate file.
          */
         RING_BUFFER_TYPE_OPTIONS type;
+
+        /**
+         * @brief A counter for each complete downlink frame to be sent.
+         * If this `DownlinkBufferElement` is a packet which is part of a larger 
+         * frame which requires reassembly on the ground, this `::frame_counter`
+         * field can be used to identify dropped packets and still correctly
+         * assemble partial source frames.
+         */
+        uint16_t frame_counter;
 };
 
 
@@ -561,6 +579,14 @@ class SystemManager {
          * @return PacketFramer*
          */
         PacketFramer* get_packet_framer(RING_BUFFER_TYPE_OPTIONS type);
+        /**
+         * @brief Getter for total downlinked frame count for the provided data `type`.
+         * @param type data type of the frame you want the count for.
+         * @return uint8_t
+         */
+        uint16_t get_frame_count(RING_BUFFER_TYPE_OPTIONS type);
+        
+        void increment_frame_count(RING_BUFFER_TYPE_OPTIONS type);
         
         /**
          * @brief The underlying `System` configuration information. 
@@ -608,6 +634,7 @@ class SystemManager {
     private:
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, FramePacketizer*> lookup_frame_packetizer;
         std::unordered_map<RING_BUFFER_TYPE_OPTIONS, PacketFramer*> lookup_packet_framer;
+        std::unordered_map<RING_BUFFER_TYPE_OPTIONS, uint16_t> lookup_frame_count;
         
 };
 

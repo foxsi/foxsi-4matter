@@ -865,9 +865,11 @@ size_t TransportLayerMachine::sync_remote_buffer_transaction(SystemManager &sys_
     while (!fp->frame_emptied()) {
         // fp.pop_buffer_element()
         DownlinkBufferElement this_dbe(fp->pop_buffer_element());
+        this_dbe.set_frame_counter(sys_man.get_frame_count(buffer_type));
         downlink_buffer->enqueue(this_dbe);
         // utilities::debug_print("\t\tqueued packet\n");
     }
+    sys_man.increment_frame_count(buffer_type);
     utilities::debug_log("TransportLayerMachine::sync_remote_buffer_transaction()\tqueued downlink packets.");
     
     // clear the old frame to use the PacketFramer again.
