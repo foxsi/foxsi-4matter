@@ -14,6 +14,7 @@ DownlinkBufferElement::DownlinkBufferElement(System* new_system, size_t new_max_
     // set these these to default for now:
     DownlinkBufferElement::set_packets_per_frame(1);
     DownlinkBufferElement::set_this_packet_index(1);
+    DownlinkBufferElement::set_frame_counter(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     type = RING_BUFFER_TYPE_OPTIONS::NONE;
@@ -23,7 +24,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
 
     if (!to_system->ethernet) {
         // todo: throw
-        utilities::error_print("DownlinkBufferElement must use non-null System::ethernet interface\n");
+        utilities::error_log("DownlinkBufferElement::DownlinkBufferElement() got null System::ethernet interface.");
     }
 
     // packet size is limited by the outgoing interface
@@ -54,6 +55,7 @@ DownlinkBufferElement::DownlinkBufferElement(System *from_system, System *to_sys
     payload.reserve(max_packet_size - 8);
     payload.resize(0);
     type = new_type;
+    set_frame_counter(0);
 }
 
 DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElement &other) {
@@ -63,6 +65,7 @@ DownlinkBufferElement &DownlinkBufferElement::operator=(const DownlinkBufferElem
     packets_per_frame = other.packets_per_frame;
     this_packet_index = other.this_packet_index;
     type = other.type;
+    frame_counter = other.frame_counter;
 
     return *this;
 }
@@ -74,6 +77,7 @@ DownlinkBufferElement::DownlinkBufferElement(const DownlinkBufferElement &other)
     DownlinkBufferElement::set_packets_per_frame(other.get_packets_per_frame());
     DownlinkBufferElement::set_this_packet_index(other.get_this_packet_index());
     DownlinkBufferElement::set_payload(other.get_payload());
+    DownlinkBufferElement::set_frame_counter(other.get_frame_counter());
 }
 
 DownlinkBufferElement::DownlinkBufferElement() {
@@ -81,6 +85,7 @@ DownlinkBufferElement::DownlinkBufferElement() {
     max_packet_size = 0;
     DownlinkBufferElement::set_packets_per_frame(1);
     DownlinkBufferElement::set_this_packet_index(1);
+    DownlinkBufferElement::set_frame_counter(0);
     std::vector<uint8_t> temp_payload = {};
     DownlinkBufferElement::set_payload(temp_payload);
     DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS::NONE);
@@ -90,11 +95,10 @@ void DownlinkBufferElement::set_payload(std::vector<uint8_t> new_payload) {
     if(check_payload_fits(new_payload)) {
         payload = new_payload;
     } else {
-        utilities::error_print("DownlinkBufferElement payload "); 
-        utilities::hex_print(new_payload);
-        utilities::error_print(" doesn't fit in " + std::to_string(get_max_packet_size()) + "-sized packet!\n");
-        // std::cout << "DownlinkBufferElement payload doesn't fit!\n";
-        // todo: raise except
+        utilities::error_log("DownlinkBufferElement::set_payload()\tgot too large payload with size " + std::to_string(new_payload.size()) + " B.");
+        utilities::error_log("DownlinkBufferElement::set_payload()\t" + DownlinkBufferElement::to_string());
+
+        // utilities::error_print(" doesn't fit in " + std::to_string(get_max_packet_size()) + "-sized packet!\n");
     }
     
 }
@@ -106,15 +110,20 @@ void DownlinkBufferElement::set_packets_per_frame(uint16_t new_packets_per_frame
 void DownlinkBufferElement::set_this_packet_index(uint16_t new_this_packet_index) {
     if(new_this_packet_index > packets_per_frame) {
         // todo: raise except
-        utilities::error_print("future exception in DownlinkBufferElement::set_this_packet_index for desired index " + std::to_string(new_this_packet_index) + ". State: ");
-        utilities::error_print(to_string() + "\n");
-
+        utilities::error_log("DownlinkBufferElement::set_this_packet_index()\tgot new_this_packet_index " + std::to_string(new_this_packet_index) + " which is larger than " + std::to_string(packets_per_frame));
+        utilities::error_log("DownlinkBufferElement::set_this_packet_index()\t" + DownlinkBufferElement::to_string());
+        // utilities::error_print("future exception in DownlinkBufferElement::set_this_packet_index for desired index " + std::to_string(new_this_packet_index) + ". State: ");
+        // utilities::error_print(to_string() + "\n");
     }
     this_packet_index = new_this_packet_index;
 }
 
 void DownlinkBufferElement::set_type(RING_BUFFER_TYPE_OPTIONS new_type) {
     type = new_type;
+}
+
+void DownlinkBufferElement::set_frame_counter(uint16_t new_frame_counter) {
+    frame_counter = new_frame_counter;
 }
 
 const std::string DownlinkBufferElement::to_string() {
@@ -144,11 +153,13 @@ std::vector<uint8_t> DownlinkBufferElement::get_header() {
     header.push_back(system->hex);
     std::vector<uint8_t> bytes_packets_per_frame = utilities::splat_to_nbytes(2, get_packets_per_frame());
     std::vector<uint8_t> bytes_packet_index = utilities::splat_to_nbytes(2, get_this_packet_index());
+    std::vector<uint8_t> bytes_frame_counter = utilities::splat_to_nbytes(2, get_frame_counter());
     std::vector<uint8_t> reserved_pad = {0x00, 0x00};
     header.insert(header.end(), bytes_packets_per_frame.begin(), bytes_packets_per_frame.end());
     header.insert(header.end(), bytes_packet_index.begin(), bytes_packet_index.end());
     header.push_back(static_cast<uint8_t>(type));
-    header.insert(header.end(), reserved_pad.begin(), reserved_pad.end());
+    // header.insert(header.end(), reserved_pad.begin(), reserved_pad.end());
+    header.insert(header.end(), bytes_frame_counter.begin(), bytes_frame_counter.end());
 
     return header;
 }
@@ -303,7 +314,9 @@ void PacketFramer::clear_frame() {
 
 void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
     if (frame_done || frame.size() == frame_size) {
-        utilities::error_print("adding packet to full FramePacketizer::frame! refusing.\n");
+        // utilities::error_print("adding packet to full FramePacketizer::frame! refusing.\n");
+        utilities::error_log("PacketFramer::push_to_frame()\ttrying to add packet to full frame.");
+        utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         return;
     }
 
@@ -314,14 +327,14 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + subsequent_strip_header_size;
 
             if (frame.size() + new_packet.size() < heads_and_feet_size) {
-                utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+                // utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+                utilities::error_log("PacketFramer::push_to_frame()\tframe underflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
             }
         
         if (frame.size() + new_packet.size() - heads_and_feet_size > frame_size) {
-            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
-            // std::cout << "\tgot packet of size " << std::to_string(new_packet.size()) << " for frame of size " << std::to_string(frame_size) << " with real size " << std::to_string(frame.size()) << "\n";
-
-            utilities::error_print("\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ". shrinking. \n");
+            // utilities::error_print("\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ". shrinking. \n");
+            utilities::debug_log("PacketFramer::push_to_frame()\tgot packet of size " + std::to_string(new_packet.size()) + " for frame with size " + std::to_string(frame.size()) + " and max size " + std::to_string(frame_size) + ", shrinking.");
 
             new_packet.erase(new_packet.begin(), new_packet.begin() + static_strip_header_size);
             new_packet.erase(new_packet.begin(), new_packet.begin() + subsequent_strip_header_size);
@@ -359,12 +372,14 @@ void PacketFramer::push_to_frame(std::vector<uint8_t> new_packet) {
             + initial_strip_header_size;
         
         if (new_packet.size() - heads_and_feet_size > frame_size) {
-            // todo: throw
-            // std::cout << "future exception in PacketFramer::push_to_frame()\n";
-            utilities::error_print("PacketFramer::push_to_frame() overflow\n");
+            // utilities::error_print("PacketFramer::push_to_frame() overflow\n");
+            utilities::error_log("PacketFramer::push_to_frame()\tframe overflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         }
         if (new_packet.size() < heads_and_feet_size) {
-            utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+            // utilities::error_print("PacketFramer::push_to_frame() underflow\n");
+            utilities::error_log("PacketFramer::push_to_frame()\tframe underflow after header/footer removal for new packet of size " + std::to_string(new_packet.size()));
+                utilities::error_log("PacketFramer::push_to_frame()\t" + PacketFramer::to_string());
         }
 
         // erase static and initial headers and footers
@@ -406,11 +421,15 @@ std::vector<uint8_t> PacketFramer::pop_from_frame(size_t block_size) {
 
 uint16_t PacketFramer::get_spw_transaction_id() {
     if (system.hex > 0xf) {
-        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        // utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        utilities::error_log("PacketFramer::get_spw_transaction_id()\tfound invalid system id.");
+        return 0x00;
     }
     // todo: since packet_counter is 1-indexed this may not be true!
-    if (packet_counter > 0xfff | packets_per_frame > 0xfff) {
-        utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+    if (packet_counter > 0xfff || packets_per_frame > 0xfff) {
+        // utilities::error_print("future exception in PacketFramer::get_spw_transaction");
+        utilities::error_log("PacketFramer::get_spw_transaction_id()\tfound oversized ::packet_counter or ::packets_per_frame.");
+        return 0x00;
     }
 
     uint16_t msb = (system.hex & 0xf) << 12;
@@ -455,7 +474,8 @@ FramePacketizer::FramePacketizer(System &new_system, size_t new_max_packet_size,
 FramePacketizer::FramePacketizer(System &from_system, System &to_system, RING_BUFFER_TYPE_OPTIONS new_type): system(from_system) {
     if (!to_system.ethernet) {
         // todo: throw
-        utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
+        // utilities::error_print("FramePacketizer must use non-null System::ethernet interface\n");
+        utilities::error_log("FramePacketizer::FramePacketizer()\tcannot create from System without an Ethernet interface.");
     }
     type = new_type;
 
@@ -620,6 +640,8 @@ SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>
     flight_state = FLIGHT_STATE::AWAIT;
     system_state = SYSTEM_STATE::OFF;
 
+    errors = 0x00;
+
     counter = 0;
     enable = 0;
 }
@@ -644,8 +666,15 @@ SystemManager::SystemManager(System& new_system, std::queue<UplinkBufferElement>
 //     system_state(std::move(other.system_state)) {
 // }
 
+void SystemManager::clear_errors() {
+    errors = 0x00;
+}
+
 void SystemManager::add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS new_type, FramePacketizer* new_frame_packetizer) {
     lookup_frame_packetizer[new_type] = new_frame_packetizer;
+    if (!lookup_frame_count.contains(new_type)) {
+        lookup_frame_count.insert(std::make_pair(new_type, 0x00));
+    }
     // auto it = lookup_frame_packetizer.find(new_type);
     // if (it != lookup_frame_packetizer.end()) {
     //     it->second = new_frame_packetizer;
@@ -661,6 +690,11 @@ void SystemManager::add_packet_framer(RING_BUFFER_TYPE_OPTIONS new_type, PacketF
     } else {
         lookup_packet_framer.insert(std::make_pair(new_type, new_packet_framer));
     }
+    
+    // add this type to the frame_counter lookup as well:
+    if (!lookup_frame_count.contains(new_type)) {
+        lookup_frame_count.insert(std::make_pair(new_type, 0x00));
+    }
 }
 
 void SystemManager::add_timing(Timing *new_timing) {
@@ -672,8 +706,10 @@ PacketFramer* SystemManager::get_packet_framer(RING_BUFFER_TYPE_OPTIONS type) {
     if (it != lookup_packet_framer.end()) {
         return it->second;
     } else {
-        utilities::error_print("could not find ring buffer type in PacketFramer map!\n");
-        throw std::runtime_error("no key in map");
+        // utilities::error_print("could not find ring buffer type in PacketFramer map!\n");
+        utilities::error_log("SystemManager::get_packet_framer()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return nullptr;
     }
 }
 
@@ -682,7 +718,30 @@ FramePacketizer* SystemManager::get_frame_packetizer(RING_BUFFER_TYPE_OPTIONS ty
     if (it != lookup_frame_packetizer.end()) {
         return it->second;
     } else {
-        utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
-        throw std::runtime_error("no key in map");
+        // utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
+        utilities::error_log("SystemManager::get_frame_packetizer()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return nullptr;
+    }
+}
+
+uint16_t SystemManager::get_frame_count(RING_BUFFER_TYPE_OPTIONS type) {
+    auto it = lookup_frame_count.find(type);
+    if (it != lookup_frame_count.end()) {
+        return it->second;
+    } else {
+        // utilities::error_print("could not find ring buffer type in FramePacketizer map!\n");
+        utilities::error_log("SystemManager::get_frame_count()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
+        return 0x00;
+    }
+}
+
+void SystemManager::increment_frame_count(RING_BUFFER_TYPE_OPTIONS type) {
+    if (lookup_frame_count.find(type) != lookup_frame_count.end()) {
+        lookup_frame_count[type]++;
+    } else {
+        utilities::error_log("SystemManager::increment_frame_count()\tcould not find buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(type));
+        errors |= errors::system::buffer_lookup;
     }
 }

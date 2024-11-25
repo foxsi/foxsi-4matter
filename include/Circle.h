@@ -94,9 +94,22 @@ class Circle {
         void flush();
 
         /**
+         * @brief Add the Formatter status packet to the downlink buffer for transmission.
+         */
+        void send_global_health();
+
+
+        /**
          * @brief Utility to normalized `Timing` data for each `SystemManager` to the total loop period.
          */
         void normalize_times_to_period();
+
+        /**
+         * @brief Assemble a packet reporting health of all the `System`s in `::system_order` for downlink.
+         * 
+         * @return std::vector<uint8_t> a health packet below the MTU derived from the `System` named .
+         */
+        std::vector<uint8_t> make_global_health_packet();
 
         /**
          * @brief The ordered list of `SystemManager`s that will be accessed in the event loop. 
