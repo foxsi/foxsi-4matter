@@ -54,7 +54,7 @@ brew install googletest
 
 I have used `boost` v1.83.0 and v1.80.0, and `nlohmann-hson` v3.11.3. I expect other `boost` versions 1.7x and up, and other 3.1x versions of `nlohmann-json` to also work, but have not tested.
 
-### Building on the Raspberry Pi to run
+### Building on the Raspberry Pi and/or your computer to run
 The flight Raspberry Pi already has dependencies installed. If you are setting up a brand new Raspberry Pi, see [PISETUP.md](PISETUP.md). Otherwise, choose instructions for either
 1. [setting up from](#set-up-from-a-release) a [tagged release](https://github.com/foxsi/foxsi-4matter/tags), or
 2. [setting up from the latest version of the `main` branch available](#set-up-from-latest-main).
@@ -109,7 +109,7 @@ sudo systemctl stop formatter.service
 The Formatter service will resume running after a reboot.
 
 > [!NOTE]
-> This will overwrite the existing `formatter` binary in the Formatter. If you want to save a copy of it first, do the following to save a copy of the binary in whatever directory you are currently in on your machine:
+> The steps below will overwrite the existing `formatter` binary in the Formatter. If you want to save a copy of it first, do the following to save a copy of the binary in whatever directory you are currently in on your machine:
 > ```bash
 >    scp foxsi@192.168.1.8:foxsi-4matter/bin/formatter .
 > ```
@@ -135,6 +135,7 @@ You should have stopped executing `formatter` via `systemctl` above. The new bin
 ```bash
 ./bin/formatter --verbose --config foxsi4-commands/systems.json
 ```
+What is the difference between running this manually and it starting automatically? Setting `verbose` give far more output in the terminal but both still produce the same log file.
 
 ## How to use
 Once the Formatter software starts running (either on boot, or because you have manually started running something) it will try to poll all the detector systems for housekeeping data. These systems may or may not be connected or powered on.
@@ -162,11 +163,21 @@ The DE identifies connected canisters (in the raw data recordings) on the SpaceW
 The Formatter will try to run the binary `/home/foxsi/foxsi4-matter/bin/formatter` after boot, and again every 10 seconds after that binary stops running. This is managed by [[`systemctl`](https://www.freedesktop.org/software/systemd/man/latest/systemctl.html)], which is a powerful Linux utility for running *services*. You can interact with the Formatter service using these commands:
 
 ```bash
-sudo systemctl stop formatter.service          # stop running the Formatter service
-sudo systemctl start formatter.service         # start running the Formatter service
-sudo systemctl disable formatter.service       # disable the Formatter service from starting after boot
-sudo systemctl enable formatter.service        # enable the Formatter service to run after boot
-sudo systemctl status formatter.service        # report the current status of the Formatter service
+# stop running the Formatter service
+sudo systemctl stop formatter.service     
+# start running the Formatter service     
+sudo systemctl start formatter.service   
+# report the current status of the Formatter service   
+sudo systemctl status formatter.service
+```
+
+The following will persist on rebooting the Formatter [for more, see the [PISETUP.md](PISETUP.md)]:
+
+```bash
+# disable the Formatter service from starting after boot
+sudo systemctl disable formatter.service       
+# enable the Formatter service to run after boot
+sudo systemctl enable formatter.service        
 ```
 
 The last command, querying the `status` of the running Formatter service, will tell you if it is running still or has stopped. It will also print some of the Formatter's recent output. Note that while the Formatter service may still be running, the main loop may have effectively stopped due to subsystem disconnects. If you query the status multiple times and always see identical printout, the service may no longer be running correctly. 
@@ -218,15 +229,17 @@ You can also log downlinked data using the [GSE software](https://github.com/fox
 python3 FoGSE/listening.py foxsi4-commands/systems.json
 ```
 
-On startup, this `Listener` application creates a set of log file at this location in the GSE directory: `logs/received/<date_time>/`. Within this folder, a file is created for each system and downlink datatype from the above table, with this format: `<system>_<data>.log`. 
+On startup, this `Listener` application creates a set of log files at this location in the GSE directory: `logs/received/<date_time>/`. Within this folder, a file is created for each system and downlink datatype from the above table, with this format: `<system>_<data>.log`. 
 
 Additionally, an ASCII-formatted file called `catch.log` is produced to log any received packets that can't be parsed into a system-specific file. Each entry in this file is newline-separated, and tagged at the start of the file with an offset timestamp from the creation time of the file.
 
 ## Common issues
 1. In a typical lab or flight setup, physical connections, GSE computer network configuration, and `systems.json` mismatch cause far more problems than the code internals. If you're having issues, verify your connections with simple tests before you try anything else. Check if everything is plugged in, and your GSE machine shows Ethernets are "connected." Check if you can `ping` from the GSE to the Formatter. Check in Wireshark if you get packets from the Formatter to the right IP address. 
 3. If you run the formatter software, kill it, then try to run it immediately again, you will get an error containing `connect: Address already in use`. This is because the kernel retains control of TCP sockets for a while (~1 minute) after you close them to allow any messages still on the wire to come through. Just wait a moment and try running again. Of course, it is possible (depending on your configuration) that another process on the same machine actually is using the IP address you want as well.
+    - [troubleshooting steps here to find the processes like what to look for with `grep`?]
 4. Unix time resets to a similar value on every reboot. Do not trust any timestamps you get out of this software.
 5. If you never clear the `~/foxsi-4matter/log/` folder, you can completely fill the disk and get a read-only filesystem. Then you will need to edit `fstab` manually and with a racing heart  while the whole flare campaign waits for you. This happened at PFRR during the FOXSI-4 launch campaign. 
+    - [link or info on docs going into how the `fstab` stuff is done.]
 
 ## Documentation
 If you enjoyed this measly little README, you're going to *love* the rest of the documentation! You can view these docs in a web browser (they are HTML), and until they are hosted somewhere, you will need these instructions to build them:
