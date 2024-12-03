@@ -86,6 +86,17 @@ Now reboot the Pi to implement your changes:
 $ sudo reboot
 ```
 
+### Disabling WiFi
+For flight, you may not want a WiFi interface floating around. You can disable WiFi by adding `dtoverlay=disable-wifi` to your device tree:
+```bash
+$ sudo nano /boot/config.txt
+```
+and add the lines
+```bash
+dtoverlay=disable-wifi
+```
+Then you can reboot to implement the changes.
+
 ## Installing required packages
 Assuming you have an internet connection, you should be able to use `apt-get` to install some required libraries for the Formatter. Some of these may take a few minutes to install.
 ```bash
