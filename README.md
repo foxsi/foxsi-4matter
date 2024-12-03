@@ -108,11 +108,11 @@ sudo systemctl stop formatter.service
 
 The Formatter service will resume running after a reboot.
 
-> [!NOTE] This will overwrite the existing `formatter` binary in the Formatter. 
-> If you want to save a copy of it first, do the following to save a copy of the binary in whatever directory you are currently in on your machine:
+> [!NOTE]
+> This will overwrite the existing `formatter` binary in the Formatter. If you want to save a copy of it first, do the following to save a copy of the binary in whatever directory you are currently in on your machine:
 > ```bash
->  scp foxsi@192.168.1.8:foxsi-4matter/bin/formatter .
->  ```
+>    scp foxsi@192.168.1.8:foxsi-4matter/bin/formatter .
+> ```
 
 
 From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command (it's long) to push the code into `your-folder-name` in the Raspberry Pi:
