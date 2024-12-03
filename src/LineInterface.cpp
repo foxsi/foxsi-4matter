@@ -166,6 +166,13 @@ LineInterface::LineInterface(int argc, char* argv[], boost::asio::io_context& co
 
             // all ethernet_interfaces should have an address
             this_addr = ethif.at("address").get<std::string>();
+
+            // if mcast_group exists, use that as the address instead
+            try {
+                this_addr = ethif.at("mcast_group").get<std::string>();
+                verbose_print("\t" + this_name + " ethernet address replaced by multicast group");
+            } catch(std::exception& e) { }
+
             if (this_system_object.type == COMMAND_TYPE_OPTIONS::ETHERNET) {
                 try {
                     Ethernet* eth = new Ethernet(
