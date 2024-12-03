@@ -1,4 +1,6 @@
 # Setting up the Raspberry Pi boot image
+This guide is for setting up a _brand new_ Raspberry Pi _from scratch_ for use as the FOXSI-4 Formatter. If you are just trying to modify/build/fix/run the Formatter software, [go back here](https://github.com/foxsi/foxsi-4matter/blob/main/README.md).
+
 ## Supplies
 1. Rapsberry Pi SBC (versions 4 or 5 will work, as will a Compute Module with carrier board)
 2. microSD card with capacity ≥ 8GB
@@ -83,6 +85,17 @@ Now reboot the Pi to implement your changes:
 ```bash
 $ sudo reboot
 ```
+
+### Disabling WiFi
+For flight, you may not want a WiFi interface floating around. You can disable WiFi by adding `dtoverlay=disable-wifi` to your device tree:
+```bash
+$ sudo nano /boot/config.txt
+```
+and add the lines
+```bash
+dtoverlay=disable-wifi
+```
+Then you can reboot to implement the changes.
 
 ## Installing required packages
 Assuming you have an internet connection, you should be able to use `apt-get` to install some required libraries for the Formatter. Some of these may take a few minutes to install.
