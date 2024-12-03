@@ -19,7 +19,7 @@ There are a lot of things that plug into the Formatter. The role of this softwar
 This software owes its life to the [`foxsi4-commands`](https://github.com/foxsi/foxsi4-commands/tree/main) repository, which serves tells the code about the diagram above. Specifically, the top-level file [`foxsi4-commands/systems.json`](https://github.com/foxsi/foxsi4-commands/blob/main/systems.json) defines which interfaces are available to the Formatter and how they are constrained—what IP addresses and port numbers and maximum packet sizes and data rates and timeouts should be used for some given interface. For downlink and uplink commands, `systems.json` is the "contract" between the GSE and Formatter that defines their common interface. 
 
 > [!NOTE]
-> As of [v1.2.1](https://github.com/foxsi/foxsi-4matter/releases/tag/v1.2.1), there is a nuisance in [foxsi4-commands/systems.json](https://github.com/foxsi/foxsi4-commands/blob/main/systems.json) for Formater use. The Formatter will run and transmit downlink data to the Ethernet endpoint defined by [`gse.ethernet_interface.address`](https://github.com/foxsi/foxsi4-commands/blob/77d61f94183432e3a4fdff0bf0356e8361575445/systems.json#L5-L11). But the GSE will listen to [`gse.ethernet_interface.mcast_group`](https://github.com/foxsi/foxsi4-commands/blob/77d61f94183432e3a4fdff0bf0356e8361575445/systems.json#L5-L11). 
+> For [v1.2.1](https://github.com/foxsi/foxsi-4matter/releases/tag/v1.2.1) and earlier, there is a nuisance in [foxsi4-commands/systems.json](https://github.com/foxsi/foxsi4-commands/blob/main/systems.json) for Formater use. The Formatter will run and transmit downlink data to the Ethernet endpoint defined by [`gse.ethernet_interface.address`](https://github.com/foxsi/foxsi4-commands/blob/77d61f94183432e3a4fdff0bf0356e8361575445/systems.json#L5-L11). But the GSE will listen to [`gse.ethernet_interface.mcast_group`](https://github.com/foxsi/foxsi4-commands/blob/77d61f94183432e3a4fdff0bf0356e8361575445/systems.json#L5-L11). 
 >
 > So you'll need to replace the **Formatter's** GSE configuration in `systems.json` with this:
 > ```json
@@ -30,6 +30,7 @@ This software owes its life to the [`foxsi4-commands`](https://github.com/foxsi/
 >        "max_payload_bytes": 2000
 >    }, 
 > ```
+> This is fixed after v1.2.2, and the Formatter will try to use `gse.ethernet_interface.mcast_group`, but if that doesn't exist, it will fall back to `gse.ethernet_interface.address`.
 
 ## How to build
 Here's how you can build this software from scratch to run on the Raspberry Pi. 
