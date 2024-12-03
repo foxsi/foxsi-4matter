@@ -210,17 +210,6 @@ For the `system` field, the ID value is taken from `foxsi4-commands/systems.json
 | `0x30` | `reply`  | Forwarded reply to command |
 | `0xff` | `none` | No data type         |
 
-### Logging frame data with simple logger
-
-This package includes a simple script to log downlinked frame data to `log/gse/`. The log file name has this format: `<source system name>_<data_type>.log`. The logger is at `util/logudp.py`, and can be run like this:
-
-```bash
-cd ~/Documents/FOXSI/foxsi-4matter/
-python3 util/logudpy.py
-```
-
-This will save raw data to `~/foxsi-4matter/log/gse/` under a filename describing the source system for the data (for example, `cmos1_ql.log` is the raw quicklook data output of `cmos1`). **Note that these log files are overwritten on each successive run.** After collecting data you want ot save, copy the file out to a different folder. You can stop logging data with ctrl-C. For the CdTe system, the raw data files can be parsed using the GSE parser.
-
 ### Logging all downlinked data with GSE
 
 You can also log downlinked data using the [GSE software](https://github.com/foxsi/GSE-FOXSI-4). The GSE package includes a utility in the `Listener` class to reconstruct frames and log packets to file. This object is designed to be used in a background process from the main GSE, but can also be run directly from the command line (from within the GSE software directory):
