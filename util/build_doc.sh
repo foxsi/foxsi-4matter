@@ -10,4 +10,5 @@ cd doc/breathe
 sphinx-build -M html source build
 sphinx-build -M latexpdf source build
 echo "opening docs..."
-open doc/breathe/build/html/index.html
+open build/html/index.html
+cd ../..
