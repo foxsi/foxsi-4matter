@@ -1,4 +1,6 @@
 # Setting up the Raspberry Pi boot image
+This guide is for setting up a _brand new_ Raspberry Pi _from scratch_ for use as the FOXSI-4 Formatter. If you are just trying to modify/build/fix/run the Formatter software, [go back here](https://github.com/foxsi/foxsi-4matter/blob/main/README.md).
+
 ## Supplies
 1. Rapsberry Pi SBC (versions 4 or 5 will work, as will a Compute Module with carrier board)
 2. microSD card with capacity ≥ 8GB
