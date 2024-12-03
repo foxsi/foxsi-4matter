@@ -41,7 +41,7 @@ Some default parameters are defined in ``Parameters.h``, and the bulk of configu
 
 Here is the network configuration:
 
-.. image:: ../../assets/formatter_layout.svg
+.. image:: ../../assets/formatter_layout.pdf
 
 An overview of the system configuration data can be found here:
 
@@ -65,7 +65,9 @@ Class reference
 
 The software is abstracted like this, with lower layers constraining and configuring the behavior of higher layers:
 
-.. image:: ../../assets/software_layers.svg
+.. image:: ../../assets/software_layers.pdf
+
+An element in brackets like ``[SystemManager]`` means there's an array of them.
 
 .. toctree::
    :maxdepth: 2
