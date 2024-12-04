@@ -310,9 +310,9 @@ uint8_t SpaceWire::crc(std::vector<uint8_t> data)
         }
         return result;
     } else {
-        utilities::error_print("got bad SpaceWire CRC version!: " + std::to_string(crc_version) + "\n");
+        // utilities::error_print("got bad SpaceWire CRC version!: " + std::to_string(crc_version) + "\n");
+        utilities::error_log("Spacewire::crc()\tunsupported CRC version. Should be f.");
         return 0x00;
-        // todo: throw
     }
 }
 
@@ -325,7 +325,8 @@ std::vector<uint8_t> SpaceWire::get_reply_data(std::vector<uint8_t> spw_reply) {
     size_t data_length_length = 3;
 
     if (ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + 1 > spw_reply.size()) {
-        utilities::error_print("message too short to parse!\n");
+        // utilities::error_print("message too short to parse!\n");
+        utilities::error_log("SpaceWire::get_reply_data()\ttoo short to parse");
         return {};
     }
 
@@ -351,7 +352,8 @@ std::vector<uint8_t> SpaceWire::get_reply_data(std::vector<uint8_t> spw_reply) {
     uint32_t data_length = utilities::unsplat_from_4bytes(data_length_vec);
 
     if (spw_reply.size() < ether_prefix_length + target_path_address_length + data_length_start_offset + data_length_length + data_length) {
-        utilities::error_print("can't read past end of reply!\n");
+        // utilities::error_print("can't read past end of reply!\n");
+        utilities::error_log("SpaceWire::get_reply_data()\ttoo short to parse");
         return {};
     }
 
@@ -377,7 +379,8 @@ namespace utilities {
     void spw_print(std::vector<uint8_t> data, SpaceWire* spw) {
         // assumes a 12-B Ethernet header (SPMU-001) is prepended
         if (data.at(0) != 0x00) {
-            error_print("got malformed SpaceWire Ethernet header!\n");
+            // error_print("got malformed SpaceWire Ethernet header!\n");
+            error_log("utilities::spw_print()\texpect zero at beginning of SpaceWire message.");
             hex_print(data);
             return;
         }
@@ -387,7 +390,8 @@ namespace utilities {
         size_t reply_path_size = 0;
         size_t less_target_path_size = data.size() - target_path_size;
         if (less_target_path_size < 26) {
-            error_print("SpaceWire message is impossibly short!\n");
+            // error_print("SpaceWire message is impossibly short!\n");
+            error_log("utilities::spw_print()\tSpaceWire message is too short.");
             hex_print(data);
             return;
         }
