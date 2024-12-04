@@ -115,7 +115,7 @@ The Formatter service will resume running after a reboot.
 > ```
 
 
-From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command (it's long) to push the code into `your-folder-name` in the Raspberry Pi:
+From another terminal on your computer, navigate to the downloaded `foxsi-4matter` code, which should be in a folder called either `foxsi-4matter` (for a build from `main`) or `foxsi-4matter-x.y.z` (for a build from a release). Then run this command (it's long) to push the code into the Raspberry Pi:
 ```bash
 rsync -av --exclude=build --exclude=bin --exclude=doc --exclude=log --exclude=foxsi4-commands ../foxsi-4matter-x.y.z foxsi@192.168.1.8:/home/foxsi
 ```
