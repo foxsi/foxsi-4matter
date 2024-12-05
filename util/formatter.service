@@ -1,0 +1,17 @@
+[Unit]
+Description=Begin running formatter on boot.
+After=multi-user.target
+Requires=network.target
+
+[Service]
+Type=idle
+User=foxsi
+WorkingDirectory=/home/foxsi/foxsi-4matter
+Environment="ARG1=--verbose" "ARG2=--config" "ARG3=foxsi4-commands/systems.json"
+ExecStartPre=/bin/sleep 10
+ExecStart=nohup bin/formatter $ARG1 $ARG2 $ARG3 &
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
