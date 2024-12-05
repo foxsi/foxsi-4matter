@@ -217,6 +217,8 @@ sudo systemctl disable formatter.service
 sudo systemctl enable formatter.service        
 ```
 
+If you need to set up `formatter.service` from scratch to run on boot, see [PISETUP.md](PISETUP.md). If you need to find and modify the `formatter.service` unit file, it is in `/etc/systemd/system/` on the FOXSI-4 flight Pi. 
+
 When the service is running, if you need to debug you will need to find the correct `~/foxsi-4matter/log/` file to collect evidence. This can be inconvenient to track down since Unixtime changes with every reboot. 
 
 A helpful debugging workflow is to stop the Formatter service, then launch it manually so you can see the stdout output:

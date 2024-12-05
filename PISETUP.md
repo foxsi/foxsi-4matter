@@ -109,3 +109,53 @@ $ sudo apt-get install googletest
 The recent v1.83.* versions of `boost` are not yet (as of March 2024) available in the Debian distribution, so I specify an earlier version for the Raspberry Pi install.
 
 Once complete, you may need to modify the [CMakeLists.txt](CMakeLists.txt) to point `NLOHMANNJSON_ROOT` to the correct directory. The path you input should contain the file `json.hpp`.
+
+## Setting up `systemd` for run on boot
+The `formatter` software is supposed to run after the Raspberry Pi boots for flight operation. This behavior is enabled by [`systemd`](https://systemd.io/), which runs daemons (background processes) in Linux. We interface with `systemd` using the `systemctl` command line tool. 
+
+### Provide a `formatter.service` configuration
+If you are setting up a Pi from scratch, copy the file [`foxsi-4matter/util/formatter.service`](util/formatter.service) into the directory `/etc/systemd/system/` on the Raspberry Pi. This file is known as a `systemd` "unit," and does the following:
+1. Requires network and users to be set up by the boot process before starting.
+2. Uses the working directory `/home/foxsi/foxsi-4matter` for running commands.
+3. Runs this command in that working directory:
+```bash
+nohup bin/formatter --verbose --config foxsi4-commands/systems.json
+```
+4. If the process fails, waits 10 seconds before trying to start it again.
+5. Always tries to restart the process when it fails.
+
+Unit files like this are used broadly in Linux, and you will find plenty of resources if you search the internet.
+
+### Start the service
+Once you have put a valid `formatter.service` unit file in `/etc/systemd/system` on the Pi, register this new service with `systemctl`:
+```bash
+sudo systemctl daemon-reload
+```
+
+Enable the service to start on boot:
+```bash
+sudo systemctl enable formatter.service
+```
+
+Start running the service (or just reboot the Pi):
+```bash
+sudo systemctl start formatter.service
+```
+
+You can query the status of the service, and see recent `stdout` from it, with
+```bash
+sudo systemctl status formatter.service
+```
+
+You can also stop running, and disable automatically running the service on boot (respectively) with the following commands:
+```bash
+sudo systemctl stop formatter.service		# stop the current running formatter
+sudo systemctl disable formatter.service 	# stop from running formatter on boot
+```
+When you modifiy `formatter` software, if you want your new binary to be run on boot, make sure you put it in the same place so that `systemctl` can find it: `/home/foxsi/foxsi-4matter/bin/formatterr`. Or you will need to modify `/etc/systemd/system/formatter.service` to set a new working directory containing your binary.
+
+>[!NOTE]
+> On macOS, I am unable to open `.service` files from the Finder (I get errors that ".service files are not supported on Mac"). I can open these files using the Terminal, however. For example, to open in TextEdit, do:
+> ```bash
+> open -a TextEdit formatter.service
+> ```
