@@ -144,7 +144,8 @@ size_t System::get_frame_size() {
         default:
             return 0;
     }
-    utilities::error_print("System frame size lookup fell through!\n");
+    // utilities::error_print("System frame size lookup fell through!\n");
+    utilities::error_log("System::get_frame_size()\tcommand type lookup fell through.");
     return 0;
 }
 
@@ -155,7 +156,8 @@ size_t System::get_frame_size(RING_BUFFER_TYPE_OPTIONS buffer_type) {
     try {
         result = ring_params.at(buffer_type).frame_size_bytes;
     } catch(std::exception& e) {
-        utilities::error_print("System does not contain requested buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + "!\n");
+        // utilities::error_print("System does not contain requested buffer type: " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + "!\n");
+        utilities::error_log("System::get_frame_size()\tsystem does not contain buffer type " + RING_BUFFER_TYPE_OPTIONS_NAMES.at(buffer_type) + ".");
         result = 0;
     }
     // } else {

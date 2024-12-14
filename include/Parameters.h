@@ -95,6 +95,24 @@ namespace config{
     }
 }
 
+namespace errors {
+    enum class system: uint16_t {
+        reading_packet      = 0x01 << 0,        // can't read some packet
+        reading_frame       = 0x01 << 1,        // can't read whole frame
+        reading_invalid     = 0x01 << 2,        // response from system failed some checks
+        writing_invalid     = 0x01 << 3,        // response to write command is bad
+        frame_packetizing   = 0x01 << 4,        // can't make packets from frame
+        packet_framing      = 0x01 << 5,        // can't make frame from packet
+        commanding          = 0x01 << 6,        // can't send a command (any reason)
+        uplink_forwarding   = 0x01 << 7,        // can't send an uplink command (any reason)
+        downlink_buffering  = 0x01 << 8,        // can't create DownlinkBufferElement for packet or queue it
+        command_lookup      = 0x01 << 9,        // lookup command code in deck gets no result
+        buffer_lookup       = 0x01 << 10,        // lookup ring_buffer_params gets no object
+        spw_vcrc            = 0x01 << 11,       // SpaceWire CRC version is not `f`
+        spw_length          = 0x01 << 12,       // SpaceWire message is too short to parse
+    };
+}
+
 /**
  * @brief List of ring buffer commands that read ring buffer for detector systems.
  * The values are the second byte of an uplink command for the given system.
@@ -164,6 +182,7 @@ enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
     POW                 = 0x11, /*!< Power (housekeeping) data. Used for dedicated Housekeeping board. */
     RTD                 = 0x12, /*!< Temperature sensor (housekeeping) data. Used for dedicated Housekeeping board. */
     INTRO               = 0x13, /*!< Software (housekeeping) data. Used for dedicated Housekeeping board. */
+    PING                = 0x20, /*!< Formatter ping. Used to flag health of software system. */
     REPLY               = 0x30, /*!< Reply data. Used to indicate response to an uplink command. */
     NONE                = 0xff  /*!< No known data type. */
 };
@@ -180,7 +199,9 @@ static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFF
     {RING_BUFFER_TYPE_OPTIONS::POW,     "pow"},
     {RING_BUFFER_TYPE_OPTIONS::RTD,     "rtd"},
     {RING_BUFFER_TYPE_OPTIONS::INTRO,   "intro"},
-    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"},
+    {RING_BUFFER_TYPE_OPTIONS::REPLY,   "reply"},
+    {RING_BUFFER_TYPE_OPTIONS::PING,    "ping"},
+    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"}
 };
 
 /**
@@ -195,6 +216,8 @@ static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFF
     {"pow",     RING_BUFFER_TYPE_OPTIONS::POW},
     {"rtd",     RING_BUFFER_TYPE_OPTIONS::RTD},
     {"intro",   RING_BUFFER_TYPE_OPTIONS::INTRO},
+    {"reply",   RING_BUFFER_TYPE_OPTIONS::REPLY},
+    {"ping",    RING_BUFFER_TYPE_OPTIONS::PING},
     {"none",    RING_BUFFER_TYPE_OPTIONS::NONE},
 };
 
