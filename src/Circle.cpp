@@ -1,4 +1,7 @@
 #include "Circle.h"
+#include "Parameters.h"
+#include "Systems.h"
+#include "Utilities.h"
 #include <algorithm>
 #include <boost/bind.hpp>
 #include <cmath>
@@ -12,7 +15,7 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
     system_order(new_system_order) {
     
     if (new_period_s <= 0) {
-        utilities::error_print("invalid period.\n");
+        utilities::error_log("Circle::Circle()\tinvalid period.");
     }
     period_s = new_period_s;
 
@@ -87,6 +90,8 @@ void Circle::init_housekeeping() {
 
     // setup power ADC
     transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x28));
+
+    housekeeping->system_state = SYSTEM_STATE::LOOP;
 }
 
 void Circle::init_cdte() {
@@ -116,13 +121,17 @@ void Circle::init_cdte() {
     utilities::debug_print("checking canister status...\n");
     std::vector<uint8_t> can_status = transport->sync_send_command_to_system(*cdtede, deck->get_command_for_sys_for_code(cdtede->system.hex, 0x8a));
     can_status = transport->get_reply_data(can_status, cdtede->system);
+    cdtede->system_state = SYSTEM_STATE::LOOP;
     utilities::debug_print("canisters status: ");
     utilities::hex_print(can_status);
 
     for (uint8_t i = 0; i < 4; ++i) {
         std::string this_name = "cdte" + std::to_string(i+1);
         if (can_status.size() < 4) {
-            utilities::error_print("got too-short canister status reply!\n");
+            // utilities::error_print("got too-short canister status reply! Abandoning CdTe.\n");
+            utilities::error_log("Circle::init_cdte()\tcanisters status disconnected.");
+            cdtede->errors |= errors::system::reading_invalid;
+            
             // Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
             // Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
             // Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
@@ -209,10 +218,17 @@ void Circle::init_cmos() {
     std::vector<uint8_t> cmos1_status = transport->sync_send_command_to_system(*cmos1, deck->get_command_for_sys_for_code(cmos1->system.hex, 0xa0));
     if (cmos1_status.size() < 4) {
         // utilities::error_print("could not receive from cmos1: ABANDONing\n");
+        utilities::error_log("Circle::init_cmos()\treceived no response to cmos1 linetime request.");
+        cmos1->errors |= errors::system::reading_packet;
         // cmos1->system_state = SYSTEM_STATE::ABANDON;
-        utilities::error_print("could not receive from cmos1.\n");
+
     } else {
         cmos1_status = transport->get_reply_data(cmos1_status, cmos1->system);
+        if (cmos1_status.size() < 4) {
+            utilities::error_log("Circle::init_cmos()\treceived invalid response to cmos1 linetime request:");
+            utilities::error_log("Circle::init_cmos()\t" + utilities::bytes_to_string(cmos1_status));
+            cmos1->errors |= errors::system::reading_invalid;
+        }
         utilities::debug_print("cmos1 linetime: ");
         utilities::hex_print(cmos1_status);
     }
@@ -240,10 +256,15 @@ void Circle::init_cmos() {
     std::vector<uint8_t> cmos2_status = transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0xa0));
     if (cmos2_status.size() < 4) {
         // utilities::error_print("could not receive from cmos2: ABANDONing\n");
+        utilities::error_log("Circle::init_cmos()\treceived no response to cmos2 linetime request.");
         // cmos2->system_state = SYSTEM_STATE::ABANDON;
-        utilities::error_print("could not receive from cmos2.\n");
     } else {
         cmos2_status = transport->get_reply_data(cmos2_status, cmos2->system);
+        if (cmos2_status.size() < 4) {
+            utilities::error_log("Circle::init_cmos()\treceived invalid response to cmos2 linetime request:");
+            utilities::error_log("Circle::init_cmos()\t" + utilities::bytes_to_string(cmos2_status));
+            cmos2->errors |= errors::system::reading_invalid;
+        }
         utilities::debug_print("cmos2 linetime: ");
         utilities::hex_print(cmos2_status);
         std::this_thread::sleep_for(delay);
@@ -280,14 +301,14 @@ void Circle::init_timepix() {
     // todo: figure out why `.is_open()` segfaults if port is not open.
     // a better implementation (soon) is to store port status in a global state and check it in this `if`.
     if (!transport->local_uart_port.is_open()) {
-        utilities::error_print("timepix uart port failed to open! Will try to talk to it anyway.");
+        // utilities::error_print("timepix uart port failed to open! Will try to talk to it anyway.");
+        utilities::error_log("Circle::init_timepix()\ttimepix uart port failed to open. Will abandon timepix.");
         // utilities::error_print("timepix uart port failed to open! ABANDONing.");
-        // timepix->system_state = SYSTEM_STATE::ABANDON;
+        timepix->system_state = SYSTEM_STATE::ABANDON;
         return;
     }
 
     utilities::debug_print("\tsending ping...\n");
-    // std::vector<uint8_t> response(1);
     Command& ping_ask = deck->get_command_for_sys_for_code(timepix->system.hex, 0x80);
     std::vector<uint8_t> response = transport->sync_send_command_to_system(*timepix, ping_ask);
 
@@ -296,7 +317,8 @@ void Circle::init_timepix() {
         utilities::hex_print(response);
         timepix->system_state = SYSTEM_STATE::LOOP;
     } else {
-        utilities::error_print("got no response from timepix. Will try to talk to it anyway.");
+        // utilities::error_print("got no response from timepix. Will try to talk to it anyway.");
+        utilities::error_log("Circle::init_timepix()\tgot no response to ping.");
         // utilities::error_print("got no response from timepix. ABANDONing!");
         // timepix->system_state = SYSTEM_STATE::ABANDON;
     }
@@ -306,6 +328,7 @@ void Circle::manage_systems() {
 
     record_uplink();    // trying to implement uplink without blocking everything
     flush();
+    send_global_health();
 
     auto cdtede = *Circle::get_sys_man_for_name("cdtede");
     auto cdte1 = *Circle::get_sys_man_for_name("cdte1");
@@ -321,7 +344,8 @@ void Circle::manage_systems() {
     
     // immediately skip if we are trying to talk to a system marked "ABANDONED".
     if (system_order.at(current_system)->system_state == SYSTEM_STATE::ABANDON) {
-        utilities::error_print("current system " + system_order.at(current_system)->system.name + " was abandoned! Continuing.\n");
+        utilities::error_log("Circle::manage_systems()\tcurrent system " + system_order.at(current_system)->system.name + " was abandoned.");
+        // utilities::error_print("current system " + system_order.at(current_system)->system.name + " was abandoned! Continuing.\n");
         return;
     }
 
@@ -333,15 +357,21 @@ void Circle::manage_systems() {
         Circle::get_sys_man_for_name("cdte1")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC) = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte1"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte1")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC));
 
         std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte1, deck->get_command_for_sys_for_code(cdte1.system.hex, 0xbf));
+
+        bool did_queue_hk;
         if (hk.size() > 0) {
             std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte1.system);
             DownlinkBufferElement dbe(&(cdte1.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
             dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
-            transport->downlink_buffer->enqueue(dbe);
+            did_queue_hk = transport->downlink_buffer->enqueue(dbe);
         }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
+
+        if (has_data || !did_queue_hk) {
+            (*Circle::get_sys_man_for_name("cdte1")).errors |= errors::system::downlink_buffering;
+        }
 
         // delay before reading again 
         std::this_thread::sleep_for(delay_inter_cdte_ms);
@@ -680,7 +710,12 @@ void Circle::manage_systems() {
         // }
 
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-        
+
+    // } else if (system_order.at(current_system)->system == deck->get_sys_for_name("uplink")) {
+        // todo: consider using GSE or another system for this message.
+
+        // send_global_health();
+
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
     }
@@ -752,4 +787,45 @@ SystemManager *Circle::get_sys_man_for_hex(uint8_t hex) {
         }
     }
     return nullptr;
+}
+
+void Circle::send_global_health() {
+    utilities::debug_print("Circle::send_global_health()\tcalled.");
+    
+    SystemManager* hk = Circle::get_sys_man_for_name("housekeeping");
+
+    std::vector<uint8_t> data = make_global_health_packet();
+
+    utilities::debug_print("Circle::send_global_health()\tcalled.");
+    DownlinkBufferElement dbe_health(&(hk->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::PING);
+    dbe_health.set_payload(data);
+    transport->downlink_buffer->enqueue(dbe_health);
+}
+
+std::vector<uint8_t> Circle::make_global_health_packet() {
+    utilities::debug_print("Circle::make_global_health_packet()\tcalled.");
+    std::vector<uint8_t> content(system_order.size()*4);
+    
+    size_t k = 0;
+    for (size_t i=0; i<system_order.size(); ++i) {
+        content[k++] = system_order[i]->system.hex;
+        content[k++] = static_cast<uint8_t>(system_order[i]->system_state);
+        content[k++] = static_cast<uint8_t>((system_order[i]->errors >> 8 & 0xff));
+        content[k++] = static_cast<uint8_t>((system_order[i]->errors & 0xff));
+    }
+    utilities::debug_print("\t...post-loop.");
+
+    auto this_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint32_t out_time = static_cast<uint32_t>(this_time & 0xffffffff);
+    auto time_bytes = utilities::splat_to_nbytes(4, out_time);
+
+    utilities::debug_print("\t...post-splat.");
+
+    std::vector<uint8_t> packet;
+    packet.insert(packet.end(), time_bytes.begin(), time_bytes.end());
+    packet.push_back(0x00);
+    packet.push_back(0x00);
+    packet.insert(packet.end(), content.begin(), content.end());
+    utilities::debug_print("\t...packet done.");
+    return packet;
 }

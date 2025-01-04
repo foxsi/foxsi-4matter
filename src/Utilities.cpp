@@ -38,6 +38,43 @@ STATE_ORDER operator++(STATE_ORDER& order, int) {
     return result;  
 }
 
+uint16_t operator|(errors::system l, uint16_t r) {
+    return static_cast<uint16_t>(l)|r;
+}
+
+uint16_t operator|(uint16_t l, errors::system r) {
+    return l|static_cast<uint16_t>(r);
+}
+
+uint16_t& operator|=(uint16_t& l, errors::system r) {
+    return l = l|r;
+}
+
+errors::system& operator|=(errors::system& l, uint16_t r) {
+    return l = static_cast<errors::system>(l|r);
+}
+
+uint16_t operator&(errors::system l, uint16_t r) {
+    return static_cast<uint16_t>(l) & r;
+}
+
+uint16_t operator&(uint16_t l, errors::system r) {
+    return l & static_cast<uint16_t>(r);
+}
+
+uint16_t& operator&=(uint16_t& l, errors::system r) {
+    return l = l & r;
+}
+
+errors::system& operator&=(errors::system& l, uint16_t r) {
+    return l = static_cast<errors::system>(l&r);
+}
+
+uint16_t operator~(errors::system err) {
+    return ~static_cast<uint16_t>(err);
+}
+
+
 namespace config::spw{
     char spw_calculate_crc_F(std::vector<char>& data) {
         /* From Takayuki Yuasa SpaceWireRMAP library https://github.com/yuasatakayuki/SpaceWireRMAPLibrary, 
@@ -310,7 +347,8 @@ namespace utilities{
     uint32_t unsplat_from_4bytes(std::vector<uint8_t> data) {
         uint32_t result = 0;
         if (data.size() < 4) {
-            error_print("data too short to unsplat 4 bytes!\n");
+            // error_print("data too short to unsplat 4 bytes!\n");
+            error_log("utilities::unsplat_from_4bytes()\tdata too short to unsplat 4 bytes.");
             return 0;
         }
         for(int i=0; i < 4; ++i) {
