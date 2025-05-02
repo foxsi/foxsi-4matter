@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <stdint.h>
 
 /**
  * @deprecated Superseded by `FramePacketizer`.
