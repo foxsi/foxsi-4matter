@@ -6,6 +6,9 @@ echo "running doxygen..."
 doxygen
 echo "running sphinx..."
 source doc/env/bin/activate
-sphinx-build -M html doc/breathe/source doc/breathe/build
+cd doc/breathe
+sphinx-build -M html source build
+sphinx-build -M latexpdf source build
 echo "opening docs..."
-open doc/breathe/build/html/index.html
+open build/html/index.html
+cd ../..

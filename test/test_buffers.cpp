@@ -208,66 +208,60 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "cmos FramePacketizer: " << fp_cmos.to_string() << "\n";
 
-    // check if source data is reconstructed correctly.
-    if (false_downlink_cdte == false_data_cdte) {
-        std::cout << "\nSUCCESS for cdte transfer.\n";
-    } else {
-        std::cout << "\ntry again cdte transfer :(\n";
-        std::cout << "\treceived " << std::to_string(false_downlink_cdte.size()) << " bytes of data: \n";
-        for (size_t i = 0; i < false_downlink_cdte.size(); ++i) {
-            std::cout << " " << std::to_string(false_downlink_cdte[i]);
-        }
-        std::cout << "\n";
-    }
-    if (false_downlink_cmos == false_data_cmos) {
-        std::cout << "\nSUCCESS for cmos transfer.\n";
-    } else {
-        std::cout << "\ntry again cmos transfer :(\n";
-        std::cout << "\treceived " << std::to_string(false_downlink_cmos.size()) << " bytes of data: \n";
-        for (size_t i = 0; i < false_downlink_cmos.size(); ++i) {
-            std::cout << " " << std::to_string(false_downlink_cmos[i]);
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
+    bool total_success = true;
 
     // ---------------------------- SpaceWire reply data tests ----------------------- //
 
     std::cout << "test SpaceWire reply data:\n";
     std::vector<uint8_t> good_reply = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0xfe, 0x01, 0x0d, 0x00, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x0e, 0x04, 0x22, 0x80, 0x3c, 0x42};
     std::vector<uint8_t> bad_reply = {0x21, 0x12, 0x81, 0x6a, 0x32, 0x3a, 0x0b, 0x70, 0x4b, 0x33, 0x8b, 0x33, 0xab, 0xb3, 0x22, 0xbf, 0x2b, 0x33, 0x32, 0xba, 0xab, 0x23, 0x3a, 0x2a, 0x12, 0xb7, 0x9f, 0x72, 0x91};
-    std::cout << "from good packet: \n";
+    std::cout << "\treading good data...\n";
     std::vector<uint8_t> good_data = cdte1.spacewire->get_reply_data(good_reply);
     std::vector<uint8_t> ref_good_data = {0x04, 0x22, 0x80, 0x3c};
-
-    utilities::hex_print(good_data);
-    std::cout << "from bad packet: \n";
+    std::cout << "\treading bad data...\n";
     std::vector<uint8_t> bad_data = cdte1.spacewire->get_reply_data(bad_reply);
-    utilities::hex_print(bad_data);
     std::vector<uint8_t> ref_bad_data = {};
 
-    if (good_data == ref_good_data) {
-        std::cout << "\nSUCCESS for good packet parsing.\n";
+    // check if source data is reconstructed correctly.
+    total_success = total_success && (false_downlink_cdte == false_data_cdte);
+    if (false_downlink_cdte == false_data_cdte) {
+        std::cout << "\nSUCCESS for cdte transfer.\n";
     } else {
-        std::cout << "\ntry again parsing the good packet :(\n";
+        std::cout << "FAILURE for cdte transfer:\n";
+        std::cout << "\treceived " << std::to_string(false_downlink_cdte.size()) << " bytes of data: \n";
+        for (size_t i = 0; i < false_downlink_cdte.size(); ++i) {
+            std::cout << " " << std::to_string(false_downlink_cdte[i]);
+        }
+        std::cout << "\n";
+    }
+    total_success = total_success && (false_downlink_cmos == false_data_cmos);
+    if (false_downlink_cmos == false_data_cmos) {
+        std::cout << "SUCCESS for cmos transfer.\n";
+    } else {
+        std::cout << "FAILURE for cmos transfer:\n";
+        std::cout << "\treceived " << std::to_string(false_downlink_cmos.size()) << " bytes of data: \n";
+        for (size_t i = 0; i < false_downlink_cmos.size(); ++i) {
+            std::cout << " " << std::to_string(false_downlink_cmos[i]);
+        }
+        std::cout << "\n";
+    }
+    total_success = total_success && (good_data == ref_good_data);
+    if (good_data == ref_good_data) {
+        std::cout << "SUCCESS for good packet parsing.\n";
+    } else {
+        std::cout << "FAILURE for good packet parsing.\n";
         std::cout << "\tgot ";
         utilities::hex_print(good_data);
     }
-
+    total_success = total_success && (bad_data == ref_bad_data);
     if (bad_data == ref_bad_data) {
-        std::cout << "\nSUCCESS for bad packet parsing.\n";
+        std::cout << "SUCCESS for bad packet parsing.\n";
     } else {
-        std::cout << "\ntry again parsing the bad packet :(\n";
+        std::cout << "FAILURE for bad packet parsing.\n";
         std::cout << "\tgot ";
         utilities::hex_print(bad_data);
     }
     std::cout << "\n";
-
-    std::vector<uint8_t> test = {0,1,2,3,4,5,6,7};
-    
-    std::vector<uint8_t> other(test.begin() + 8, test.begin() + 8);
-    std::cout << "other: ";
-    utilities::hex_print(other);
 
     // ---------------------------- SpaceWire print tests ---------------------------- //
 
@@ -285,6 +279,11 @@ int main(int argc, char* argv[]) {
     utilities::spw_print(test_cdte_read_msg, cdte1.spacewire);
     utilities::spw_print(test_cdte_reply_msg, nullptr);
 
-    std::cout << "end of main.\n";
+    if (total_success) {
+        std::cout << "\nAll tests passed successfully.\n";
+    } else {
+        std::cout << "\nSome tests failed.\n";
+    }
+    
     return 0;
 }

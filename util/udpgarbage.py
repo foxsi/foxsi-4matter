@@ -3,8 +3,8 @@ import socket, time, random
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
 # multicast group address and port
-mcast_grp = '224.1.1.0'
-mcast_port = 3000
+mcast_grp = '224.1.1.118'
+mcast_port = 9999
 
 while True:
 	# make some random data to transmit

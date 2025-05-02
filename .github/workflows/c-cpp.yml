@@ -15,11 +15,13 @@ jobs:
     - uses: actions/checkout@v4
     - name: "install boost"
       run: sudo apt-get -y install libboost-all-dev
+    - name: "install nlohmann-json"
+      run: sudo apt-get -y install nlohmann-json3-dev
     - name: "set boost path"
       run: export BOOST_ROOT=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
     - name: "debug print"
-      run: ls -l /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
+      run: ls -l /usr/local/include
     - name: "run CMake"
       run: cmake -S . build -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/
     - name: "build project"
-      run: cmake --build build --target all -j4
+      run: cmake --build build --target formatter foxsimile
