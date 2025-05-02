@@ -1,0 +1,13 @@
+[Unit]
+Description=Update /etc/fake-hwclock.data each second
+After=multi-user.target
+
+[Service]
+Type=simple
+User=foxsi
+ExecStart=nohup /home/foxsi/foxsi-4matter/util/secondly-fake-hwclock.sh &
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
