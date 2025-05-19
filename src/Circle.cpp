@@ -269,34 +269,12 @@ void Circle::init_cmos() {
         utilities::hex_print(cmos2_status);
         std::this_thread::sleep_for(delay);
     }
-
-     // send start_cmos_init         0x0f 0x18
-    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x18));
-    // std::this_thread::sleep_for(delay);
-	
-    // send start_cmos_training     0x0f 0x1f
-    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x1f));
-    // std::this_thread::sleep_for(delay);
-	
-    // send set_cmos_params         0x0f 0x10
-    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x10));
-    // std::this_thread::sleep_for(delay);
-	
-    // send start_cmos_exposure     0x0f 0x12
-    // transport->sync_send_command_to_system(*cmos2, deck->get_command_for_sys_for_code(cmos2->system.hex, 0x12));
-    // std::this_thread::sleep_for(delay);
-
-    // then can read ring buffer
-
 }
 
 void Circle::init_timepix() {
     utilities::debug_print("\ninitializing timepix system\n");
     SystemManager* timepix = Circle::get_sys_man_for_name("timepix");
-// DEBUG
-    // timepix->system_state = SYSTEM_STATE::ABANDON;
-    // return;
-
+    
     // check that serial port opened correctly. 
     // todo: figure out why `.is_open()` segfaults if port is not open.
     // a better implementation (soon) is to store port status in a global state and check it in this `if`.
@@ -315,6 +293,7 @@ void Circle::init_timepix() {
     if (response.size() > 0) {
         utilities::debug_print("got response from timepix: ");
         utilities::hex_print(response);
+        utilities::debug_log("Circle::init_timepix()\tgot timepix pingback.");
         timepix->system_state = SYSTEM_STATE::LOOP;
     } else {
         // utilities::error_print("got no response from timepix. Will try to talk to it anyway.");
@@ -325,6 +304,7 @@ void Circle::init_timepix() {
 }
 
 void Circle::manage_systems() {
+    utilities::debug_log("Circle::manage_systems()\tfor " + system_order.at(current_system)->system.name + "...");
 
     record_uplink();    // trying to implement uplink without blocking everything
     flush();
@@ -619,6 +599,7 @@ void Circle::manage_systems() {
                 }
             }
             if (housekeeping->enable & 0x02) {
+                utilities::debug_log("Circle::manage_systems()\thousekeeping\treading RTDs.");
                 // do read RTD data
                 std::vector<uint8_t> temp1_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x84));
                 std::vector<uint8_t> temp2_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x85));
@@ -652,6 +633,7 @@ void Circle::manage_systems() {
                 }
             }
             if (housekeeping->enable & 0x04) {
+                utilities::debug_log("Circle::manage_systems()\thousekeeping\treading intro.");
                 // do read introspection
                 // // microcontroller clock counter reading:
                 std::vector<uint8_t> clock_reply = transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x8e));
@@ -683,12 +665,14 @@ void Circle::manage_systems() {
 
         if (zero_finder == 0) {
             utilities::error_print("Housekeeping failed to respond!\n");
+            utilities::error_log("Circle::manage_systems()\thousekeeping failed to respond! Stopping socket...");
             utilities::error_print("\tcanceling socket operations...\n");
             transport->local_tcp_housekeeping_sock.cancel();
             utilities::error_print("\tclosing socket...\n");
             transport->local_tcp_housekeeping_sock.close();
             housekeeping->enable = 0x00;
             utilities::error_print("\tDISCONNECTing housekeeping!\n");
+            utilities::error_log("DISCONNECTing housekeeping!");
             Circle::get_sys_man_for_name("housekeeping")->system_state = SYSTEM_STATE::DISCONNECT;
             return;
         }
@@ -718,6 +702,7 @@ void Circle::manage_systems() {
 
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
+        utilities::debug_log("Circle::manage_systems()\t fell through for " + system_order.at(current_system)->system.name);
     }
 }
 

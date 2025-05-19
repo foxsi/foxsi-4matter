@@ -218,6 +218,7 @@ int main(int argc, char** argv) {
 
 
     std::cout << "machine: \n";
+    utilities::debug_log("starting main()...");
     try {
         UART timepix_uart_pre = *(deck->get_sys_for_name("timepix").uart);
         auto timepix_uart = std::make_shared<UART>(*(deck->get_sys_for_name("timepix").uart));

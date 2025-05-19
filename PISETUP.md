@@ -111,48 +111,57 @@ The recent v1.83.* versions of `boost` are not yet (as of March 2024) available 
 Once complete, you may need to modify the [CMakeLists.txt](CMakeLists.txt) to point `NLOHMANNJSON_ROOT` to the correct directory. The path you input should contain the file `json.hpp`.
 
 ## Setting up `systemd` for run on boot
+
 The `formatter` software is supposed to run after the Raspberry Pi boots for flight operation. This behavior is enabled by [`systemd`](https://systemd.io/), which runs daemons (background processes) in Linux. We interface with `systemd` using the `systemctl` command line tool. 
 
 ### Provide a `formatter.service` configuration
-If you are setting up a Pi from scratch, copy the file [`foxsi-4matter/util/formatter.service`](util/formatter.service) into the directory `/etc/systemd/system/` on the Raspberry Pi. This file is known as a `systemd` "unit," and does the following:
-1. Requires network and users to be set up by the boot process before starting.
-2. Uses the working directory `/home/foxsi/foxsi-4matter` for running commands.
-3. Runs this command in that working directory:
-```bash
-nohup bin/formatter --verbose --config foxsi4-commands/systems.json
-```
-4. If the process fails, waits 10 seconds before trying to start it again.
-5. Always tries to restart the process when it fails.
+>[!NOTE] 
+> In the following, `secondly-fake-hwclock.service` was only added at v1.3.1. If you are setting up a Pi for an earlier release (such as v1.2.0, from FOXSI-4 flight) you may ignore all `fake-hwclock`-related instructions.
+
+If you are setting up a Pi from scratch, copy the files 
+1. [`foxsi-4matter/util/formatter.service`](util/formatter.service)
+2.  [`foxsi-4matter/util/secondly-fake-hwclock.service`](util/secondly-fake-hwclock.service)
+
+into the directory `/etc/systemd/system/` on the Raspberry Pi. These files are known as `systemd` "units," and do the following:
+- `formatter.service` runs the main Formatter software in the background (to poll detectors for data, accept uplink commands, and send telemetry), and restarts the process if it fails.
+- `secondly-fake-hwclock.service` updates the saved value of the hardware clock every second so that after a hard power cut and reboot, unixtime does not revert to an old value and overwrite log files.
 
 Unit files like this are used broadly in Linux, and you will find plenty of resources if you search the internet.
 
-### Start the service
-Once you have put a valid `formatter.service` unit file in `/etc/systemd/system` on the Pi, register this new service with `systemctl`:
+### Start the services
+Once you have put `formatter.service` and `secondly-fake-hwclock.service` in `/etc/systemd/system` on the Pi, register these new services with `systemctl`:
 ```bash
 sudo systemctl daemon-reload
 ```
 
-Enable the service to start on boot:
+Enable these services to start on boot:
 ```bash
 sudo systemctl enable formatter.service
+sudo systemctl enable fake-hwclock.service
+sudo systemctl enable secondly-fake-hwclock.service
 ```
 
 Start running the service (or just reboot the Pi):
 ```bash
 sudo systemctl start formatter.service
+sudo systemctl start fake-hwclock.service
+sudo systemctl start secondly-fake-hwclock.service
 ```
 
-You can query the status of the service, and see recent `stdout` from it, with
+You can query the status of a service, and see recent `stdout` from it, with
 ```bash
-sudo systemctl status formatter.service
+sudo systemctl status service-name.service
 ```
 
 You can also stop running, and disable automatically running the service on boot (respectively) with the following commands:
 ```bash
-sudo systemctl stop formatter.service		# stop the current running formatter
-sudo systemctl disable formatter.service 	# stop from running formatter on boot
+sudo systemctl stop service-name.service		# stop running
+sudo systemctl disable service-name.service 	# prevent from running on future boots
 ```
 When you modifiy `formatter` software, if you want your new binary to be run on boot, make sure you put it in the same place so that `systemctl` can find it: `/home/foxsi/foxsi-4matter/bin/formatterr`. Or you will need to modify `/etc/systemd/system/formatter.service` to set a new working directory containing your binary.
+
+>[!NOTE]
+> As of v1.3.1, `formatter.service` requires `secondly-hwclock.service` to run first, make sure it is enabled if you are testing `formatter`.
 
 >[!NOTE]
 > On macOS, I am unable to open `.service` files from the Finder (I get errors that ".service files are not supported on Mac"). I can open these files using the Terminal, however. For example, to open in TextEdit, do:

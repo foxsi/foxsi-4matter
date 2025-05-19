@@ -105,11 +105,6 @@ namespace utilities{
      */
     void trace_log(std::string msg);
     /**
-     * @brief Write a `std::string` to the prelog file with type `[trace]`. 
-     * @param msg the string to log.
-     */
-    void trace_prelog(std::string msg);
-    /**
      * @brief Write a `std::string` to log with type `[error]`. 
      * @param msg the string to log.
      */
@@ -129,11 +124,6 @@ namespace utilities{
      * @param data the data to log.
      */
     void trace_log(std::vector<uint8_t> data);
-    /**
-     * @brief Write raw data to prelog file with type `[trace]`. 
-     * @param data the data to log.
-     */
-    void trace_prelog(std::vector<uint8_t> data);
     /**
      * @brief Write raw data to log with type `[error]`. 
      * @param data the data to log.

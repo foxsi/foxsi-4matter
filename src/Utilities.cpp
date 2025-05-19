@@ -188,10 +188,10 @@ namespace config::spw{
 
 namespace utilities{
     std::string get_now_string() {
-        char time_format[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
+        char time_format[std::size("auto_yyyy-mm-dd_hh-mm-ss")];
         auto start_time = std::time({});
 
-        std::strftime(std::data(time_format), std::size(time_format), "auto_%F_%T", std::gmtime(&start_time));
+        std::strftime(std::data(time_format), std::size(time_format), "auto_%F_%H-%M-%S", std::gmtime(&start_time));
 
         return std::string(time_format);
     }
@@ -200,7 +200,6 @@ namespace utilities{
     // add spdlog write function (error, debug, info) here
     
     std::shared_ptr<spdlog::logger> logger;
-    std::shared_ptr<spdlog::logger> prelogger;
     void setup_logs_nowtime(std::string prefix)
     {
         // char time_fmt[std::size("auto_yyyy-mm-dd_hh:mm:ss")];
@@ -211,16 +210,15 @@ namespace utilities{
         std::string time_fmt = get_now_string();
 
         std::string file_name = prefix + std::string(time_fmt);
-        std::string prefile_name = prefix + std::string(time_fmt) + "_pre";
         std::string extension = ".log";
         debug_print("log file: " + file_name + extension + "\n");
         
         auto logger_temp = spdlog::basic_logger_mt<spdlog::async_factory>(file_name, file_name + extension);
-        auto prelogger_temp = spdlog::basic_logger_mt<spdlog::async_factory>(prefile_name, prefile_name + extension);
         logger_temp->set_level(spdlog::level::trace);
-        prelogger_temp->set_level(spdlog::level::trace);
         logger = spdlog::get(file_name);
-        prelogger = spdlog::get(prefile_name);
+
+        spdlog::set_pattern("[%Y-%m-%d %H:%M%S] [%E] [%l] %v");
+        spdlog::flush_every(std::chrono::seconds(1));
     }
 
     void debug_log(std::string msg) {
@@ -231,9 +229,6 @@ namespace utilities{
     }
     void trace_log(std::string msg) {
         utilities::logger->trace(msg);
-    }
-    void trace_prelog(std::string msg) {
-        utilities::prelogger->trace(msg);
     }
     void error_log(std::string msg) {
         utilities::logger->error(msg);
@@ -246,9 +241,6 @@ namespace utilities{
     }
     void trace_log(std::vector<uint8_t> data) {
         utilities::logger->trace("{:spn}", spdlog::to_hex(data));
-    }
-    void trace_prelog(std::vector<uint8_t> data) {
-        utilities::prelogger->trace("{:spn}", spdlog::to_hex(data));
     }
     void error_log(std::vector<uint8_t> data) {
         utilities::logger->error("{:spn}", spdlog::to_hex(data));

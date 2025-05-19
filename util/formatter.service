@@ -1,6 +1,8 @@
 [Unit]
 Description=Begin running formatter on boot.
 After=multi-user.target
+After=dev-serial0.device
+After=secondly-fake-hwclock.service
 Requires=network.target
 
 [Service]
