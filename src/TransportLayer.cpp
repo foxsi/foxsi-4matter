@@ -262,6 +262,12 @@ bool TransportLayerMachine::handle_intercept_cmd(SystemManager& sys_man, Command
     utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\thandling intercept command " + std::to_string(cmd.hex) + " for system " + std::to_string(sys_man.system.hex));
 
     if (sys_man.system.name == "housekeeping") {
+        // command to clear formatter logs. This is not actually used by the housekeeping board, but categorized under that system.
+        if (0x3f == cmd.hex) {
+            int success = utilities::clear_formatter_log();
+            utilities::debug_log("TransportLayerMachine::handle_intercept_cmd()\ttried clearing logs and got " + std::to_string(success) + " result.");
+            return true;
+        }
         // note here we are directly using the command hex code, not the content of the command.
         if (sys_man.system_state != SYSTEM_STATE::DISCONNECT && sys_man.system_state != SYSTEM_STATE::ABANDON) {
             if (0x30 == cmd.hex) {
