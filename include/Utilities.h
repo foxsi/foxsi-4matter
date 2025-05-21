@@ -131,6 +131,11 @@ namespace utilities{
     void error_log(std::vector<uint8_t> data);
 
     /**
+     * @brief Delete formatter log files and syslog/daemon.log.
+     */
+    int clear_formatter_log();
+
+    /**
      * @brief Print a `std::string` to stdout, colored blue (debug).
      * @param msg the string to print.
      */

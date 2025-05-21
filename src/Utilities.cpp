@@ -1,5 +1,6 @@
 #include "Utilities.h"
 
+#include <exception>
 #include <spdlog/fmt/bin_to_hex.h>
 
 #include <iostream>
@@ -8,6 +9,7 @@
 #include <string>
 #include <chrono>
 #include <ctime>
+#include <filesystem>
 
 SUBSYSTEM_ORDER operator++(SUBSYSTEM_ORDER& order) {
     // order = static_cast<SUBSYSTEM_ORDER>((order + 1) % SUBSYSTEM_ORDER::SUBSYSTEM_COUNT);
@@ -244,6 +246,41 @@ namespace utilities{
     }
     void error_log(std::vector<uint8_t> data) {
         utilities::logger->error("{:spn}", spdlog::to_hex(data));
+    }
+
+    int clear_formatter_log() {
+        try {
+            debug_log("clearing formatter logs...");
+            const std::filesystem::path daemon_f = "/var/log/daemon.log";
+            const std::filesystem::path syslog_f = "/var/log/syslog";
+            const std::filesystem::path log_dir = "/home/foxsi/foxsi-4matter/log/";
+
+            bool logs_success = false;
+
+            debug_log("\tfolder: " + log_dir.string());
+            const std::filesystem::path current_log(logger->name() + ".log");
+            debug_log("\texpect current logfile: " + current_log.filename().string());
+            for (auto const& logfile: std::filesystem::directory_iterator{log_dir}) {
+                auto const& this_file = logfile.path().filename().string();
+                if (this_file == current_log.filename().string()) {
+                    debug_log("\tfound current logfile " + this_file + "! Skipping.");
+                    continue;
+                } else {
+                    logs_success |= std::filesystem::remove(logfile);
+                    debug_log("\tdeleted logfile " + this_file);
+                }
+            }
+
+            // std::filesystem::resize_file(syslog_f, 0);
+            // std::filesystem::resize_file(daemon_f, 0);
+            // debug_log("\tcleared logfile " + daemon_f.filename().string());
+            // debug_log("\tcleared logfile " + syslog_f.filename().string());
+            
+            return 0;
+        } catch (std::exception &e) {
+            utilities::error_log(std::string("failed to clear log files! ") + e.what());
+            return -1;
+        }
     }
 
 

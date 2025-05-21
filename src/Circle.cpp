@@ -798,19 +798,15 @@ std::vector<uint8_t> Circle::make_global_health_packet() {
         content[k++] = static_cast<uint8_t>((system_order[i]->errors >> 8 & 0xff));
         content[k++] = static_cast<uint8_t>((system_order[i]->errors & 0xff));
     }
-    utilities::debug_print("\t...post-loop.");
 
     auto this_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     uint32_t out_time = static_cast<uint32_t>(this_time & 0xffffffff);
     auto time_bytes = utilities::splat_to_nbytes(4, out_time);
-
-    utilities::debug_print("\t...post-splat.");
 
     std::vector<uint8_t> packet;
     packet.insert(packet.end(), time_bytes.begin(), time_bytes.end());
     packet.push_back(0x00);
     packet.push_back(0x00);
     packet.insert(packet.end(), content.begin(), content.end());
-    utilities::debug_print("\t...packet done.");
     return packet;
 }
