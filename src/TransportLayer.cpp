@@ -19,7 +19,7 @@ TransportLayerMachine::TransportLayerMachine(
     io_context(context),
     local_udp_sock(context), 
     local_tcp_sock(context),
-    local_tcp_housekeeping_sock(context),
+    local_udp_housekeeping_sock(context),
     uplink_buffer(new_uplink_buffer),
     downlink_buffer(new_downlink_buffer),
     local_uart_port(context),
@@ -61,10 +61,10 @@ TransportLayerMachine::TransportLayerMachine(
 TransportLayerMachine::TransportLayerMachine(
     boost::asio::ip::udp::endpoint local_udp_end,
     boost::asio::ip::tcp::endpoint local_tcp_end,
-    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
+    boost::asio::ip::udp::endpoint local_udp_housekeeping_end,
     boost::asio::ip::udp::endpoint remote_udp_end,
     boost::asio::ip::tcp::endpoint remote_tcp_end,
-    boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
+    boost::asio::ip::udp::endpoint remote_udp_housekeeping_end,
     std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
     std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
     boost::asio::io_context& context
@@ -72,7 +72,7 @@ TransportLayerMachine::TransportLayerMachine(
     io_context(context),
     local_udp_sock(context),
     local_tcp_sock(context),
-    local_tcp_housekeeping_sock(context),
+    local_udp_housekeeping_sock(context),
     uplink_buffer(new_uplink_buffer),
     downlink_buffer(new_downlink_buffer),
     local_uart_port(context),
@@ -80,7 +80,7 @@ TransportLayerMachine::TransportLayerMachine(
 {
     remote_udp_endpoint = remote_udp_end;
     remote_tcp_endpoint = remote_tcp_end;
-    remote_tcp_housekeeping_endpoint = remote_tcp_housekeeping_end;
+    remote_udp_housekeeping_endpoint = remote_udp_housekeeping_end;
     
     active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
     active_state = STATE_ORDER::IDLE;
@@ -96,7 +96,7 @@ TransportLayerMachine::TransportLayerMachine(
 
     local_udp_sock.open(boost::asio::ip::udp::v4());
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
+    local_udp_housekeeping_sock.open(boost::asio::ip::udp::v4());
     
     set_socket_options();
 
@@ -105,17 +105,17 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock.bind(local_tcp_end);
     local_tcp_sock.connect(remote_tcp_endpoint);
 
-    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
-    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
+    local_udp_housekeeping_sock.bind(local_udp_housekeeping_end);
+    local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
 }
 
 TransportLayerMachine::TransportLayerMachine(
     boost::asio::ip::udp::endpoint local_udp_end, 
     boost::asio::ip::tcp::endpoint local_tcp_end, 
-    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end, 
+    boost::asio::ip::udp::endpoint local_udp_housekeeping_end, 
     boost::asio::ip::udp::endpoint remote_udp_end, 
     boost::asio::ip::tcp::endpoint remote_tcp_end, 
-    boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end, 
+    boost::asio::ip::udp::endpoint remote_udp_housekeeping_end, 
     std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer, 
     std::shared_ptr<UART> local_uart, 
     std::shared_ptr<UART> uplink_uart, 
@@ -124,7 +124,7 @@ TransportLayerMachine::TransportLayerMachine(
     io_context(context),
     local_udp_sock(context),
     local_tcp_sock(context),
-    local_tcp_housekeeping_sock(context),
+    local_udp_housekeeping_sock(context),
     uplink_buffer(new_uplink_buffer),
     downlink_buffer(new_downlink_buffer),
     local_uart_port(context),
@@ -132,7 +132,7 @@ TransportLayerMachine::TransportLayerMachine(
 {
     remote_udp_endpoint = remote_udp_end;
     remote_tcp_endpoint = remote_tcp_end;
-    remote_tcp_housekeeping_endpoint = remote_tcp_housekeeping_end;
+    remote_udp_housekeeping_endpoint = remote_udp_housekeeping_end;
     
     active_subsys = SUBSYSTEM_ORDER::HOUSEKEEPING;
     active_state = STATE_ORDER::IDLE;
@@ -150,7 +150,7 @@ TransportLayerMachine::TransportLayerMachine(
     local_udp_sock.bind(local_udp_end);
 
     local_tcp_sock.open(boost::asio::ip::tcp::v4());
-    local_tcp_housekeeping_sock.open(boost::asio::ip::tcp::v4());
+    local_udp_housekeeping_sock.open(boost::asio::ip::udp::v4());
     
     set_socket_options();
     
@@ -159,8 +159,8 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock.connect(remote_tcp_endpoint);
     
     utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\tconnecting ::local_tcp_housekeeping_socket.");
-    local_tcp_housekeeping_sock.bind(local_tcp_housekeeping_end);
-    local_tcp_housekeeping_sock.connect(remote_tcp_housekeeping_endpoint);
+    local_udp_housekeeping_sock.bind(local_udp_housekeeping_end);
+    local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
 
     // std::cout << "opening serial ports...\n";
     // utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\topening serial ports.");
@@ -293,7 +293,7 @@ void TransportLayerMachine::set_socket_options() {
     
     local_udp_sock.set_option(reuse_addr_option);
     local_tcp_sock.set_option(reuse_addr_option);
-    local_tcp_housekeeping_sock.set_option(reuse_addr_option);
+    local_udp_housekeeping_sock.set_option(reuse_addr_option);
 }
 
 void TransportLayerMachine::set_local_serial_options(std::shared_ptr<UART> port) {
@@ -606,10 +606,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_uart_read(boost::asio::serial_p
 std::vector<uint8_t> TransportLayerMachine::sync_udp_read(boost::asio::ip::udp::socket &socket, size_t receive_size, std::chrono::milliseconds timeout_ms) {
     boost::system::error_code err;
     udp_local_receive_swap.resize(receive_size);
+    std::vector<uint8_t> receive_data(receive_size);
 
     socket.async_receive_from(
-        boost::asio::buffer(udp_local_receive_swap),
-        remote_udp_endpoint,
+        boost::asio::buffer(receive_data),
+        remote_udp_housekeeping_endpoint,
         boost::bind(
             &TransportLayerMachine::sync_tcp_read_handler,
             boost::placeholders::_1, 
@@ -618,16 +619,14 @@ std::vector<uint8_t> TransportLayerMachine::sync_udp_read(boost::asio::ip::udp::
             &receive_size
         )
     );
-    bool timed_out = TransportLayerMachine::run_udp_context(timeout_ms);
+    bool timed_out = TransportLayerMachine::run_udp_context(local_udp_housekeeping_sock, timeout_ms);
 
     if (timed_out) {
         return {};
     } else {
         // utilities::debug_print("udp received!\n");
-        std::vector<uint8_t> swap_copy(udp_local_receive_swap);
-        swap_copy.resize(receive_size);
-        udp_local_receive_swap.resize(0);
-        return swap_copy;
+        receive_data.resize(receive_size);
+        return receive_data;
     }
 }
 
@@ -642,12 +641,12 @@ void TransportLayerMachine::sync_uart_read_handler(const boost::system::error_co
     *out_length = length;
 }
 
-bool TransportLayerMachine::run_udp_context(std::chrono::milliseconds timeout_ms)
+bool TransportLayerMachine::run_udp_context(boost::asio::ip::udp::socket& socket, std::chrono::milliseconds timeout_ms)
 {
     io_context.restart();
     io_context.run_for(timeout_ms);
     if (!io_context.stopped()) {
-        local_udp_sock.cancel();
+        socket.cancel();
         io_context.run();
         return true;
     }
@@ -1031,11 +1030,11 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
         // utilities::debug_print("sending ");
         // utilities::hex_print(packet);
         utilities::debug_log("\tsending ethernet command " + utilities::bytes_to_string(packet) + ".");
-		local_tcp_housekeeping_sock.send(boost::asio::buffer(packet));
+		local_udp_housekeeping_sock.send(boost::asio::buffer(packet));
 		if (cmd.read) {
 			size_t expected_size = cmd.get_eth_reply_length();
             reply.resize(expected_size);
-			size_t reply_size = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, sys_man);
+			size_t reply_size = TransportLayerMachine::read_udp(local_udp_housekeeping_sock, reply, sys_man);
             reply.resize(reply_size);
 		}
         utilities::debug_log("\tdispatched command " + cmd.name + ", raw form " + utilities::bytes_to_string(packet) + " to " + sys_man.system.name);
@@ -1064,14 +1063,14 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
     return reply;
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send) {
+std::vector<uint8_t> TransportLayerMachine::sync_udp_housekeeping_transaction(std::vector<uint8_t> data_to_send) {
     utilities::debug_print("sending " + std::to_string(data_to_send.size()) + " bytes: ");
     utilities::hex_print(data_to_send);
     std::vector<uint8_t> reply;
     // todo: no magic numbers
     reply.resize(1024);
-    local_tcp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
-    size_t reply_len = local_tcp_housekeeping_sock.read_some(boost::asio::buffer(reply));
+    local_udp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
+    size_t reply_len = local_udp_housekeeping_sock.receive(boost::asio::buffer(reply));
     reply.resize(reply_len);
 
     utilities::debug_print("received " + std::to_string(reply_len) + " bytes: ");
@@ -1082,9 +1081,9 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_housekeeping_transaction(st
     return reply;
 }
 
-void TransportLayerMachine::sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send) {
+void TransportLayerMachine::sync_udp_housekeeping_send(std::vector<uint8_t> data_to_send) {
     utilities::debug_print("transmitting to housekeeping_system\n");
-    local_tcp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
+    local_udp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
 }
 
 void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {
@@ -1254,7 +1253,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_sys(System
     return reply;
 }
 
-std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd) {
+std::vector<uint8_t> TransportLayerMachine::sync_udp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd) {
     std::vector<uint8_t> packet = commands->get_command_bytes_for_sys_for_code(hk_man.system.hex, cmd.hex);
 
     std::vector<uint8_t> reply(4096);
@@ -1264,7 +1263,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_housekeepi
         utilities::error_print("cannot send non-Ethernet command!");
     }
 
-    local_tcp_housekeeping_sock.send(boost::asio::buffer(packet));
+    local_udp_housekeeping_sock.send(boost::asio::buffer(packet));
     utilities::debug_print("in sync_tcp_send_command_for_housekeeping_sys(), sent request\n");
 
     if (cmd.read) {
@@ -1272,7 +1271,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_tcp_send_command_for_housekeepi
         size_t expected_size = cmd.get_eth_reply_length();
         reply.resize(expected_size);
         // size_t reply_len = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, hk_man);
-        size_t reply_len = TransportLayerMachine::read(local_tcp_housekeeping_sock, reply, hk_man);
+        size_t reply_len = TransportLayerMachine::read_udp(local_udp_housekeeping_sock, reply, hk_man);
         if (reply_len == expected_size) {
             utilities::debug_print("got response: ");
         } else {

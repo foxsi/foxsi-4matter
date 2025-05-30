@@ -39,9 +39,9 @@ class TransportLayerMachine {
          */
         boost::asio::ip::tcp::socket local_tcp_sock;
         /**
-         * @brief the local machine's TCP socket for the housekeeping system.
+         * @brief the local machine's UDP socket for the housekeeping system.
          */
-        boost::asio::ip::tcp::socket local_tcp_housekeeping_sock;
+        boost::asio::ip::udp::socket local_udp_housekeeping_sock;
         /**
          * @brief a remote machine's UDP endpoint.
          */
@@ -51,9 +51,9 @@ class TransportLayerMachine {
          */
         boost::asio::ip::tcp::endpoint remote_tcp_endpoint;
         /**
-         * @brief the remote housekeeping machine's TCP endpoint.
+         * @brief the remote housekeeping machine's UDP endpoint.
          */
-        boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_endpoint;
+        boost::asio::ip::udp::endpoint remote_udp_housekeeping_endpoint;
         /**
          * @brief the local machine's general UART port.
          */
@@ -141,10 +141,10 @@ class TransportLayerMachine {
          * While constructing, this will try to open sockets and connect to remote interfaces.
          * @param local_udp_end the local machine's UDP endpoint.
          * @param local_tcp_end the local machine's TCP endpoint for detector communication.
-         * @param local_tcp_housekeeping_end the local machine's TCP endpoint for housekeeping communication.
+         * @param local_udp_housekeeping_end the local machine's UDP endpoint for housekeeping communication.
          * @param remote_udp_end a remote machine's UDP endpoint.
          * @param remote_tcp_end a remote machine's TCP endpoint.
-         * @param remote_tcp_housekeeping_end a remote machine's TCP endpoint for housekeeping communication.
+         * @param remote_udp_housekeeping_end a remote machine's UDP endpoint for housekeeping communication.
          * @param new_uplink_buffer a map of buffers used to store commands sent to each `System`.
          * @param new_downlink_buffer a shared queue for all downlink data.
          * @param context a reference to a `boost::asio::io_context` used for running asynchronous work.
@@ -152,10 +152,10 @@ class TransportLayerMachine {
         TransportLayerMachine(
             boost::asio::ip::udp::endpoint local_udp_end,
             boost::asio::ip::tcp::endpoint local_tcp_end,
-            boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint local_udp_housekeeping_end,
             boost::asio::ip::udp::endpoint remote_udp_end,
             boost::asio::ip::tcp::endpoint remote_tcp_end,
-            boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint remote_udp_housekeeping_end,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             boost::asio::io_context& context
@@ -166,10 +166,10 @@ class TransportLayerMachine {
          * While constructing, this will try to open sockets, ports, and connect to remote interfaces.
          * @param local_udp_end the local machine's UDP endpoint.
          * @param local_tcp_end the local machine's TCP endpoint for detector communication.
-         * @param local_tcp_housekeeping_end the local machine's TCP endpoint for housekeeping communication.
+         * @param local_udp_housekeeping_end the local machine's TCP endpoint for housekeeping communication.
          * @param remote_udp_end a remote machine's UDP endpoint.
          * @param remote_tcp_end a remote machine's TCP endpoint.
-         * @param remote_tcp_housekeeping_end a remote machine's TCP endpoint for housekeeping communication.
+         * @param remote_udp_housekeeping_end a remote machine's TCP endpoint for housekeeping communication.
          * @param new_uplink_buffer a map of buffers used to store commands sent to each `System`.
          * @param new_downlink_buffer a shared queue for all downlink data.
          * @param local_uart a `std::shared_ptr` to the `UART` object storing configuration data for the onboard detector UART.
@@ -179,10 +179,10 @@ class TransportLayerMachine {
         TransportLayerMachine(
             boost::asio::ip::udp::endpoint local_udp_end,
             boost::asio::ip::tcp::endpoint local_tcp_end,
-            boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint local_udp_housekeeping_end,
             boost::asio::ip::udp::endpoint remote_udp_end,
             boost::asio::ip::tcp::endpoint remote_tcp_end,
-            boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end,
+            boost::asio::ip::udp::endpoint remote_udp_housekeeping_end,
             std::shared_ptr<std::unordered_map<System, moodycamel::ConcurrentQueue<UplinkBufferElement>>> new_uplink_buffer, 
             std::shared_ptr<moodycamel::ConcurrentQueue<DownlinkBufferElement>> new_downlink_buffer,
             std::shared_ptr<UART> local_uart,
@@ -393,7 +393,7 @@ class TransportLayerMachine {
          * @param timeout_ms the deadline for the `io_context` to run, in milliseconds.
          * @return bool with value `true` if the deadline passed.
          */
-        bool run_udp_context(std::chrono::milliseconds timeout_ms);
+        bool run_udp_context(boost::asio::ip::udp::socket& socket, std::chrono::milliseconds timeout_ms);
         /**
          * @brief Run the underlying `io_context` for `timeout_ms` milliseconds. 
          * If the operation is not completed by the timeout, the socket `::local_tcp_sock` will be canceled, and the `io_context` will restart..
@@ -460,11 +460,11 @@ class TransportLayerMachine {
         /**
          * @deprecated Superseded by `sync_send_command_to_system`.
          */
-        std::vector<uint8_t> sync_tcp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
+        std::vector<uint8_t> sync_udp_housekeeping_transaction(std::vector<uint8_t> data_to_send);
         /**
          * @deprecated Superseded by `sync_send_command_to_system`.
          */
-        void sync_tcp_housekeeping_send(std::vector<uint8_t> data_to_send);
+        void sync_udp_housekeeping_send(std::vector<uint8_t> data_to_send);
 
         /**
          * @brief Reads up to 8 uplink commands (each of which is 2 bytes long) from `::local_udp_sock`, storing them in the appropriate uplink buffer.
@@ -508,13 +508,13 @@ class TransportLayerMachine {
         
         /**
          * @deprecated Superseded by `sync_send_command_to_system`.
-         * @brief Synchronously send command `cmd` to remote housekeeping system `hk_man` over `local_tcp_housekeeping_socket`.
+         * @brief Synchronously send command `cmd` to remote housekeeping system `hk_man` over `local_udp_housekeeping_socket`.
          * 
          * @param sys_man
          * @param cmd 
          * @return std::vector<uint8_t> any response data to the command.
          */
-        std::vector<uint8_t> sync_tcp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd);
+        std::vector<uint8_t> sync_udp_send_command_for_housekeeping_sys(SystemManager hk_man, Command cmd);
 
         /**
          * @deprecated Superseded by `sync_send_command_to_system`.
