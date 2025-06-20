@@ -1,4 +1,5 @@
 #include "Circle.h"
+#include "Buffers.h"
 #include "Parameters.h"
 #include "Systems.h"
 #include "Utilities.h"
@@ -8,6 +9,7 @@
 #include <ctime>
 #include <thread>
 #include <chrono>
+#include <unordered_map>
 
 Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> new_system_order, std::shared_ptr<CommandDeck> new_deck, std::shared_ptr<TransportLayerMachine> new_transport, boost::asio::io_context &new_context): 
     deck(new_deck),
@@ -31,7 +33,7 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
     slowmo_gain = 1;
 
     Circle::get_sys_man_for_name("cdte1")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
-    Circle::get_sys_man_for_name("cdte2")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
+    Circle::get_sys_man_for_name("cdte5")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
     Circle::get_sys_man_for_name("cdte3")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
     Circle::get_sys_man_for_name("cdte4")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
     Circle::get_sys_man_for_name("cmos1")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::PC] = 0x00;
@@ -40,7 +42,7 @@ Circle::Circle(double new_period_s, std::vector<std::shared_ptr<SystemManager>> 
     Circle::get_sys_man_for_name("cmos2")->last_write_pointer[RING_BUFFER_TYPE_OPTIONS::QL] = 0x00;
 
     Circle::get_sys_man_for_name("cdte1")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
-    Circle::get_sys_man_for_name("cdte2")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
+    Circle::get_sys_man_for_name("cdte5")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
     Circle::get_sys_man_for_name("cdte3")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
     Circle::get_sys_man_for_name("cdte4")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
     Circle::get_sys_man_for_name("cmos1")->active_type = RING_BUFFER_TYPE_OPTIONS::PC;
@@ -98,7 +100,7 @@ void Circle::init_cdte() {
     utilities::debug_print("\ninitializing cdte system\n");
     SystemManager* cdtede = Circle::get_sys_man_for_name("cdtede");
     System& cdte1 = deck->get_sys_for_name("cdte1");
-    System& cdte2 = deck->get_sys_for_name("cdte2");
+    System& cdte5 = deck->get_sys_for_name("cdte5");
     System& cdte3 = deck->get_sys_for_name("cdte3");
     System& cdte4 = deck->get_sys_for_name("cdte4");
 
@@ -109,7 +111,7 @@ void Circle::init_cdte() {
 
 // debug cmos
     // Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
-    // Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+    // Circle::get_sys_man_for_name("cdte5")->system_state = SYSTEM_STATE::ABANDON;
     // Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
     // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
     // Circle::get_sys_man_for_name("cdtede")->system_state = SYSTEM_STATE::ABANDON;
@@ -125,15 +127,16 @@ void Circle::init_cdte() {
     utilities::debug_print("canisters status: ");
     utilities::hex_print(can_status);
 
+    std::vector<System> cdte_sys = {cdte1, cdte5, cdte3, cdte4};
     for (uint8_t i = 0; i < 4; ++i) {
-        std::string this_name = "cdte" + std::to_string(i+1);
+        std::string this_name = cdte_sys[i].name;
         if (can_status.size() < 4) {
             // utilities::error_print("got too-short canister status reply! Abandoning CdTe.\n");
             utilities::error_log("Circle::init_cdte()\tcanisters status disconnected.");
             cdtede->errors |= errors::system::reading_invalid;
             
             // Circle::get_sys_man_for_name("cdte1")->system_state = SYSTEM_STATE::ABANDON;
-            // Circle::get_sys_man_for_name("cdte2")->system_state = SYSTEM_STATE::ABANDON;
+            // Circle::get_sys_man_for_name("cdte5")->system_state = SYSTEM_STATE::ABANDON;
             // Circle::get_sys_man_for_name("cdte3")->system_state = SYSTEM_STATE::ABANDON;
             // Circle::get_sys_man_for_name("cdte4")->system_state = SYSTEM_STATE::ABANDON;
         } else {
@@ -312,7 +315,7 @@ void Circle::manage_systems() {
 
     auto cdtede = *Circle::get_sys_man_for_name("cdtede");
     auto cdte1 = *Circle::get_sys_man_for_name("cdte1");
-    auto cdte2 = *Circle::get_sys_man_for_name("cdte2");
+    auto cdte5 = *Circle::get_sys_man_for_name("cdte5");
     auto cdte3 = *Circle::get_sys_man_for_name("cdte3");
     auto cdte4 = *Circle::get_sys_man_for_name("cdte4");
     auto cmos1 = *Circle::get_sys_man_for_name("cmos1");
@@ -356,17 +359,17 @@ void Circle::manage_systems() {
         // delay before reading again 
         std::this_thread::sleep_for(delay_inter_cdte_ms);
 
-    } else if (system_order.at(current_system)->system == deck->get_sys_for_name("cdte2")) {
-        utilities::debug_print("managing cdte2 system\n");
+    } else if (system_order.at(current_system)->system == deck->get_sys_for_name("cdte5")) {
+        utilities::debug_print("managing cdte5 system\n");
 
         transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdtede"));
-        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte2"));
-        Circle::get_sys_man_for_name("cdte2")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC) = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte2"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte2")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC));
+        transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("cdte5"));
+        Circle::get_sys_man_for_name("cdte5")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC) = transport->sync_remote_buffer_transaction(*Circle::get_sys_man_for_name("cdte5"), RING_BUFFER_TYPE_OPTIONS::PC, Circle::get_sys_man_for_name("cdte5")->last_write_pointer.at(RING_BUFFER_TYPE_OPTIONS::PC));
         
-        std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte2, deck->get_command_for_sys_for_code(cdte2.system.hex, 0xbf));
+        std::vector<uint8_t> hk = transport->sync_send_command_to_system(cdte5, deck->get_command_for_sys_for_code(cdte5.system.hex, 0xbf));
         if (hk.size() > 0) {
-            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte2.system);
-            DownlinkBufferElement dbe(&(cdte2.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
+            std::vector<uint8_t> hk_data = transport->get_reply_data(hk, cdte5.system);
+            DownlinkBufferElement dbe(&(cdte5.system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::HK);
             dbe.set_payload(hk_data);
             // queue and send the downlink buffer:
             transport->downlink_buffer->enqueue(dbe);

@@ -121,6 +121,7 @@ namespace errors {
 enum class RING_READ_CMD: uint8_t {
     CDTE_1              = 0x8e,
     CDTE_2              = 0x8e,
+    CDTE_5              = 0x8e,
     CDTE_3              = 0x8e,
     CDTE_4              = 0x8e,
     CMOS_1              = 0x8e,
@@ -137,7 +138,7 @@ enum class SUBSYSTEM_ORDER: unsigned short {
     CDTE_2              = 0x03,
     TIMEPIX             = 0x04,
     CDTE_3              = 0x05,
-    CMOS_2              = 0x06,
+    CMOS_5              = 0x06,
     CDTE_4              = 0x07,
     SUBSYSTEM_COUNT     = 0x08
 };

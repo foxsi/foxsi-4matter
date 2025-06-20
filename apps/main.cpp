@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     System& housekeeping = deck->get_sys_for_name("housekeeping");
     System& cdtede = deck->get_sys_for_name("cdtede");
     System& cdte1 = deck->get_sys_for_name("cdte1");
-    System& cdte2 = deck->get_sys_for_name("cdte2");
+    System& cdte5 = deck->get_sys_for_name("cdte5");
     System& cdte3 = deck->get_sys_for_name("cdte3");
     System& cdte4 = deck->get_sys_for_name("cdte4");
     System& cmos1 = deck->get_sys_for_name("cmos1");
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
     PacketFramer pf_cdte1_pc(cdte1, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cdte1_hk(cdte1, RING_BUFFER_TYPE_OPTIONS::HK);
-    PacketFramer pf_cdte2(cdte2, RING_BUFFER_TYPE_OPTIONS::PC);
+    PacketFramer pf_cdte5(cdte5, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cdte3(cdte3, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cdte4(cdte4, RING_BUFFER_TYPE_OPTIONS::PC);
     PacketFramer pf_cmos1_ql(cmos1, RING_BUFFER_TYPE_OPTIONS::QL);
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
 
     FramePacketizer fp_cdte1_pc(cdte1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cdte1_hk(cdte1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::HK);
-    FramePacketizer fp_cdte2(cdte2, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
+    FramePacketizer fp_cdte5(cdte5, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cdte3(cdte3, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cdte4(cdte4, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::PC);
     FramePacketizer fp_cmos1_ql(cmos1, deck->get_sys_for_name("gse"), RING_BUFFER_TYPE_OPTIONS::QL);
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     std::queue<UplinkBufferElement> housekeeping_uplink_queue;
     std::queue<UplinkBufferElement> cdtede_uplink_queue;
     std::queue<UplinkBufferElement> cdte1_uplink_queue;
-    std::queue<UplinkBufferElement> cdte2_uplink_queue;
+    std::queue<UplinkBufferElement> cdte5_uplink_queue;
     std::queue<UplinkBufferElement> cdte3_uplink_queue;
     std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     auto housekeeping_manager = std::make_shared<SystemManager>(housekeeping, housekeeping_uplink_queue);
     auto cdtede_manager = std::make_shared<SystemManager>(cdtede, cdtede_uplink_queue);
     auto cdte1_manager = std::make_shared<SystemManager>(cdte1, cdte1_uplink_queue);
-    auto cdte2_manager = std::make_shared<SystemManager>(cdte2, cdte2_uplink_queue);
+    auto cdte5_manager = std::make_shared<SystemManager>(cdte5, cdte5_uplink_queue);
     auto cdte3_manager = std::make_shared<SystemManager>(cdte3, cdte3_uplink_queue);
     auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     housekeeping_manager->add_timing(&lif.lookup_timing[housekeeping]);
     cdtede_manager->add_timing(&lif.lookup_timing[cdtede]);
     cdte1_manager->add_timing(&lif.lookup_timing[cdte1]);
-    cdte2_manager->add_timing(&lif.lookup_timing[cdte2]);
+    cdte5_manager->add_timing(&lif.lookup_timing[cdte5]);
     cdte3_manager->add_timing(&lif.lookup_timing[cdte3]);
     cdte4_manager->add_timing(&lif.lookup_timing[cdte4]);
     cmos1_manager->add_timing(&lif.lookup_timing[cmos1]);
@@ -113,9 +113,9 @@ int main(int argc, char** argv) {
     cdte1_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::HK, &fp_cdte1_hk);
     cdte1_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::HK, &pf_cdte1_hk);
     cdte1_manager->add_timing(&lif.lookup_timing[cdte1]);
-    cdte2_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte2);
-    cdte2_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte2);
-    cdte2_manager->add_timing(&lif.lookup_timing[cdte2]);
+    cdte5_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte5);
+    cdte5_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte5);
+    cdte5_manager->add_timing(&lif.lookup_timing[cdte5]);
     cdte3_manager->add_frame_packetizer(RING_BUFFER_TYPE_OPTIONS::PC, &fp_cdte3);
     cdte3_manager->add_packet_framer(RING_BUFFER_TYPE_OPTIONS::PC, &pf_cdte3);
     cdte3_manager->add_timing(&lif.lookup_timing[cdte3]);
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
     std::vector<std::shared_ptr<SystemManager>> order;
     order.emplace_back(std::move(cdte1_manager));
-    order.emplace_back(std::move(cdte2_manager));
+    order.emplace_back(std::move(cdte5_manager));
     order.emplace_back(std::move(cmos1_manager));
     order.emplace_back(std::move(cdtede_manager));
     order.emplace_back(std::move(housekeeping_manager));
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
     (*new_uplink_buffer)[deck->get_sys_for_name("housekeeping")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdtede")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte1")];
-    (*new_uplink_buffer)[deck->get_sys_for_name("cdte2")];
+    (*new_uplink_buffer)[deck->get_sys_for_name("cdte5")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte3")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cdte4")];
     (*new_uplink_buffer)[deck->get_sys_for_name("cmos1")];
