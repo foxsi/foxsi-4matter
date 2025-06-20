@@ -227,8 +227,8 @@ bool TransportLayerMachine::check_frame_read_cmd(uint8_t sys, uint8_t cmd) {
         if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_1)) {
             return true;
         }
-    } else if(sys == 0x0a) {                // cdte2
-        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_2)) {
+    } else if(sys == 0x0a) {                // cdte5
+        if(cmd == static_cast<uint8_t>(RING_READ_CMD::CDTE_5)) {
             return true;
         }
     } else if(sys == 0x0b) {                // cdte3
