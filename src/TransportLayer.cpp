@@ -106,7 +106,7 @@ TransportLayerMachine::TransportLayerMachine(
     local_tcp_sock.connect(remote_tcp_endpoint);
 
     local_udp_housekeeping_sock.bind(local_udp_housekeeping_end);
-    local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
+    // local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
 }
 
 TransportLayerMachine::TransportLayerMachine(
@@ -160,7 +160,7 @@ TransportLayerMachine::TransportLayerMachine(
     
     utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\tconnecting ::local_tcp_housekeeping_socket.");
     local_udp_housekeeping_sock.bind(local_udp_housekeeping_end);
-    local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
+    // local_udp_housekeeping_sock.connect(remote_udp_housekeeping_endpoint);
 
     // std::cout << "opening serial ports...\n";
     // utilities::debug_log("TransportLayerMachine::TransportLayerMachine()\topening serial ports.");
@@ -1030,7 +1030,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_send_command_to_system(SystemMa
         // utilities::debug_print("sending ");
         // utilities::hex_print(packet);
         utilities::debug_log("\tsending ethernet command " + utilities::bytes_to_string(packet) + ".");
-		local_udp_housekeeping_sock.send(boost::asio::buffer(packet));
+		local_udp_housekeeping_sock.send_to(boost::asio::buffer(packet), remote_udp_housekeeping_endpoint);
 		if (cmd.read) {
 			size_t expected_size = cmd.get_eth_reply_length();
             reply.resize(expected_size);
@@ -1069,8 +1069,8 @@ std::vector<uint8_t> TransportLayerMachine::sync_udp_housekeeping_transaction(st
     std::vector<uint8_t> reply;
     // todo: no magic numbers
     reply.resize(1024);
-    local_udp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
-    size_t reply_len = local_udp_housekeeping_sock.receive(boost::asio::buffer(reply));
+    local_udp_housekeeping_sock.send_to(boost::asio::buffer(data_to_send), remote_udp_housekeeping_endpoint);
+    size_t reply_len = local_udp_housekeeping_sock.receive_from(boost::asio::buffer(reply), remote_udp_housekeeping_endpoint);
     reply.resize(reply_len);
 
     utilities::debug_print("received " + std::to_string(reply_len) + " bytes: ");
@@ -1083,7 +1083,7 @@ std::vector<uint8_t> TransportLayerMachine::sync_udp_housekeeping_transaction(st
 
 void TransportLayerMachine::sync_udp_housekeeping_send(std::vector<uint8_t> data_to_send) {
     utilities::debug_print("transmitting to housekeeping_system\n");
-    local_udp_housekeeping_sock.send(boost::asio::buffer(data_to_send));
+    local_udp_housekeeping_sock.send_to(boost::asio::buffer(data_to_send), remote_udp_housekeeping_endpoint);
 }
 
 void TransportLayerMachine::sync_udp_receive_to_uplink_buffer(SystemManager &uplink_sys_man) {

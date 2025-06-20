@@ -36,6 +36,7 @@ namespace config{
      */
     namespace timing{
         static const unsigned short         PERIOD          = 1;
+        static const unsigned short         HOUSEKEEPING_LOOP_EVERY = 2;
     }
 
     /**
