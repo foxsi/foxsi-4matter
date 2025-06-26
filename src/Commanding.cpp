@@ -310,21 +310,7 @@ CommandDeck::CommandDeck(std::vector<System> new_systems, std::unordered_map<Sys
                 std::vector<uint8_t> this_eth_packet;
                 this_eth_packet.push_back(this_eth_instr);
                 this_eth_packet.push_back(this_eth_addr);
-
-                if (this_eth_instr == 0x03 && !this_read) {
-                    // handle power on/off commands
-                    this_eth_packet.push_back(this_eth_write);
-                } else if (this_eth_instr == 0x07 && !this_read) {
-                    // handle introspection commands
-                    if (this_eth_addr == 0xe0) {
-                        // error reset command:
-                        this_eth_packet.push_back(0x00);
-                        this_eth_packet.push_back(0x00);
-                    } else if (this_eth_addr == 0xf0) {
-                        // flight state setting commands:
-                        this_eth_packet.push_back(this_eth_write);
-                    }
-                }
+                this_eth_packet.push_back(this_eth_write);
 
                 this_command.set_eth_options(this_eth_packet,this_reply_len);
                 commands[this_system.hex].insert(std::make_pair(this_hex, this_command));

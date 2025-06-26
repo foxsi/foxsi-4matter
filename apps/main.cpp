@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
         boost::asio::ip::make_address(lif.local_address),
         deck->get_sys_for_name("cdte1").ethernet->port
     );
-    boost::asio::ip::tcp::endpoint local_tcp_housekeeping_end(
+    boost::asio::ip::udp::endpoint local_udp_housekeeping_end(
         boost::asio::ip::make_address(lif.local_address),
         deck->get_sys_for_name("housekeeping").ethernet->port
     );
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
         boost::asio::ip::make_address(deck->get_sys_for_name("cdte1").ethernet->address),
         deck->get_sys_for_name("cdte1").ethernet->port
     );
-    boost::asio::ip::tcp::endpoint remote_tcp_housekeeping_end(
+    boost::asio::ip::udp::endpoint remote_udp_housekeeping_end(
         boost::asio::ip::make_address(deck->get_sys_for_name("housekeeping").ethernet->address),
         deck->get_sys_for_name("housekeeping").ethernet->port
     );
@@ -228,10 +228,10 @@ int main(int argc, char** argv) {
         auto machine = std::make_shared<TransportLayerMachine>(
             local_udp_end,
             local_tcp_end,
-            local_tcp_housekeeping_end,
+            local_udp_housekeeping_end,
             remote_udp_end,
             remote_tcp_end,
-            remote_tcp_housekeeping_end,
+            remote_udp_housekeeping_end,
             new_uplink_buffer,
             new_downlink_buffer,
             timepix_uart,

@@ -579,7 +579,7 @@ void Circle::manage_systems() {
         transport->sync_send_buffer_commands_to_system(*Circle::get_sys_man_for_name("housekeeping"));
 
         size_t zero_finder = 1;
-        if (housekeeping->counter % 5 == 0) {
+        if (housekeeping->counter % config::timing::HOUSEKEEPING_LOOP_EVERY == 0) {
             utilities::debug_log("Circle::manage_systems()\thousekeeping\ttrying read.");
             // unix timestamp
             std::vector<uint8_t> reply_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
@@ -599,6 +599,7 @@ void Circle::manage_systems() {
                     DownlinkBufferElement dbe_power(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::POW);
                     dbe_power.set_payload(packet_power);
                     transport->downlink_buffer->enqueue(dbe_power);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
             if (housekeeping->enable & 0x02) {
@@ -620,6 +621,7 @@ void Circle::manage_systems() {
                     DownlinkBufferElement dbe_temp1(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
                     dbe_temp1.set_payload(packet_temp1);
                     transport->downlink_buffer->enqueue(dbe_temp1);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     // start a new conversion
                     transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x04));
                 }
@@ -631,6 +633,7 @@ void Circle::manage_systems() {
                     DownlinkBufferElement dbe_temp2(&(housekeeping->system), &(deck->get_sys_for_name("gse")), RING_BUFFER_TYPE_OPTIONS::RTD);
                     dbe_temp2.set_payload(packet_temp2);
                     transport->downlink_buffer->enqueue(dbe_temp2);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     // start a new conversion
                     transport->sync_send_command_to_system(*housekeeping, deck->get_command_for_sys_for_code(housekeeping->system.hex, 0x05));
                 }
@@ -668,40 +671,13 @@ void Circle::manage_systems() {
 
         if (zero_finder == 0) {
             utilities::error_print("Housekeeping failed to respond!\n");
-            utilities::error_log("Circle::manage_systems()\thousekeeping failed to respond! Stopping socket...");
-            utilities::error_print("\tcanceling socket operations...\n");
-            transport->local_tcp_housekeeping_sock.cancel();
-            utilities::error_print("\tclosing socket...\n");
-            transport->local_tcp_housekeeping_sock.close();
-            housekeeping->enable = 0x00;
-            utilities::error_print("\tDISCONNECTing housekeeping!\n");
-            utilities::error_log("DISCONNECTing housekeeping!");
-            Circle::get_sys_man_for_name("housekeeping")->system_state = SYSTEM_STATE::DISCONNECT;
+            utilities::error_print("Using UDP now, so we don't care! We'll be back again next loop.\n");
             return;
         }
 
         housekeeping->counter += 1;
 
-        // if (any_zero == 0) {
-        //     utilities::error_print("Housekeeping failed to respond!\n");
-        //     utilities::error_print("\tcanceling socket operations...\n");
-        //     transport->local_tcp_housekeeping_sock.cancel();
-        //     utilities::error_print("\tclosing socket...\n");
-        //     transport->local_tcp_housekeeping_sock.close();
-        //     utilities::error_print("\tABANDONing housekeeping!\n");
-        //     Circle::get_sys_man_for_name("housekeeping")->system_state = SYSTEM_STATE::ABANDON;
-        //     return;
-        //     // std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        //     // utilities::error_print("\ttrying to reconnect...\n");
-        //     // transport->local_tcp_housekeeping_sock.connect(transport->remote_tcp_housekeeping_endpoint);
-        // }
-
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
-
-    // } else if (system_order.at(current_system)->system == deck->get_sys_for_name("uplink")) {
-        // todo: consider using GSE or another system for this message.
-
-        // send_global_health();
 
     } else {
         utilities::debug_print("system management fell through in Circle for " + system_order.at(current_system)->system.name +  "\n");
@@ -730,7 +706,6 @@ void Circle::record_uplink() {
 
 void Circle::flush() {
     transport->sync_tcp_read_some(transport->local_tcp_sock, std::chrono::milliseconds(1));
-    transport->sync_tcp_read_some(transport->local_tcp_housekeeping_sock, std::chrono::milliseconds(1));
 }
 
 boost::asio::chrono::milliseconds Circle::get_state_time()
