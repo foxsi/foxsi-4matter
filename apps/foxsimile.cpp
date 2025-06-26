@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
     System& gse = deck->get_sys_for_name("gse");
     System& cdte1 = deck->get_sys_for_name("cdte1");
-    System& cdte2 = deck->get_sys_for_name("cdte2");
+    System& cdte5 = deck->get_sys_for_name("cdte5");
     System& cdte3 = deck->get_sys_for_name("cdte3");
     System& cdte4 = deck->get_sys_for_name("cdte4");
     System& cmos1 = deck->get_sys_for_name("cmos1");
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     std::map<std::vector<uint8_t>, std::vector<uint8_t>> gse_response_lookup;
     
     std::queue<UplinkBufferElement> cdte1_uplink_queue;
-    std::queue<UplinkBufferElement> cdte2_uplink_queue;
+    std::queue<UplinkBufferElement> cdte5_uplink_queue;
     std::queue<UplinkBufferElement> cdte3_uplink_queue;
     std::queue<UplinkBufferElement> cdte4_uplink_queue;
     std::queue<UplinkBufferElement> cmos1_uplink_queue;
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     std::queue<UplinkBufferElement> housekeeping_uplink_queue;
     std::queue<UplinkBufferElement> gse_uplink_queue;
     auto cdte1_manager = std::make_shared<SystemManager>(cdte1, cdte1_uplink_queue);
-    auto cdte2_manager = std::make_shared<SystemManager>(cdte2, cdte2_uplink_queue);
+    auto cdte5_manager = std::make_shared<SystemManager>(cdte5, cdte5_uplink_queue);
     auto cdte3_manager = std::make_shared<SystemManager>(cdte3, cdte3_uplink_queue);
     auto cdte4_manager = std::make_shared<SystemManager>(cdte4, cdte4_uplink_queue);
     auto cmos1_manager = std::make_shared<SystemManager>(cmos1, cmos1_uplink_queue);
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 
     auto bulk_lookup = {
         cdte1_manager, 
-        cdte2_manager, 
+        cdte5_manager, 
         cdte3_manager, 
         cdte4_manager, 
         cmos1_manager,
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     };
     std::map<uint8_t, std::string> bulk_mmap = {
         {cdte1.hex, cdte_mmap_file},
-        {cdte2.hex, cdte_mmap_file},
+        {cdte5.hex, cdte_mmap_file},
         {cdte3.hex, cdte_mmap_file},
         {cdte4.hex, cdte_mmap_file},
         {cmos1.hex, cmos_mmap_file},
