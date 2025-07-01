@@ -784,7 +784,8 @@ std::vector<uint8_t> Circle::make_global_health_packet() {
     std::vector<uint8_t> packet;
     packet.insert(packet.end(), time_bytes.begin(), time_bytes.end());
     packet.push_back(0x00);
-    packet.push_back(0x00);
+    // find the uplink command counter, wrap it at 1 byte, and send it for confirmation.
+    packet.push_back((Circle::get_sys_man_for_name("uplink")->counter % 256) & 0xff);
     packet.insert(packet.end(), content.begin(), content.end());
     return packet;
 }
