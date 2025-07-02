@@ -510,20 +510,28 @@ void Circle::manage_systems() {
         Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
         Command hk_req_cmd     = deck->get_command_for_sys_for_code(timepix->system.hex, 0x88);
         Command rates_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x81);
+        Command pcap_req_cmd   = deck->get_command_for_sys_for_code(timepix->system.hex, 0x25);
+        Command pc_req_cmd    = deck->get_command_for_sys_for_code(timepix->system.hex, 0x20);
 
         utilities::debug_print("\tsending " + utilities::bytes_to_string(flags_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(hk_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(rates_req_cmd.get_uart_instruction()) + "\n");
+        utilities::debug_print("\tsending " + utilities::bytes_to_string(pcap_req_cmd.get_uart_instruction()) + "\n");
+        utilities::debug_print("\tsending " + utilities::bytes_to_string(pc_req_cmd.get_uart_instruction()) + "\n");
         
         std::vector<uint8_t> flags_response(flags_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> hk_response(hk_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> rates_response(rates_req_cmd.get_uart_reply_length());
+        std::vector<uint8_t> pcap_response(pcap_req_cmd.get_uart_reply_length());
+        std::vector<uint8_t> pc_response(pc_req_cmd.get_uart_reply_length());
         
         std::vector<uint8_t> request_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
 
         flags_response = transport->sync_send_command_to_system(*timepix, flags_req_cmd);
         hk_response = transport->sync_send_command_to_system(*timepix, hk_req_cmd);
         rates_response = transport->sync_send_command_to_system(*timepix, rates_req_cmd);
+        pcap_response = transport->sync_send_command_to_system(*timepix, pcap_req_cmd);
+        pc_response = transport->sync_send_command_to_system(*timepix, pc_req_cmd);
 
         utilities::debug_print("\tsent all\n");
         
@@ -540,27 +548,66 @@ void Circle::manage_systems() {
         // utilities::debug_print("\tresized all\n");
 
         // build the downlink packet:
-        std::vector<uint8_t> downlink;
-        downlink.push_back(timepix->system.hex);
-        downlink.push_back(0x00);
-        downlink.insert(downlink.end(), request_time.begin(), request_time.end());
-        downlink.insert(downlink.end(), flags_response.begin(), flags_response.end());
-        downlink.insert(downlink.end(), hk_response.begin(), hk_response.end());
-        downlink.insert(downlink.end(), rates_response.begin(), rates_response.end());
+        std::vector<uint8_t> downlink_health;
+        downlink_health.push_back(timepix->system.hex);
+        downlink_health.push_back(0x00);
+        downlink_health.insert(downlink_health.end(), request_time.begin(), request_time.end());
+        downlink_health.insert(downlink_health.end(), flags_response.begin(), flags_response.end());
+        downlink_health.insert(downlink_health.end(), hk_response.begin(), hk_response.end());
+        downlink_health.insert(downlink_health.end(), rates_response.begin(), rates_response.end());
         
         utilities::debug_print("\tresized all\n");
 
         // create element for downlink buffer:
-        DownlinkBufferElement dbe(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+        DownlinkBufferElement dbe_health(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
         RING_BUFFER_TYPE_OPTIONS::TPX);
-        dbe.set_packets_per_frame(1);
-        dbe.set_this_packet_index(1);
-        dbe.set_payload(downlink);
+        dbe_health.set_packets_per_frame(1);
+        dbe_health.set_this_packet_index(1);
+        dbe_health.set_payload(downlink_health);
+
+        transport->downlink_buffer->enqueue(dbe_health);
+
+        // check if we got pcap response, downlink if so.
+        if (pcap_response.size() == pcap_req_cmd.get_uart_reply_length()) {
+            // populate packet:
+            std::vector<uint8_t> downlink_pcap;
+            downlink_pcap.push_back(timepix->system.hex);
+            downlink_pcap.push_back(0x00);
+            downlink_pcap.insert(downlink_pcap.end(), pcap_response.begin(), pcap_response.end());
+            // put it in a DownlinkBufferElement
+            DownlinkBufferElement dbe_pcap(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+                RING_BUFFER_TYPE_OPTIONS::PCAP);
+            dbe_pcap.set_packets_per_frame(1);
+            dbe_pcap.set_this_packet_index(1);
+            dbe_pcap.set_payload(downlink_pcap);
+            // queue the buffer element
+            transport->downlink_buffer->enqueue(dbe_pcap);
+        }
+        if (pc_response.size() == pc_req_cmd.get_uart_reply_length()) {
+            // populate packet:
+            std::vector<uint8_t> downlink_pc;
+            downlink_pc.push_back(timepix->system.hex);
+            downlink_pc.push_back(0x00);
+            downlink_pc.insert(downlink_pc.end(), pc_response.begin(), pc_response.end());
+            // put it in a DownlinkBufferElement
+            DownlinkBufferElement dbe_pc(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+                RING_BUFFER_TYPE_OPTIONS::PC);
+            dbe_pc.set_packets_per_frame(1);
+            dbe_pc.set_this_packet_index(1);
+            dbe_pc.set_payload(downlink_pc);
+            // qpce the buffer element
+            transport->downlink_buffer->enqueue(dbe_pc);
+        }
+
+        DownlinkBufferElement dbe_img(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+        RING_BUFFER_TYPE_OPTIONS::PC);
+        dbe_health.set_packets_per_frame(1);
+        dbe_health.set_this_packet_index(1);
+        dbe_health.set_payload(downlink_health);
 
         utilities::debug_print("\tbuffered downlink\n");
 
         // queue and send the downlink buffer:
-        transport->downlink_buffer->enqueue(dbe);
         bool has_data = transport->sync_udp_send_all_downlink_buffer();
 
     } else if (system_order.at(current_system)->system == deck->get_sys_for_name("housekeeping")) {

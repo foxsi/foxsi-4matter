@@ -177,10 +177,11 @@ enum class COMMAND_TYPE_OPTIONS: uint8_t {
  * @note While `SystemManager` may own interfaces to buffer objects with different types, you need to provide a `RING_BUFFER_TYPE_OPTIONS` key to lookup a specific buffer object for a `SystemManager`.
  */
 enum class RING_BUFFER_TYPE_OPTIONS: uint8_t {
-    PC                  = 0x00, /*!< Photon counting data. Used for CMOS and CdTe detectors. */
+    PC                  = 0x00, /*!< Photon counting data. Used for CMOS, CdTe, Timepix detectors. */
     QL                  = 0x01, /*!< Quick-look data. Used for CMOS detectors. */
     HK                  = 0x10, /*!< Housekeeping data. Used for CMOS and CdTe detectors, and CdTe DE. */
-    TPX                 = 0x02, /*!< Timepix data. Used for Timepix detector. */
+    TPX                 = 0x02, /*!< Timepix housekeeping + software status + rates. Used for Timepix detector. */
+    PCAP                = 0x03, /*!< Timepix pcap health data. Used for Timepix detector. */
     POW                 = 0x11, /*!< Power (housekeeping) data. Used for dedicated Housekeeping board. */
     RTD                 = 0x12, /*!< Temperature sensor (housekeeping) data. Used for dedicated Housekeeping board. */
     INTRO               = 0x13, /*!< Software (housekeeping) data. Used for dedicated Housekeeping board. */
@@ -197,13 +198,14 @@ static const std::unordered_map<RING_BUFFER_TYPE_OPTIONS, std::string> RING_BUFF
     {RING_BUFFER_TYPE_OPTIONS::PC,      "pc"},
     {RING_BUFFER_TYPE_OPTIONS::QL,      "ql"},
     {RING_BUFFER_TYPE_OPTIONS::TPX,     "tpx"},
+    {RING_BUFFER_TYPE_OPTIONS::PCAP,    "pcap"},
     {RING_BUFFER_TYPE_OPTIONS::HK,      "hk"},
     {RING_BUFFER_TYPE_OPTIONS::POW,     "pow"},
     {RING_BUFFER_TYPE_OPTIONS::RTD,     "rtd"},
     {RING_BUFFER_TYPE_OPTIONS::INTRO,   "intro"},
     {RING_BUFFER_TYPE_OPTIONS::REPLY,   "reply"},
     {RING_BUFFER_TYPE_OPTIONS::PING,    "ping"},
-    {RING_BUFFER_TYPE_OPTIONS::NONE,    "none"}
+    {RING_BUFFER_TYPE_OPTIONS::NONE,   "none"}
 };
 
 /**
@@ -214,6 +216,7 @@ static const std::unordered_map<std::string, RING_BUFFER_TYPE_OPTIONS> RING_BUFF
     {"pc",      RING_BUFFER_TYPE_OPTIONS::PC},
     {"ql",      RING_BUFFER_TYPE_OPTIONS::QL},
     {"tpx",     RING_BUFFER_TYPE_OPTIONS::TPX},
+    {"pcap",     RING_BUFFER_TYPE_OPTIONS::PCAP},
     {"hk",      RING_BUFFER_TYPE_OPTIONS::HK},
     {"pow",     RING_BUFFER_TYPE_OPTIONS::POW},
     {"rtd",     RING_BUFFER_TYPE_OPTIONS::RTD},
