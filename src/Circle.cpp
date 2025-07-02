@@ -586,8 +586,6 @@ void Circle::manage_systems() {
         if (pc_response.size() == pc_req_cmd.get_uart_reply_length()) {
             // populate packet:
             std::vector<uint8_t> downlink_pc;
-            downlink_pc.push_back(timepix->system.hex);
-            downlink_pc.push_back(0x00);
             downlink_pc.insert(downlink_pc.end(), pc_response.begin(), pc_response.end());
             // put it in a DownlinkBufferElement
             DownlinkBufferElement dbe_pc(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
