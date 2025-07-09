@@ -92,6 +92,21 @@ def create_read_temp_packet(data: ReadTempPacket):
     packet[5] = data.board_t2 // 256
     return packet
 
+
+NUM_PHOTONS = 360
+
+def pack_photon(x, y, tot, spare):
+    packed = ((int(x) & 0x1FF) << 23) | ((int(y) & 0x1FF) << 14) | ((int(tot) & 0x3FF) << 4) | (int(spare) & 0xF)
+    return packed.to_bytes(4, byteorder="big")
+
+def pack_image_packet(xs, ys, tots, spares):
+    if len(xs) != NUM_PHOTONS:
+        raise ValueError("Need exactly 360 photons")
+    packet = bytearray()
+    for x, y, tot, spare in zip(xs, ys, tots, spares):
+        packet.extend(pack_photon(x, y, tot, spare))
+    return bytes(packet)
+
 ##crease instance of flag_byte for flags 
 flag_byte = FlagByte()
 
@@ -99,7 +114,7 @@ flag_byte = FlagByte()
 usbdevice = '/dev/tty.usbserial-FT9O910G'
 ser = serial.Serial(
     usbdevice,
-    9600,
+    115200,
     serial.EIGHTBITS,
     serial.PARITY_NONE,
     serial.STOPBITS_ONE
@@ -119,6 +134,10 @@ now = datetime.now()
 hkfn = "util/mock/tpx_hk.npz"
 telefn = "util/mock/tpx_telemetry.npz"
 logfile = "log/timepix_log_{}-{}-{}_{}-{}-{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+pcfile = "util/mock/tpx_pc.npz"
+
+pc_raw_data = np.load(pcfile)
+x_npz, y_npz, tot_npz, spare_npz = pc_raw_data['x'], pc_raw_data['y'], pc_raw_data['tot'], pc_raw_data['spare']
 
 print("starting listen...")
 
@@ -303,6 +322,11 @@ while True:																        ### Step One: Check FORMATTER for commands vi
             ser.write(bytes(read_rates_packet))
         except:
             flag_byte.raise_flag(2) #software error
+
+    elif received_bytes == b'\xa0': # READ PHOTON EVENT DATA
+        print("Received command: 0xA0 (READ PHOTON EVENTS)")
+        packet = pack_image_packet(x_npz, y_npz, tot_npz, spare_npz)
+        ser.write(bytes(packet))
 
     elif received_bytes == b'\x8B':  #READ ERROR FLAG COMMAND
         print("Received command: 0x8B (READ ERROR FLAG)")

@@ -510,8 +510,8 @@ void Circle::manage_systems() {
         Command flags_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x8a);
         Command hk_req_cmd     = deck->get_command_for_sys_for_code(timepix->system.hex, 0x88);
         Command rates_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x81);
-        Command pcap_req_cmd   = deck->get_command_for_sys_for_code(timepix->system.hex, 0x25);
-        Command pc_req_cmd    = deck->get_command_for_sys_for_code(timepix->system.hex, 0x20);
+        Command pcap_req_cmd   = deck->get_command_for_sys_for_code(timepix->system.hex, 0xa5);
+        Command pc_req_cmd    = deck->get_command_for_sys_for_code(timepix->system.hex, 0xa0);
 
         utilities::debug_print("\tsending " + utilities::bytes_to_string(flags_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(hk_req_cmd.get_uart_instruction()) + "\n");
