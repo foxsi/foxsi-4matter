@@ -92,6 +92,38 @@ def create_read_temp_packet(data: ReadTempPacket):
     packet[5] = data.board_t2 // 256
     return packet
 
+NUM_PCAPS = 4
+
+def pack_pcap_size(size_mb):
+    """Pack a single PCAP size (uint16) into 2 bytes."""
+    size_int = int(size_mb)  # convert numpy.uint16 to int
+    if not (0 <= size_int <= 0xFFFF):
+        raise ValueError("PCAP size out of range for uint16")
+    return size_int.to_bytes(2, byteorder="big")
+
+def pack_pcap_status_packet(sizes_mb):
+    """Pack list/array of 4 PCAP sizes into an 8-byte packet."""
+    if len(sizes_mb) != NUM_PCAPS:
+        raise ValueError(f"Need exactly {NUM_PCAPS} PCAP sizes")
+    packet = bytearray()
+    for size in sizes_mb:
+        packet.extend(pack_pcap_size(size))
+    return bytes(packet)
+
+NUM_PHOTONS = 360
+
+def pack_photon(x, y, tot, spare):
+    packed = ((int(x) & 0x1FF) << 23) | ((int(y) & 0x1FF) << 14) | ((int(tot) & 0x3FF) << 4) | (int(spare) & 0xF)
+    return packed.to_bytes(4, byteorder="big")
+
+def pack_image_packet(xs, ys, tots, spares):
+    if len(xs) != NUM_PHOTONS:
+        raise ValueError("Need exactly 360 photons")
+    packet = bytearray()
+    for x, y, tot, spare in zip(xs, ys, tots, spares):
+        packet.extend(pack_photon(x, y, tot, spare))
+    return bytes(packet)
+
 ##crease instance of flag_byte for flags 
 flag_byte = FlagByte()
 
@@ -99,7 +131,7 @@ flag_byte = FlagByte()
 usbdevice = '/dev/tty.usbserial-FT9O910G'
 ser = serial.Serial(
     usbdevice,
-    9600,
+    115200,
     serial.EIGHTBITS,
     serial.PARITY_NONE,
     serial.STOPBITS_ONE
@@ -119,6 +151,10 @@ now = datetime.now()
 hkfn = "util/mock/tpx_hk.npz"
 telefn = "util/mock/tpx_telemetry.npz"
 logfile = "log/timepix_log_{}-{}-{}_{}-{}-{}".format(now.year, now.month, now.day, now.hour, now.minute, now.second)
+pcfile = "util/mock/tpx_pc.npz"
+
+pc_raw_data = np.load(pcfile)
+x_npz, y_npz, tot_npz, spare_npz = pc_raw_data['x'], pc_raw_data['y'], pc_raw_data['tot'], pc_raw_data['spare']
 
 print("starting listen...")
 
@@ -303,6 +339,17 @@ while True:																        ### Step One: Check FORMATTER for commands vi
             ser.write(bytes(read_rates_packet))
         except:
             flag_byte.raise_flag(2) #software error
+
+    elif received_bytes == b'\xA0': # READ PHOTON EVENT DATA
+        print("Received command: 0xA0 (READ PHOTON EVENTS)")
+        packet = pack_image_packet(x_npz, y_npz, tot_npz, spare_npz)
+        ser.write(bytes(packet))
+
+    elif received_bytes == b'\xA5':
+        print("Received command: 0xA5 (READ PCAP HEALTH)")
+        fake_pcap_sizes = [0, 1, 20000, 50001]
+        packet = pack_pcap_status_packet(fake_pcap_sizes)
+        ser.write(bytes(packet))
 
     elif received_bytes == b'\x8B':  #READ ERROR FLAG COMMAND
         print("Received command: 0x8B (READ ERROR FLAG)")

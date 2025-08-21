@@ -1137,14 +1137,14 @@ void TransportLayerMachine::sync_uart_receive_to_uplink_buffer(SystemManager &up
 
                 (uplink_buffer->at(commands->get_sys_for_code(sys_code))).enqueue(new_uplink);
                 utilities::debug_log("\tqueued command " + new_uplink.get_command()->name + " for " + new_uplink.get_system()->name);
+                uplink_sys_man.counter++;
             } catch (std::out_of_range& e) {
                 // todo: log the error.
+                uplink_sys_man.errors |= errors::system::uplink_forwarding;
                 utilities::error_print("could not add uplink command to queue!\n"); 
                 utilities::error_log("\tfailed to store an uplink command!");
                 return;
             }
-            utilities::debug_print("\tstored uplink commands\n");
-            utilities::debug_log("\tstored uplink commands");
         }
     }
 }
