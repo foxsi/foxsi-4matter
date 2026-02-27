@@ -511,19 +511,19 @@ void Circle::manage_systems() {
         Command hk_req_cmd     = deck->get_command_for_sys_for_code(timepix->system.hex, 0x88);
         Command rates_req_cmd  = deck->get_command_for_sys_for_code(timepix->system.hex, 0x81);
         Command pcap_req_cmd   = deck->get_command_for_sys_for_code(timepix->system.hex, 0xa5);
-        Command pc_req_cmd    = deck->get_command_for_sys_for_code(timepix->system.hex, 0xa0);
+        // Command pc_req_cmd    = deck->get_command_for_sys_for_code(timepix->system.hex, 0xa0);
 
         utilities::debug_print("\tsending " + utilities::bytes_to_string(flags_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(hk_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(rates_req_cmd.get_uart_instruction()) + "\n");
         utilities::debug_print("\tsending " + utilities::bytes_to_string(pcap_req_cmd.get_uart_instruction()) + "\n");
-        utilities::debug_print("\tsending " + utilities::bytes_to_string(pc_req_cmd.get_uart_instruction()) + "\n");
+        // utilities::debug_print("\tsending " + utilities::bytes_to_string(pc_req_cmd.get_uart_instruction()) + "\n");
         
         std::vector<uint8_t> flags_response(flags_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> hk_response(hk_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> rates_response(rates_req_cmd.get_uart_reply_length());
         std::vector<uint8_t> pcap_response(pcap_req_cmd.get_uart_reply_length());
-        std::vector<uint8_t> pc_response(pc_req_cmd.get_uart_reply_length());
+        // std::vector<uint8_t> pc_response(pc_req_cmd.get_uart_reply_length());
         
         std::vector<uint8_t> request_time = utilities::splat_to_nbytes(4, static_cast<uint32_t>(std::time(nullptr)));
 
@@ -531,7 +531,7 @@ void Circle::manage_systems() {
         hk_response = transport->sync_send_command_to_system(*timepix, hk_req_cmd);
         rates_response = transport->sync_send_command_to_system(*timepix, rates_req_cmd);
         pcap_response = transport->sync_send_command_to_system(*timepix, pcap_req_cmd);
-        pc_response = transport->sync_send_command_to_system(*timepix, pc_req_cmd);
+        // pc_response = transport->sync_send_command_to_system(*timepix, pc_req_cmd);
 
         utilities::debug_print("\tsent all\n");
         
@@ -583,19 +583,19 @@ void Circle::manage_systems() {
             // queue the buffer element
             transport->downlink_buffer->enqueue(dbe_pcap);
         }
-        if (pc_response.size() == pc_req_cmd.get_uart_reply_length()) {
-            // populate packet:
-            std::vector<uint8_t> downlink_pc;
-            downlink_pc.insert(downlink_pc.end(), pc_response.begin(), pc_response.end());
-            // put it in a DownlinkBufferElement
-            DownlinkBufferElement dbe_pc(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
-                RING_BUFFER_TYPE_OPTIONS::PC);
-            dbe_pc.set_packets_per_frame(1);
-            dbe_pc.set_this_packet_index(1);
-            dbe_pc.set_payload(downlink_pc);
-            // qpce the buffer element
-            transport->downlink_buffer->enqueue(dbe_pc);
-        }
+        // if (pc_response.size() == pc_req_cmd.get_uart_reply_length()) {
+        //     // populate packet:
+        //     std::vector<uint8_t> downlink_pc;
+        //     downlink_pc.insert(downlink_pc.end(), pc_response.begin(), pc_response.end());
+        //     // put it in a DownlinkBufferElement
+        //     DownlinkBufferElement dbe_pc(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
+        //         RING_BUFFER_TYPE_OPTIONS::PC);
+        //     dbe_pc.set_packets_per_frame(1);
+        //     dbe_pc.set_this_packet_index(1);
+        //     dbe_pc.set_payload(downlink_pc);
+        //     // qpce the buffer element
+        //     transport->downlink_buffer->enqueue(dbe_pc);
+        // }
 
         DownlinkBufferElement dbe_img(&(deck->get_sys_for_name("timepix")), &(deck->get_sys_for_name("gse")), 
         RING_BUFFER_TYPE_OPTIONS::PC);
